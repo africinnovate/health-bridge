@@ -3,6 +3,7 @@ mod config;
 mod auth;
 mod models;
 mod routes;
+mod handlers;
 mod schema;
 
 use axum::{Router, routing::get, http::StatusCode};

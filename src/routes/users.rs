@@ -1,12 +1,12 @@
-use axum::{Router, routing::get, extract::State, Json};
-use crate::AppState;
+use axum::{Router, routing::{get, post}};
+use crate::{AppState, handlers::users};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(get_users))
-}
-
-async fn get_users(State(state): State<AppState>) -> Json<&'static str> {
-    // use state.pool.get()? to get Diesel connection
-    Json("list of users")
+        .route("/", get(users::get_users))
+        .route("/register", post(users::register))
+        .route("/login", post(users::login))
+        .route("/forgot-password", post(users::forgot_password))
+        .route("/reset-password", post(users::reset_password))
+        .route("/verify-token", post(users::verify_token))
 }
