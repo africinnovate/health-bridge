@@ -1,11 +1,20 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, NaiveDate};
+use diesel::prelude::*;
+use crate::schema::users;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = users)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
     pub id: Uuid,
+    pub first_name: String,
+    pub last_name: String,
     pub email: String,
+    pub phone: Option<String>,
+    pub gender: Option<String>,
+    pub dob: Option<NaiveDate>,
     #[serde(skip_serializing)]
     pub password_hash: String,
     pub role: String,
@@ -13,10 +22,16 @@ pub struct User {
 }
 
 #[derive(Insertable)]
-#[table_name = "users"]
+#[diesel(table_name = users)]
 pub struct NewUser<'a> {
+    pub first_name: &'a str,
+    pub last_name: &'a str,
     pub email: &'a str,
+    pub phone: Option<&'a str>,
+    pub gender: Option<&'a str>,
+    pub dob: Option<NaiveDate>,
     pub password_hash: &'a str,
+    pub role: &'a str,
 }
 
 
