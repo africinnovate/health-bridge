@@ -1,0 +1,33 @@
+FROM rust:1.86
+
+# Install cargo-watch for hot-reloading
+RUN cargo install cargo-watch --locked
+
+# Install PostgreSQL client
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy manifests first for dependency caching
+COPY Cargo.toml Cargo.lock ./
+
+# Create dummy main to cache dependencies
+RUN mkdir -p src && \
+    echo "fn main() {println!(\"Dummy\");}" > src/main.rs && \
+    cargo build --release && \
+    rm -rf src target/release/deps/emr_api* target/release/emr-api*
+
+# Copy the actual source code (will be mounted as volume in docker-compose)
+COPY src ./src
+COPY migrations ./migrations
+
+# Create a development startup script
+COPY scripts/docker-entrypoint-dev.sh /app/docker-entrypoint-dev.sh
+RUN chmod +x /app/docker-entrypoint-dev.sh
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/docker-entrypoint-dev.sh"]

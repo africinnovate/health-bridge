@@ -32,7 +32,7 @@ COPY --from=builder /app/target/release/emr-api /app/emr-api
 COPY migrations /app/migrations
 
 # Create a startup script
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 8080

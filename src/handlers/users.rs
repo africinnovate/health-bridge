@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
+use tracing::{info, error, instrument};
 use crate::{AppState, auth, models::User};
 
 // Request/Response DTOs
@@ -89,7 +89,7 @@ pub async fn get_users(
 
     let mut conn = state.pool.get()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
+    tracing::info!("after connectiondddd");
     let user_list = users
         .select(User::as_select())
         .load::<User>(&mut conn)
@@ -110,16 +110,16 @@ pub async fn register(
 ) -> Result<Json<AuthResponse>, StatusCode> {
     let mut conn = state.pool.get()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
     // Check if email already exists
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
-
+    
     let existing_user = users
-        .filter(email.eq(&payload.email))
-        .first::<User>(&mut conn)
-        .optional()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .filter(email.eq(&payload.email))
+    .first::<User>(&mut conn)
+    .optional()
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    info!("after connections");
 
     if existing_user.is_some() {
         return Err(StatusCode::CONFLICT);
