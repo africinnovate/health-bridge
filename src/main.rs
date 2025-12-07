@@ -5,12 +5,16 @@ mod models;
 mod routes;
 mod handlers;
 mod schema;
+mod docs;
 
 use axum::{Router, routing::get, http::StatusCode};
 use std::net::SocketAddr;
 use tracing_subscriber;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::db::DbPool;
+use crate::docs::ApiDoc;
 
 #[derive(Clone)]
 struct AppState {
@@ -31,13 +35,17 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui")
+            .url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api", routes::create_router())
-        .route("/health", get(|| async { (StatusCode::OK, "OK") }))
+        .route("/health", get(|| async { (StatusCode::OK, "OKoh") }))
         .with_state(state);
 
     let addr: SocketAddr = cfg.bind_addr.parse()?;
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!("listening on {}", addr);
+    println!("Server starting on http://{}", addr);
+    println!("📚 Swagger UI available at http://{}/swagger-ui", addr);
 
     axum::serve(listener, app).await?;
 

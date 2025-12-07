@@ -5,11 +5,12 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use tracing::{info, error, instrument};
+use tracing::{info};
+use utoipa::ToSchema;
 use crate::{AppState, auth, models::User};
 
 // Request/Response DTOs
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct RegisterRequest {
     pub first_name: String,
     pub last_name: String,
@@ -20,35 +21,35 @@ pub struct RegisterRequest {
     pub role: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct ForgotPasswordRequest {
     pub email: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct ResetPasswordRequest {
     pub token: String,
     pub new_password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct VerifyTokenRequest {
     pub token: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct AuthResponse {
     pub token: String,
     pub user: UserResponse,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct UserResponse {
     pub id: Uuid,
     pub first_name: String,
@@ -57,12 +58,12 @@ pub struct UserResponse {
     pub role: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct MessageResponse {
     pub message: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct TokenVerifyResponse {
     pub valid: bool,
     pub user_id: Option<String>,
@@ -80,7 +81,19 @@ impl From<User> for UserResponse {
     }
 }
 
-// Handler: Get all users
+/// List all users
+///
+/// Gets all users on the application
+
+#[utoipa::path(
+    get,
+    path = "/api/users",
+    responses(
+        (status = 200, description = "List of users retrieved successfully", body = [UserResponse]),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "users"
+)]
 pub async fn get_users(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<UserResponse>>, StatusCode> {
@@ -103,7 +116,20 @@ pub async fn get_users(
     Ok(Json(response))
 }
 
-// Handler: Register new user
+/// Register a new user
+///
+/// Creates a new user account and returns an authentication token
+#[utoipa::path(
+    post,
+    path = "/api/users/register",
+    request_body = RegisterRequest,
+    responses(
+        (status = 200, description = "User registered successfully", body = AuthResponse),
+        (status = 409, description = "Email already exists"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "authentication"
+)]
 pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
@@ -145,7 +171,20 @@ pub async fn register(
     }))
 }
 
-// Handler: Login user
+/// Login user
+///
+/// Authenticates a user and returns a JWT token
+#[utoipa::path(
+    post,
+    path = "/api/users/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful", body = AuthResponse),
+        (status = 401, description = "Invalid credentials"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "authentication"
+)]
 pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
@@ -170,7 +209,21 @@ pub async fn login(
     }))
 }
 
-// Handler: Forgot password (send reset email)
+/// Request password reset
+///
+/// Sends a password reset link to the user's email
+
+#[utoipa::path(
+    post,
+    path = "/api/users/forgot-password",
+    request_body = ForgotPasswordRequest,
+    responses(
+        (status = 200, description = "Password reset email sent", body = MessageResponse),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "authentication"
+)]
+
 pub async fn forgot_password(
     State(state): State<AppState>,
     Json(payload): Json<ForgotPasswordRequest>,
@@ -207,7 +260,21 @@ pub async fn forgot_password(
     }))
 }
 
-// Handler: Reset password
+/// Reset password
+///
+/// Resets the user's password using a reset token
+#[utoipa::path(
+    post,
+    path = "/api/users/reset-password",
+    request_body = ResetPasswordRequest,
+    responses(
+        (status = 200, description = "Password reset successful", body = MessageResponse),
+        (status = 400, description = "Invalid or expired token"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "authentication"
+)]
+
 pub async fn reset_password(
     State(_state): State<AppState>,
     Json(_payload): Json<ResetPasswordRequest>,
@@ -224,7 +291,18 @@ pub async fn reset_password(
     }))
 }
 
-// Handler: Verify JWT token
+/// Verify JWT token
+///
+/// Validates a JWT token and returns user information
+#[utoipa::path(
+    post,
+    path = "/api/users/verify-token",
+    request_body = VerifyTokenRequest,
+    responses(
+        (status = 200, description = "Token verification result", body = TokenVerifyResponse),
+    ),
+    tag = "authentication"
+)]
 pub async fn verify_token(
     State(state): State<AppState>,
     Json(payload): Json<VerifyTokenRequest>,
