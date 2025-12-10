@@ -9,15 +9,6 @@ jobs:
     runs-on: self-hosted
     
     steps:
-      - name: Debug sudo configuration
-        run: |
-          echo "Current user: $(whoami)"
-          echo "User ID: $(id)"
-          echo "Sudo version: $(sudo -V | head -1)"
-          echo "Testing sudo:"
-          sudo -l
-          echo "Testing systemctl:"
-          /usr/bin/sudo -n /usr/bin/systemctl status health-bridge || echo "Sudo failed with exit code: $?"
       - name: Checkout repository
         uses: actions/checkout@v4
       
@@ -25,7 +16,7 @@ jobs:
         run: cargo build --release
       
       - name: Stop service before replacing binary
-        run: /usr/bin/sudo -n /usr/bin/systemctl stop health-bridge
+        run: systemctl --user stop health-bridge
       
       - name: Copy binary to deployment location
         run: |
@@ -34,10 +25,13 @@ jobs:
           chmod +x /home/afric/apps/hb/target/release/health-bridge
       
       - name: Start service
-        run: /usr/bin/sudo -n /usr/bin/systemctl start health-bridge
+        run: systemctl --user start health-bridge
+      
+      - name: Wait for service to start
+        run: sleep 2
       
       - name: Check service status
-        run: /usr/bin/sudo -n /usr/bin/systemctl status health-bridge --no-pager
+        run: systemctl --user status health-bridge --no-pager
 
       - name: Show recent logs
-        run: /usr/bin/sudo -n /usr/bin/journalctl -u health-bridge -n 20 --no-pager
+        run: journalctl --user -u health-bridge -n 20 --no-pager
