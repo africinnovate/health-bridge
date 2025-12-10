@@ -38,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(SwaggerUi::new("/swagger-ui")
             .url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api", routes::create_router())
-        .route("/health", get(|| async { (StatusCode::OK, "OKoh") }))
+        .route("/health", get(|| async { (StatusCode::OK, "The health is healthing ...") }))
         .with_state(state);
 
     let addr: SocketAddr = cfg.bind_addr.parse()?;
