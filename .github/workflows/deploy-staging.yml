@@ -6,44 +6,29 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
       - name: Build in release mode
         run: cargo build --release
       
-      - name: Install Cloudflared
-        run: |
-          wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared-linux-amd64.deb
+      - name: Stop service before replacing binary
+        run: sudo systemctl stop health-bridge
       
-      - name: Setup Cloudflare Tunnel
+      - name: Copy binary to deployment location
         run: |
-          mkdir -p ~/.ssh
-          cat >> ~/.ssh/config << EOF
-          Host healthbridge
-            ProxyCommand cloudflared access ssh --hostname ssh.healthbridge.africinnovate.com
-            User ${{ secrets.DEPLOY_USER }}
-            StrictHostKeyChecking no
-          EOF
+          mkdir -p /home/afric/apps/hb/target/release
+          cp target/release/health-bridge /home/afric/apps/hb/target/release/
+          chmod +x /home/afric/apps/hb/target/release/health-bridge
       
-      - name: Upload binary via Cloudflare Tunnel
-        run: |
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          scp -i ~/.ssh/deploy_key -o ProxyCommand="cloudflared access ssh --hostname ssh.healthbridge.africinnovate.com" \
-            target/release/health-bridge \
-            ${{ secrets.DEPLOY_USER }}@ssh.healthbridge.africinnovate.com:${{ secrets.DEPLOY_PATH }}/target/release/
+      - name: Start service
+        run: sudo systemctl start health-bridge
       
-      - name: Restart service via Cloudflare Tunnel
-        run: |
-          ssh -i ~/.ssh/deploy_key healthbridge << 'EOF'
-            sudo systemctl restart health-bridge
-            sudo systemctl status health-bridge --no-pager
-          EOF
+      - name: Check service status
+        run: sudo systemctl status health-bridge --no-pager
+
+      - name: Show recent logs
+        run: sudo journalctl -u health-bridge -n 20 --no-pager
