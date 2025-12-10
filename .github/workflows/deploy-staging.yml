@@ -10,7 +10,7 @@ jobs:
     
     steps:
       - name: Check user
-        run: whoami
+        run: which systemctl
       - name: Checkout repository
         uses: actions/checkout@v4
       
@@ -30,7 +30,7 @@ jobs:
         run: sudo systemctl start health-bridge
       
       - name: Check service status
-        run: sudo systemctl status health-bridge --no-pager
+        run: sudo -n systemctl status health-bridge --no-pager
 
       - name: Show recent logs
         run: sudo journalctl -u health-bridge -n 20 --no-pager
