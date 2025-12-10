@@ -16,7 +16,7 @@ jobs:
         run: cargo build --release
       
       - name: Stop service before replacing binary
-        run: systemctl stop health-bridge
+        run: sudo systemctl stop health-bridge
       
       - name: Copy binary to deployment location
         run: |
@@ -25,10 +25,10 @@ jobs:
           chmod +x /home/afric/apps/hb/target/release/health-bridge
       
       - name: Start service
-        run: systemctl start health-bridge
+        run: sudo systemctl start health-bridge
       
       - name: Check service status
-        run: systemctl status health-bridge --no-pager
+        run: sudo systemctl status health-bridge --no-pager
 
       - name: Show recent logs
-        run: journalctl -u health-bridge -n 20 --no-pager
+        run: sudo journalctl -u health-bridge -n 20 --no-pager
