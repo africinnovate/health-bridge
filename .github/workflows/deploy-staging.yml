@@ -7,32 +7,43 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-
+      
       - name: Build in release mode
         run: cargo build --release
-
-      - name: Upload binary to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          source: "target/release/health-bridge"
-          target: "${{ secrets.DEPLOY_PATH }}/target/release/"
-
-      - name: Restart systemd service
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script: |
+      
+      - name: Install Cloudflared
+        run: |
+          wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+      
+      - name: Setup Cloudflare Tunnel
+        run: |
+          mkdir -p ~/.ssh
+          cat >> ~/.ssh/config << EOF
+          Host healthbridge
+            ProxyCommand cloudflared access ssh --hostname ssh.healthbridge.africinnovate.com
+            User ${{ secrets.DEPLOY_USER }}
+            StrictHostKeyChecking no
+          EOF
+      
+      - name: Upload binary via Cloudflare Tunnel
+        run: |
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          scp -i ~/.ssh/deploy_key -o ProxyCommand="cloudflared access ssh --hostname ssh.healthbridge.africinnovate.com" \
+            target/release/health-bridge \
+            ${{ secrets.DEPLOY_USER }}@ssh.healthbridge.africinnovate.com:${{ secrets.DEPLOY_PATH }}/target/release/
+      
+      - name: Restart service via Cloudflare Tunnel
+        run: |
+          ssh -i ~/.ssh/deploy_key healthbridge << 'EOF'
             sudo systemctl restart health-bridge
             sudo systemctl status health-bridge --no-pager
+          EOF
