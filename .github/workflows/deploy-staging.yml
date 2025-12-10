@@ -24,7 +24,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
-          source: "target/release/hb"
+          source: "target/release/health-bridge"
           target: "${{ secrets.DEPLOY_PATH }}/target/release/"
 
       - name: Restart systemd service
@@ -32,7 +32,7 @@ jobs:
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
+        h"  key: ${{ secrets.DEPLOY_KEY }}
           script: |
             sudo systemctl restart health-bridge
             sudo systemctl status health-bridge --no-pager
