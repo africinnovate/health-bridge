@@ -17,3 +17,6 @@ Thumbs.db
 
 .env
 *.env
+.env.staging
+.env.production
+.env.local
