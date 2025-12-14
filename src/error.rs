@@ -4,7 +4,6 @@ use axum::{
     Json,
 };
 use serde_json::json;
-// use diesel::r2d2;
 
 #[derive(Debug)]
 pub enum AppError {
