@@ -92,12 +92,12 @@ impl From<User> for UserResponse {
 
 #[utoipa::path(
     get,
-    path = "/api/users",
+    path = "/api/auth",
     responses(
         (status = 200, description = "List of users retrieved successfully", body = [UserResponse]),
         (status = 500, description = "Internal server error")
     ),
-    tag = "users"
+    tag = "auth"
 )]
 pub async fn get_users(
     State(state): State<AppState>,
@@ -121,14 +121,14 @@ pub async fn get_users(
 /// Creates a new user account and returns an authentication token
 #[utoipa::path(
     post,
-    path = "/api/users/register",
+    path = "/api/auth/register",
     request_body = RegisterRequest,
     responses(
         (status = 200, description = "User registered successfully", body = AuthResponse),
         (status = 409, description = "Email already exists"),
         (status = 500, description = "Internal server error")
     ),
-    tag = "authentication"
+    tag = "auth"
 )]
 pub async fn register(
     State(state): State<AppState>,
@@ -143,8 +143,6 @@ pub async fn register(
         .filter(email.eq(&payload.email))
         .first::<User>(&mut conn)
         .optional()?;
-
-    info!("after connections");
 
     if existing_user.is_some() {
         return Err(AppError::UserAlreadyExists);
@@ -172,14 +170,14 @@ pub async fn register(
 /// Authenticates a user and returns a JWT token
 #[utoipa::path(
     post,
-    path = "/api/users/login",
+    path = "/api/auth/login",
     request_body = LoginRequest,
     responses(
         (status = 200, description = "Login successful", body = AuthResponse),
         (status = 401, description = "Invalid credentials"),
         (status = 500, description = "Internal server error")
     ),
-    tag = "authentication"
+    tag = "auth"
 )]
 pub async fn login(
     State(state): State<AppState>,
@@ -208,13 +206,13 @@ pub async fn login(
 
 #[utoipa::path(
     post,
-    path = "/api/users/forgot-password",
+    path = "/api/auth/forgot-password",
     request_body = ForgotPasswordRequest,
     responses(
         (status = 200, description = "Password reset email sent", body = MessageResponse),
         (status = 500, description = "Internal server error")
     ),
-    tag = "authentication"
+    tag = "auth"
 )]
 
 pub async fn forgot_password(
@@ -243,14 +241,14 @@ pub async fn forgot_password(
 
 #[utoipa::path(
     post,
-    path = "/api/users/reset-password",
+    path = "/api/auth/reset-password",
     request_body = ResetPasswordRequest,
     responses(
         (status = 200, description = "Password reset successful", body = MessageResponse),
         (status = 400, description = "Invalid or expired token"),
         (status = 500, description = "Internal server error")
     ),
-    tag = "authentication"
+    tag = "auth"
 )]
 
 pub async fn reset_password(
@@ -267,12 +265,12 @@ pub async fn reset_password(
 /// Validates a JWT token and returns user information
 #[utoipa::path(
     post,
-    path = "/api/users/verify-token",
+    path = "/api/auth/verify-token",
     request_body = VerifyTokenRequest,
     responses(
         (status = 200, description = "Token verification result", body = TokenVerifyResponse),
     ),
-    tag = "authentication"
+    tag = "auth"
 )]
 pub async fn verify_token(
     State(state): State<AppState>,
