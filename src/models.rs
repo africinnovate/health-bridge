@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc, NaiveDate};
 use diesel::prelude::*;
-use crate::schema::users;
+use crate::schema::{
+    users, 
+    password_reset_tokens,
+};
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = users)]
@@ -33,6 +36,27 @@ pub struct NewUser<'a> {
     pub password_hash: &'a str,
     pub role: &'a str,
 }
+
+#[derive(Debug, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = password_reset_tokens)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct PasswordResetToken {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub token: String,
+    pub expires_at: DateTime<Utc>,
+    pub used: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = password_reset_tokens)]
+pub struct NewPasswordResetToken<'a> {
+    pub user_id: Uuid,
+    pub token: &'a str,
+    pub expires_at: DateTime<Utc>,
+}
+
 
 
 /* Patient */
