@@ -134,6 +134,7 @@ pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
+    info!("start script");
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 
@@ -280,7 +281,7 @@ pub async fn reset_password(
 
     // Verify the token and get user_id
     let user_id = auth::verify_reset_token(&mut conn, &payload.token)
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| AppError::BadRequest)?;
 
     // Reset the password
     auth::reset_user_password(&mut conn, user_id, &payload.new_password)?;

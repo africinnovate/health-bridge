@@ -9,7 +9,7 @@ pub mod patients;
 
 pub fn create_router() -> Router<AppState> {
     Router::new()
-        .nest("/users", auth::router())
+        .nest("/auth", auth::router())
         .nest("/patients", patients::router())
         .nest("/specialists", specialists::router())
         .nest("/hospitals", hospitals::router())

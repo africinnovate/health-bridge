@@ -4,53 +4,67 @@ use axum::{
     Json,
 };
 use serde_json::json;
+use tracing::error;
 
 #[derive(Debug)]
 pub enum AppError {
     DbError,
     UserAlreadyExists,
     Unauthorized,
+    BadRequest,
     InternalServerError,
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        match self {
+        let (status, message) = match self {
             AppError::UserAlreadyExists => (
                 StatusCode::CONFLICT,
-                Json(json!({ "error": "User already exists" })),
-            ).into_response(),
-
+                "User already exists",
+            ),
             AppError::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
-                Json(json!({ "error": "Invalid credentials" })),
-            ).into_response(),
-
-            AppError::DbError | AppError::InternalServerError => (
+                "Invalid credentials",
+            ),
+            AppError::DbError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "Internal server error" })),
-            ).into_response(),
-        }
+                "Database error",
+            ),
+            AppError::BadRequest => (
+                StatusCode::BAD_REQUEST,
+                "Bad request",
+            ),
+            AppError::InternalServerError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            ),
+        };
+
+        let body = Json(json!({
+            "error": message
+        }));
+
+        (status, body).into_response()
     }
 }
 
-// Diesel query errors
 impl From<diesel::result::Error> for AppError {
-    fn from(_: diesel::result::Error) -> Self {
+    fn from(err: diesel::result::Error) -> Self {
+        error!("Database error: {:?}", err);
         AppError::DbError
     }
 }
 
-// Connection pool errors (THIS FIXES ERROR #2)
 impl From<r2d2::Error> for AppError {
-    fn from(_: r2d2::Error) -> Self {
+    fn from(err: r2d2::Error) -> Self {
+        error!("Connection pool error: {:?}", err);
         AppError::DbError
     }
 }
 
-// JWT / utility errors (THIS FIXES ERROR #1)
 impl From<anyhow::Error> for AppError {
-    fn from(_: anyhow::Error) -> Self {
+    fn from(err: anyhow::Error) -> Self {
+        error!("Internal error: {:?}", err);
         AppError::InternalServerError
     }
 }
