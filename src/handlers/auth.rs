@@ -11,9 +11,6 @@ use crate::{
     models::User,
 };
 
-// =====================
-// DTOs
-// =====================
 
 #[derive(Deserialize, ToSchema)]
 pub struct RegisterRequest {
