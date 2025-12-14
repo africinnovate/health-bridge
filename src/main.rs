@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let app = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui")
+        .merge(SwaggerUi::new("/docs")
             .url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api", routes::create_router())
         .route("/health", get(|| async { (StatusCode::OK, "The health is healthing! ...") }))
@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!("listening on {}", addr);
     println!("Server starting on http://{}", addr);
-    println!("📚 Swagger UI available at http://{}/swagger-ui", addr);
+    println!("📚 Swagger UI available at http://{}/docs", addr);
 
     axum::serve(listener, app).await?;
 
