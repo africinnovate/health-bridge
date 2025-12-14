@@ -8,12 +8,15 @@ use argon2::{
     PasswordVerifier,
     password_hash::{rand_core::OsRng, SaltString}
 };
+use argon2::password_hash::rand_core::RngCore;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
 use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, TokenData};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
+use chrono::Utc;
+use chrono::Duration;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -60,6 +63,89 @@ pub fn create_user(
     Ok(user)
 }
 
+pub fn generate_reset_token() -> String {
+    let mut rng = OsRng;
+    let mut bytes = [0u8; 32];
+    rng.fill_bytes(&mut bytes);
+    hex::encode(bytes)
+}
+
+pub fn create_password_reset_token(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+) -> Result<String, diesel::result::Error> {
+    use crate::schema::password_reset_tokens;
+    
+    let token = generate_reset_token();
+    let expires_at = Utc::now() + Duration::hours(1);
+    
+    let new_token = crate::models::NewPasswordResetToken {
+        user_id,
+        token: &token,
+        expires_at,
+    };
+    
+    diesel::insert_into(password_reset_tokens::table)
+        .values(&new_token)
+        .execute(conn)?;
+    
+    Ok(token)
+}
+
+pub fn verify_reset_token(
+    conn: &mut PgConnection,
+    token: &str,
+) -> Result<Uuid, diesel::result::Error> {
+    use crate::schema::password_reset_tokens::dsl::*;
+    use diesel::prelude::*;
+    
+    let reset_token = password_reset_tokens
+        .filter(token.eq(token))
+        .filter(used.eq(false))
+        .filter(expires_at.gt(Utc::now()))
+        .first::<crate::models::PasswordResetToken>(conn)?;
+    
+    Ok(reset_token.user_id)
+}
+
+pub fn mark_token_as_used(
+    conn: &mut PgConnection,
+    token: &str,
+) -> Result<(), diesel::result::Error> {
+    use crate::schema::password_reset_tokens::dsl::*;
+    use diesel::prelude::*;
+    
+    diesel::update(password_reset_tokens.filter(token.eq(token)))
+        .set(used.eq(true))
+        .execute(conn)?;
+    
+    Ok(())
+}
+
+pub fn reset_user_password(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+    new_password: &str,
+) -> Result<(), diesel::result::Error> {
+    use crate::schema::users::dsl::*;
+    use diesel::prelude::*;
+    
+    let argon2 = Argon2::default();
+    let salt = SaltString::generate(&mut OsRng);
+
+    let hashed = argon2
+        .hash_password(new_password.as_bytes(), &salt)
+        .map_err(|_| diesel::result::Error::RollbackTransaction)?
+        .to_string();
+    // let hashed = hash_password(new_password)
+    //     .map_err(|_| diesel::result::Error::RollbackTransaction)?;
+    
+    diesel::update(users.filter(id.eq(user_id)))
+        .set(password_hash.eq(hashed))
+        .execute(conn)?;
+    
+    Ok(())
+}
 
 pub fn authenticate_user(
     conn: &mut PgConnection,

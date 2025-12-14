@@ -1,7 +1,7 @@
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use tracing::info;
+use tracing::{info, error };
 use utoipa::ToSchema;
 
 use crate::{
@@ -229,16 +229,37 @@ pub async fn forgot_password(
         .first::<User>(&mut conn)
         .optional()?;
 
+    if let Some(user) = user {
+        // Generate reset token
+        let reset_token = auth::create_password_reset_token(&mut conn, user.id)?;
+        
+        // Send email asynchronously
+        let mail_service = state.mail_service.clone();
+        let user_email = user.email.clone();
+        let user_name = format!("{} {}", user.first_name, user.last_name);
+        let frontend_url = state.cfg.frontend_url.clone();
+        
+        tokio::spawn(async move {
+            if let Err(e) = mail_service
+                .send_password_reset_email(&user_email, &user_name, &reset_token, &frontend_url)
+                .await
+            {
+                error!("Failed to send password reset email: {:?}", e);
+            }
+        });
+        
+        info!("Password reset token generated for user: {}", user.email);
+    }
+
+    // Always return success to prevent email enumeration
     Ok(Json(MessageResponse {
-        message: if user.is_some() {
-            "If the email exists, a password reset link has been sent."
-        } else {
-            "If the email exists, a password reset link has been sent."
-        }
-        .to_string(),
+        message: "If the email exists, a password reset link has been sent.".to_string(),
     }))
 }
 
+/// Reset password
+///
+/// Endpoint to reset password
 #[utoipa::path(
     post,
     path = "/api/auth/reset-password",
@@ -252,11 +273,25 @@ pub async fn forgot_password(
 )]
 
 pub async fn reset_password(
-    State(_state): State<AppState>,
-    Json(_payload): Json<ResetPasswordRequest>,
+    State(state): State<AppState>,
+    Json(payload): Json<ResetPasswordRequest>,
 ) -> Result<Json<MessageResponse>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    // Verify the token and get user_id
+    let user_id = auth::verify_reset_token(&mut conn, &payload.token)
+        .map_err(|_| AppError::Unauthorized)?;
+
+    // Reset the password
+    auth::reset_user_password(&mut conn, user_id, &payload.new_password)?;
+
+    // Mark token as used
+    auth::mark_token_as_used(&mut conn, &payload.token)?;
+
+    info!("Password successfully reset for user: {}", user_id);
+
     Ok(Json(MessageResponse {
-        message: "Password reset functionality not yet implemented.".to_string(),
+        message: "Password has been reset successfully.".to_string(),
     }))
 }
 
