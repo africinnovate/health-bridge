@@ -9,6 +9,7 @@ use crate::{
     auth,
     error::AppError,
     models::User,
+    utils::validation::{validate_email, validate_phone_length},
 };
 
 
@@ -131,7 +132,11 @@ pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    info!("start script");
+
+    validate_email(&payload.email)?;
+    if let Some(phone_number) = &payload.phone {
+        validate_phone_length(phone_number, 11, 11)?;
+    }
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 
@@ -181,6 +186,8 @@ pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
+
+    validate_email(&payload.email)?;
     let mut conn = state.pool.get()?;
 
     let user = auth::authenticate_user(
@@ -217,6 +224,9 @@ pub async fn forgot_password(
     State(state): State<AppState>,
     Json(payload): Json<ForgotPasswordRequest>,
 ) -> Result<Json<MessageResponse>, AppError> {
+
+    validate_email(&payload.email)?;
+    
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 

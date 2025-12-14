@@ -8,6 +8,7 @@ mod schema;
 mod docs;
 mod services;
 mod error;
+mod utils;
 
 use axum::{Router, routing::get, http::StatusCode};
 use std::net::SocketAddr;

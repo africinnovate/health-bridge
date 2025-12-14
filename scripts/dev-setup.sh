@@ -9,12 +9,18 @@ command -v cargo >/dev/null 2>&1 || { echo "❌ Rust/Cargo not installed"; exit 
 command -v cargo-watch >/dev/null 2>&1 || { echo "⚠️  cargo-watch not installed, installing..."; cargo install cargo-watch; }
 
 # Load environment variables
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+ENV_FILE="${1:-.env}"
+
+if [ -f "$ENV_FILE" ]; then
+    echo "📄 Loading environment variables from $ENV_FILE"
+    set -a
+    source "$ENV_FILE"
+    set +a
 else
-    echo "❌ .env file not found!"
+    echo "❌ Env file '$ENV_FILE' not found!"
     exit 1
 fi
+
 
 echo "✅ Prerequisites checked"
 
