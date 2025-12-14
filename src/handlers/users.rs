@@ -1,15 +1,20 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Json,
-};
+use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use tracing::{info};
+use tracing::info;
 use utoipa::ToSchema;
-use crate::{AppState, auth, models::User};
 
-// Request/Response DTOs
+use crate::{
+    AppState,
+    auth,
+    error::AppError,
+    models::User,
+};
+
+// =====================
+// DTOs
+// =====================
+
 #[derive(Deserialize, ToSchema)]
 pub struct RegisterRequest {
     pub first_name: String,
@@ -96,24 +101,19 @@ impl From<User> for UserResponse {
 )]
 pub async fn get_users(
     State(state): State<AppState>,
-) -> Result<Json<Vec<UserResponse>>, StatusCode> {
+) -> Result<Json<Vec<UserResponse>>, AppError> {
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 
-    let mut conn = state.pool.get()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    tracing::info!("after connectiondddd");
+    let mut conn = state.pool.get()?;
+
     let user_list = users
         .select(User::as_select())
-        .load::<User>(&mut conn)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .load::<User>(&mut conn)?;
 
-    let response: Vec<UserResponse> = user_list
-        .into_iter()
-        .map(UserResponse::from)
-        .collect();
-
-    Ok(Json(response))
+    Ok(Json(
+        user_list.into_iter().map(UserResponse::from).collect(),
+    ))
 }
 
 /// Register a new user
@@ -133,25 +133,23 @@ pub async fn get_users(
 pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
-) -> Result<Json<AuthResponse>, StatusCode> {
-    let mut conn = state.pool.get()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    // Check if email already exists
+) -> Result<Json<AuthResponse>, AppError> {
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
-    
+
+    let mut conn = state.pool.get()?;
+
     let existing_user = users
-    .filter(email.eq(&payload.email))
-    .first::<User>(&mut conn)
-    .optional()
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .filter(email.eq(&payload.email))
+        .first::<User>(&mut conn)
+        .optional()?;
+
     info!("after connections");
 
     if existing_user.is_some() {
-        return Err(StatusCode::CONFLICT);
+        return Err(AppError::UserAlreadyExists);
     }
 
-    // Create user
     let user = auth::create_user(
         &mut conn,
         &payload.first_name,
@@ -159,11 +157,9 @@ pub async fn register(
         &payload.email,
         &payload.password,
         &payload.role,
-    ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    )?;
 
-    // Generate JWT
-    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
 
     Ok(Json(AuthResponse {
         token,
@@ -188,20 +184,17 @@ pub async fn register(
 pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
-) -> Result<Json<AuthResponse>, StatusCode> {
-    let mut conn = state.pool.get()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+) -> Result<Json<AuthResponse>, AppError> {
+    let mut conn = state.pool.get()?;
 
-    // Authenticate user
     let user = auth::authenticate_user(
         &mut conn,
         &payload.email,
         &payload.password,
-    ).map_err(|_| StatusCode::UNAUTHORIZED)?;
+    )
+    .map_err(|_| AppError::Unauthorized)?;
 
-    // Generate JWT
-    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
 
     Ok(Json(AuthResponse {
         token,
@@ -227,42 +220,27 @@ pub async fn login(
 pub async fn forgot_password(
     State(state): State<AppState>,
     Json(payload): Json<ForgotPasswordRequest>,
-) -> Result<Json<MessageResponse>, StatusCode> {
+) -> Result<Json<MessageResponse>, AppError> {
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 
-    let mut conn = state.pool.get()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut conn = state.pool.get()?;
 
-    // Check if user exists
     let user = users
         .filter(email.eq(&payload.email))
         .first::<User>(&mut conn)
-        .optional()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if user.is_none() {
-        // Don't reveal if email exists or not for security
-        return Ok(Json(MessageResponse {
-            message: "If the email exists, a password reset link has been sent.".to_string(),
-        }));
-    }
-
-    // TODO: Generate reset token and send email
-    // For now, just return success message
-    // In production, you would:
-    // 1. Generate a unique reset token
-    // 2. Store it in a password_reset_tokens table with expiry
-    // 3. Send email with reset link
+        .optional()?;
 
     Ok(Json(MessageResponse {
-        message: "If the email exists, a password reset link has been sent.".to_string(),
+        message: if user.is_some() {
+            "If the email exists, a password reset link has been sent."
+        } else {
+            "If the email exists, a password reset link has been sent."
+        }
+        .to_string(),
     }))
 }
 
-/// Reset password
-///
-/// Resets the user's password using a reset token
 #[utoipa::path(
     post,
     path = "/api/users/reset-password",
@@ -278,14 +256,7 @@ pub async fn forgot_password(
 pub async fn reset_password(
     State(_state): State<AppState>,
     Json(_payload): Json<ResetPasswordRequest>,
-) -> Result<Json<MessageResponse>, StatusCode> {
-    // TODO: Implement password reset logic
-    // 1. Verify reset token is valid and not expired
-    // 2. Hash new password
-    // 3. Update user's password
-    // 4. Delete used reset token
-
-    // Placeholder response
+) -> Result<Json<MessageResponse>, AppError> {
     Ok(Json(MessageResponse {
         message: "Password reset functionality not yet implemented.".to_string(),
     }))
@@ -306,7 +277,7 @@ pub async fn reset_password(
 pub async fn verify_token(
     State(state): State<AppState>,
     Json(payload): Json<VerifyTokenRequest>,
-) -> Result<Json<TokenVerifyResponse>, StatusCode> {
+) -> Result<Json<TokenVerifyResponse>, AppError> {
     match auth::verify_jwt(&payload.token, &state.cfg.jwt_secret) {
         Ok(token_data) => Ok(Json(TokenVerifyResponse {
             valid: true,

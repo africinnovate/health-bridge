@@ -1,5 +1,8 @@
 use utoipa::OpenApi;
 use crate::handlers::users;
+use crate::handlers::hospitals;
+use crate::handlers::patients;
+use crate::handlers::specialists;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -22,6 +25,16 @@ use crate::handlers::users;
             users::UserResponse,
             users::MessageResponse,
             users::TokenVerifyResponse,
+
+                        // Hospitals
+            hospitals::MessageResponse,
+
+            // Patients
+            patients::MessageResponse,
+
+            // Specialists
+            specialists::MessageResponse,
+
         )
     ),
     tags(
@@ -32,12 +45,12 @@ use crate::handlers::users;
         (name = "hospitals", description = "Hospital management endpoints"),
     ),
     info(
-        title = "EMR API",
+        title = "Health Bridge API",
         version = "1.0.0",
-        description = "Electronic Medical Records API",
+        description = "Health Bridge REST API",
         contact(
             name = "API Support",
-            email = "support@emr-api.com"
+            email = "support@healthbridge.com"
         ),
         license(
             name = "MIT",
