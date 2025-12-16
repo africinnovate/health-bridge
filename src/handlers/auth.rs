@@ -1,4 +1,4 @@
-use axum::{extract::State, Json};
+use axum::{extract::State, Json, http::StatusCode,};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use tracing::{info, error };
@@ -9,7 +9,10 @@ use crate::{
     auth,
     error::AppError,
     models::User,
-    utils::validation::{validate_email, validate_phone_length},
+    utils::{
+        validation::{validate_email, validate_phone_length},
+        response::{ApiResponse, EmptyData},
+    },
 };
 
 
@@ -92,14 +95,14 @@ impl From<User> for UserResponse {
     get,
     path = "/api/auth",
     responses(
-        (status = 200, description = "List of users retrieved successfully", body = [UserResponse]),
+        (status = 200, description = "List of users retrieved successfully", body = ApiResponse<Vec<UserResponse>>),
         (status = 500, description = "Internal server error")
     ),
     tag = "auth"
 )]
 pub async fn get_users(
     State(state): State<AppState>,
-) -> Result<Json<Vec<UserResponse>>, AppError> {
+) -> Result<ApiResponse<Vec<UserResponse>>, AppError> {
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 
@@ -109,8 +112,14 @@ pub async fn get_users(
         .select(User::as_select())
         .load::<User>(&mut conn)?;
 
-    Ok(Json(
-        user_list.into_iter().map(UserResponse::from).collect(),
+    let users_response: Vec<UserResponse> = user_list
+        .into_iter()
+        .map(UserResponse::from)
+        .collect();
+
+    Ok(ApiResponse::success_with_message(
+        "Users retrieved successfully",
+        users_response,
     ))
 }
 
@@ -122,7 +131,7 @@ pub async fn get_users(
     path = "/api/auth/register",
     request_body = RegisterRequest,
     responses(
-        (status = 200, description = "User registered successfully", body = AuthResponse),
+        (status = 200, description = "User registered successfully", body = ApiResponse<AuthResponse>),
         (status = 409, description = "Email already exists"),
         (status = 500, description = "Internal server error")
     ),
@@ -131,7 +140,7 @@ pub async fn get_users(
 pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
-) -> Result<Json<AuthResponse>, AppError> {
+) -> Result<ApiResponse<AuthResponse>, AppError> {
 
     validate_email(&payload.email)?;
     if let Some(phone_number) = &payload.phone {
@@ -162,10 +171,13 @@ pub async fn register(
 
     let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
 
-    Ok(Json(AuthResponse {
-        token,
-        user: user.into(),
-    }))
+    Ok(ApiResponse::created(
+        "User registered successfully",
+        AuthResponse {
+            token,
+            user: user.into(),
+        },
+    ))
 }
 
 /// Login user
@@ -176,7 +188,7 @@ pub async fn register(
     path = "/api/auth/login",
     request_body = LoginRequest,
     responses(
-        (status = 200, description = "Login successful", body = AuthResponse),
+        (status = 200, description = "Login successful", body = ApiResponse<AuthResponse>),
         (status = 401, description = "Invalid credentials"),
         (status = 500, description = "Internal server error")
     ),
@@ -185,7 +197,7 @@ pub async fn register(
 pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
-) -> Result<Json<AuthResponse>, AppError> {
+) -> Result<ApiResponse<AuthResponse>, AppError> {
 
     validate_email(&payload.email)?;
     let mut conn = state.pool.get()?;
@@ -199,10 +211,13 @@ pub async fn login(
 
     let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
 
-    Ok(Json(AuthResponse {
-        token,
-        user: user.into(),
-    }))
+    Ok(ApiResponse::success_with_message(
+        "Login successful",
+        AuthResponse {
+            token,
+            user: user.into(),
+        },
+    ))
 }
 
 /// Request password reset
@@ -214,7 +229,7 @@ pub async fn login(
     path = "/api/auth/forgot-password",
     request_body = ForgotPasswordRequest,
     responses(
-        (status = 200, description = "Password reset email sent", body = MessageResponse),
+        (status = 200, description = "Password reset email sent", body = ApiResponse<EmptyData>),
         (status = 500, description = "Internal server error")
     ),
     tag = "auth"
@@ -223,7 +238,7 @@ pub async fn login(
 pub async fn forgot_password(
     State(state): State<AppState>,
     Json(payload): Json<ForgotPasswordRequest>,
-) -> Result<Json<MessageResponse>, AppError> {
+) -> Result<ApiResponse<EmptyData>, AppError> {
 
     validate_email(&payload.email)?;
     
@@ -260,9 +275,10 @@ pub async fn forgot_password(
     }
 
     // Always return success to prevent email enumeration
-    Ok(Json(MessageResponse {
-        message: "If the email exists, a password reset link has been sent.".to_string(),
-    }))
+    Ok(ApiResponse::message_only(
+        StatusCode::OK,
+        "If the email exists, a password reset link has been sent.",
+    ))
 }
 
 /// Reset password
@@ -273,7 +289,7 @@ pub async fn forgot_password(
     path = "/api/auth/reset-password",
     request_body = ResetPasswordRequest,
     responses(
-        (status = 200, description = "Password reset successful", body = MessageResponse),
+        (status = 200, description = "Password reset successful", body = ApiResponse<EmptyData>),
         (status = 400, description = "Invalid or expired token"),
         (status = 500, description = "Internal server error")
     ),
@@ -283,7 +299,7 @@ pub async fn forgot_password(
 pub async fn reset_password(
     State(state): State<AppState>,
     Json(payload): Json<ResetPasswordRequest>,
-) -> Result<Json<MessageResponse>, AppError> {
+) -> Result<ApiResponse<EmptyData>, AppError> {
     let mut conn = state.pool.get()?;
 
     // Verify the token and get user_id
@@ -298,9 +314,10 @@ pub async fn reset_password(
 
     info!("Password successfully reset for user: {}", user_id);
 
-    Ok(Json(MessageResponse {
-        message: "Password has been reset successfully.".to_string(),
-    }))
+    Ok(ApiResponse::message_only(
+        StatusCode::OK,
+        "Password has been reset successfully.",
+    ))
 }
 
 /// Verify JWT token
@@ -311,22 +328,24 @@ pub async fn reset_password(
     path = "/api/auth/verify-token",
     request_body = VerifyTokenRequest,
     responses(
-        (status = 200, description = "Token verification result", body = TokenVerifyResponse),
+        (status = 200, description = "Token verification result", body = ApiResponse<TokenVerifyResponse>),
     ),
     tag = "auth"
 )]
 pub async fn verify_token(
     State(state): State<AppState>,
     Json(payload): Json<VerifyTokenRequest>,
-) -> Result<Json<TokenVerifyResponse>, AppError> {
-    match auth::verify_jwt(&payload.token, &state.cfg.jwt_secret) {
-        Ok(token_data) => Ok(Json(TokenVerifyResponse {
+) -> Result<ApiResponse<TokenVerifyResponse>, AppError> {
+    let response = match auth::verify_jwt(&payload.token, &state.cfg.jwt_secret) {
+        Ok(token_data) => TokenVerifyResponse {
             valid: true,
             user_id: Some(token_data.claims.sub),
-        })),
-        Err(_) => Ok(Json(TokenVerifyResponse {
+        },
+        Err(_) => TokenVerifyResponse {
             valid: false,
             user_id: None,
-        })),
-    }
+        },
+    };
+
+    Ok(ApiResponse::success(response))
 }

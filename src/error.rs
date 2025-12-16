@@ -1,10 +1,11 @@
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
-use serde_json::json;
+
 use tracing::error;
+
+use crate::utils::response::ApiResponse;
 
 #[derive(Debug)]
 pub enum AppError {
@@ -40,11 +41,7 @@ impl IntoResponse for AppError {
             ),
         };
 
-        let body = Json(json!({
-            "error": message
-        }));
-
-        (status, body).into_response()
+        ApiResponse::message_only(status, message).into_response()
     }
 }
 
