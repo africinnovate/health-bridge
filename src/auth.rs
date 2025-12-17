@@ -1,4 +1,5 @@
-use crate::models::{NewEmailVerificationToken, NewUser, User};
+use crate::error::AppError;
+use crate::models::{EmailVerificationToken, NewEmailVerificationToken, NewUser, User};
 use crate::schema::users;
 use crate::utils::enums::Role;
 use crate::utils::helpers::generate_numeric_code;
@@ -115,6 +116,40 @@ pub fn create_password_reset_token(
     
     Ok(token)
 }
+
+pub fn verify_email_code(
+    conn: &mut PgConnection,
+    user_email: &str,
+    code: &str,
+) -> Result<(), AppError> {
+    use crate::schema::{users, email_verification_tokens};
+    use diesel::prelude::*;
+    use chrono::Utc;
+
+    let user = users::table
+        .filter(users::email.eq(user_email))
+        .first::<User>(conn)
+        .map_err(|_| AppError::BadRequest)?;
+
+    let token = email_verification_tokens::table
+        .filter(email_verification_tokens::user_id.eq(user.id))
+        .filter(email_verification_tokens::code.eq(code))
+        .filter(email_verification_tokens::used.eq(false))
+        .filter(email_verification_tokens::expires_at.gt(Utc::now()))
+        .first::<EmailVerificationToken>(conn)
+        .map_err(|_| AppError::BadRequest)?;
+
+    diesel::update(email_verification_tokens::table.find(token.id))
+        .set(email_verification_tokens::used.eq(true))
+        .execute(conn)?;
+
+    diesel::update(users::table.find(user.id))
+        .set(users::email_verified.eq(true))
+        .execute(conn)?;
+
+    Ok(())
+}
+
 
 pub fn verify_reset_token(
     conn: &mut PgConnection,

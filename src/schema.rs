@@ -26,6 +26,7 @@ diesel::table! {
         dob -> Nullable<Date>,
         password_hash -> Text,
         role -> RoleType,
+        email_verified -> Bool,
         created_at -> Timestamptz,
     }
 }

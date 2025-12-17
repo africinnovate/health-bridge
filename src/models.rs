@@ -25,6 +25,7 @@ pub struct User {
     #[serde(skip_serializing)]
     pub password_hash: String,
     pub role: Role,
+    pub email_verified: bool,
     pub created_at: DateTime<Utc>,
 }
 
@@ -40,6 +41,19 @@ pub struct NewUser<'a> {
     pub password_hash: &'a str,
     pub role: Role,
 }
+
+#[derive(Debug, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = email_verification_tokens)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct EmailVerificationToken {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub code: String,
+    pub expires_at: DateTime<Utc>,
+    pub used: bool,
+    pub created_at: DateTime<Utc>,
+}
+
 
 #[derive(Debug, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = password_reset_tokens)]

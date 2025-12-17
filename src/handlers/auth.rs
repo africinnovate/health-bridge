@@ -135,7 +135,7 @@ pub async fn get_users(
     path = "/api/auth/register",
     request_body = RegisterRequest,
     responses(
-        (status = 200, description = "User registered successfully", body = ApiResponse<AuthResponse>),
+        (status = 201, description = "User registered successfully", body = ApiResponse<AuthResponse>),
         (status = 409, description = "Email already exists"),
         (status = 500, description = "Internal server error")
     ),
@@ -371,3 +371,39 @@ pub async fn verify_token(
 
     Ok(ApiResponse::success(response))
 }
+
+/// Verify email verification code
+/// 
+/// Validates the email verification code sent to the user's email
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/verify-email",
+    request_body = VerifyEmailRequest,
+    responses(
+        (status = 200, description = "Email verified successfully", body = ApiResponse<EmptyData>),
+        (status = 400, description = "Invalid or expired verification code"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "auth"
+)]
+pub async fn verify_email(
+    State(state): State<AppState>,
+    Json(payload): Json<VerifyEmailRequest>,
+) -> Result<ApiResponse<EmptyData>, AppError> {
+    validate_email(&payload.email)?;
+
+    let mut conn = state.pool.get()?;
+
+    auth::verify_email_code(
+        &mut conn,
+        &payload.email,
+        &payload.code,
+    )?;
+
+    Ok(ApiResponse::message_only(
+        StatusCode::OK,
+        "Email verified successfully.",
+    ))
+}
+

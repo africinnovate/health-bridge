@@ -9,4 +9,5 @@ pub fn router() -> Router<AppState> {
         .route("/forgot-password", post(auth::forgot_password))
         .route("/reset-password", post(auth::reset_password))
         .route("/verify-token", post(auth::verify_token))
+        .route("/verify-email", post(auth::verify_email))
 }

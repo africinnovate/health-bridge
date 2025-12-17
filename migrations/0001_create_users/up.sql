@@ -9,6 +9,7 @@ CREATE TABLE users (
     gender VARCHAR,
     dob DATE,
     password_hash TEXT NOT NULL,
-    role VARCHAR NOT NULL, -- e.g. patient, specialist, admin
+    role VARCHAR NOT NULL,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

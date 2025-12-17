@@ -13,6 +13,7 @@ use crate::handlers::specialists;
         auth::forgot_password,
         auth::reset_password,
         auth::verify_token,
+        auth::verify_email,
     ),
     components(
         schemas(
@@ -25,6 +26,7 @@ use crate::handlers::specialists;
             auth::UserResponse,
             auth::MessageResponse,
             auth::TokenVerifyResponse,
+            auth::VerifyEmailRequest,
 
                         // Hospitals
             hospitals::MessageResponse,
