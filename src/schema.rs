@@ -1,6 +1,20 @@
+pub mod sql_types {
+    use diesel::sql_types::SqlType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "gender_type"))]
+    pub struct GenderType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "role_type"))]
+    pub struct RoleType;
+}
+
+
 diesel::table! {
     use diesel::sql_types::*;
     use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::{GenderType, RoleType};
 
     users (id) {
         id -> DieselUuid,
@@ -8,10 +22,10 @@ diesel::table! {
         last_name -> Varchar,
         email -> Varchar,
         phone -> Nullable<Varchar>,
-        gender -> Nullable<Text>,
+        gender -> Nullable<GenderType>,
         dob -> Nullable<Date>,
         password_hash -> Text,
-        role -> Text,
+        role -> RoleType,
         created_at -> Timestamptz,
     }
 }

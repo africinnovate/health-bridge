@@ -21,11 +21,8 @@ pub struct RegisterRequest {
     pub password: String,
     pub role: String,
 
-    // optional now
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
-    pub phone: Option<String>,
-    pub gender: Option<String>,
+   
+    // pub phone: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -150,9 +147,9 @@ pub async fn register(
 ) -> Result<ApiResponse<AuthResponse>, AppError> {
 
     validate_email(&payload.email)?;
-    if let Some(phone_number) = &payload.phone {
-        validate_phone_length(phone_number, 11, 11)?;
-    }
+    // if let Some(phone_number) = &payload.phone {
+    //     validate_phone_length(phone_number, 11, 11)?;
+    // }
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 

@@ -7,18 +7,18 @@ use diesel::FromSqlRow;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::str::FromStr;
-
+use crate::schema::sql_types::{GenderType, RoleType};
 use crate::error::AppError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow)]
-#[diesel(sql_type = Text)]
+#[diesel(sql_type = GenderType)]
 #[serde(rename_all = "lowercase")]
 pub enum Gender {
     Male,
     Female,
 }
 
-impl ToSql<Text, Pg> for Gender {
+impl ToSql<GenderType, Pg> for Gender {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         match *self {
             Gender::Male => out.write_all(b"male")?,
@@ -28,7 +28,7 @@ impl ToSql<Text, Pg> for Gender {
     }
 }
 
-impl FromSql<Text, Pg> for Gender {
+impl FromSql<GenderType, Pg> for Gender {
     fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
         match bytes.as_bytes() {
             b"male" => Ok(Gender::Male),
@@ -39,7 +39,7 @@ impl FromSql<Text, Pg> for Gender {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow)]
-#[diesel(sql_type = Text)]
+#[diesel(sql_type = RoleType)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     Patient,
@@ -48,7 +48,7 @@ pub enum Role {
     Hospital,
 }
 
-impl ToSql<Text, Pg> for Role {
+impl ToSql<RoleType, Pg> for Role {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         match *self {
             Role::Patient => out.write_all(b"patient")?,
@@ -60,7 +60,7 @@ impl ToSql<Text, Pg> for Role {
     }
 }
 
-impl FromSql<Text, Pg> for Role {
+impl FromSql<RoleType, Pg> for Role {
     fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
         match bytes.as_bytes() {
             b"patient" => Ok(Role::Patient),
