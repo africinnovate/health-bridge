@@ -1,5 +1,6 @@
 use crate::models::{User, NewUser};
 use crate::schema::users;
+use crate::utils::enums::Role;
 use anyhow::{Result, anyhow};
 use argon2::{
     Argon2, 
@@ -30,7 +31,7 @@ pub fn create_user(
     last_name: &str,
     email: &str,
     password: &str,
-    role: &str,
+    role: Role,
 ) -> Result<User> {
 
     // ---- Hash password using Argon2 ----

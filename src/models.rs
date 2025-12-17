@@ -2,9 +2,12 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc, NaiveDate};
 use diesel::prelude::*;
-use crate::schema::{
-    users, 
-    password_reset_tokens,
+use crate::{
+    schema::{
+        users, 
+        password_reset_tokens,
+    },
+    utils::enums::{Gender, Role}
 };
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
@@ -16,11 +19,11 @@ pub struct User {
     pub last_name: String,
     pub email: String,
     pub phone: Option<String>,
-    pub gender: Option<String>,
+    pub gender: Option<Gender>,
     pub dob: Option<NaiveDate>,
     #[serde(skip_serializing)]
     pub password_hash: String,
-    pub role: String,
+    pub role: Role,
     pub created_at: DateTime<Utc>,
 }
 
@@ -31,10 +34,10 @@ pub struct NewUser<'a> {
     pub last_name: &'a str,
     pub email: &'a str,
     pub phone: Option<&'a str>,
-    pub gender: Option<&'a str>,
+    pub gender: Option<Gender>,
     pub dob: Option<NaiveDate>,
     pub password_hash: &'a str,
-    pub role: &'a str,
+    pub role: Role,
 }
 
 #[derive(Debug, Queryable, Selectable, Identifiable)]

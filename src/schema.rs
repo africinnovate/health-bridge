@@ -8,10 +8,10 @@ diesel::table! {
         last_name -> Varchar,
         email -> Varchar,
         phone -> Nullable<Varchar>,
-        gender -> Nullable<Varchar>,
+        gender -> Nullable<Text>,
         dob -> Nullable<Date>,
         password_hash -> Text,
-        role -> Varchar,
+        role -> Text,
         created_at -> Timestamptz,
     }
 }

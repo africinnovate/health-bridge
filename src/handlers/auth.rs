@@ -10,8 +10,7 @@ use crate::{
     error::AppError,
     models::User,
     utils::{
-        validation::{validate_email, validate_phone_length},
-        response::{ApiResponse, EmptyData},
+        enums::Role, response::{ApiResponse, EmptyData}, validation::{validate_email, validate_phone_length}
     },
 };
 
@@ -82,7 +81,7 @@ impl From<User> for UserResponse {
             first_name: user.first_name,
             last_name: user.last_name,
             email: user.email,
-            role: user.role,
+            role: user.role.to_string(),
         }
     }
 }
@@ -160,13 +159,17 @@ pub async fn register(
         return Err(AppError::UserAlreadyExists);
     }
 
+    let other_role = payload
+    .role
+    .parse::<Role>()?;
+
     let user = auth::create_user(
         &mut conn,
         &payload.first_name,
         &payload.last_name,
         &payload.email,
         &payload.password,
-        &payload.role,
+        other_role,
     )?;
 
     let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
