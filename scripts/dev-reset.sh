@@ -17,8 +17,17 @@ if [ "$confirm" != "yes" ]; then
     exit 0
 fi
 
+echo "🔌 Terminating active connections..."
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DATABASE_HOST" -U "$POSTGRES_USER" -d postgres -c "
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = '$POSTGRES_DB'
+  AND pid <> pg_backend_pid();
+"
+
 echo "🗑️  Dropping database..."
-PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DATABASE_HOST" -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $POSTGRES_DB;"
+PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DATABASE_HOST" -U "$POSTGRES_USER" -d postgres -c \
+"DROP DATABASE IF EXISTS $POSTGRES_DB;"
 
 echo "📦 Creating database..."
 PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DATABASE_HOST" -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE $POSTGRES_DB OWNER $POSTGRES_USER;"
