@@ -1,1 +1,1 @@
-DROP TABLE patients;
+DROP TABLE IF EXISTS patients;

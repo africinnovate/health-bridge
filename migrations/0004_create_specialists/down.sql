@@ -1,1 +1,1 @@
-DROP TABLE specialists;
+DROP TABLE IF EXISTS specialists;

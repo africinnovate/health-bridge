@@ -17,13 +17,15 @@ use crate::{
 
 #[derive(Deserialize, ToSchema)]
 pub struct RegisterRequest {
-    pub first_name: String,
-    pub last_name: String,
     pub email: String,
     pub password: String,
+    pub role: String,
+
+    // optional now
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
     pub phone: Option<String>,
     pub gender: Option<String>,
-    pub role: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -35,6 +37,12 @@ pub struct LoginRequest {
 #[derive(Deserialize, ToSchema)]
 pub struct ForgotPasswordRequest {
     pub email: String,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct VerifyEmailRequest {
+    pub email: String,
+    pub code: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -165,14 +173,28 @@ pub async fn register(
 
     let user = auth::create_user(
         &mut conn,
-        &payload.first_name,
-        &payload.last_name,
         &payload.email,
         &payload.password,
         other_role,
     )?;
 
+    let code = auth::create_email_verification_code(&mut conn, user.id, 4)?;
     let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
+
+    let mail = state.mail_service.clone();
+    let other_email = user.email.clone();
+
+    tokio::spawn(async move {
+        let _ = mail.send_notification(
+            &other_email,
+            "Verify your HealthBridge account",
+            &format!(
+                "<p>Your verification code is:</p><h2>{}</h2><p>This code expires in 10 minutes.</p>",
+                code
+            ),
+            Some(&format!("Your verification code is: {}", code)),
+        ).await;
+    });
 
     Ok(ApiResponse::created(
         "User registered successfully",

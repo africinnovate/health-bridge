@@ -1,6 +1,7 @@
-use crate::models::{User, NewUser};
+use crate::models::{NewEmailVerificationToken, NewUser, User};
 use crate::schema::users;
 use crate::utils::enums::Role;
+use crate::utils::helpers::generate_numeric_code;
 use anyhow::{Result, anyhow};
 use argon2::{
     Argon2, 
@@ -27,8 +28,6 @@ pub struct Claims {
 
 pub fn create_user(
     conn: &mut PgConnection,
-    first_name: &str,
-    last_name: &str,
     email: &str,
     password: &str,
     role: Role,
@@ -45,8 +44,8 @@ pub fn create_user(
 
     // ---- Prepare new user struct ----
     let new_user = NewUser {
-        first_name,
-        last_name,
+        first_name: "",
+        last_name: "",
         email,
         phone: None,
         gender: None,
@@ -63,6 +62,30 @@ pub fn create_user(
 
     Ok(user)
 }
+
+pub fn create_email_verification_code(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+    length: usize,
+) -> Result<String, diesel::result::Error> {
+    use crate::schema::email_verification_tokens;
+
+    let code = generate_numeric_code(length);
+    let expires_at = chrono::Utc::now() + chrono::Duration::minutes(10);
+
+    let token = NewEmailVerificationToken {
+        user_id,
+        code: &code,
+        expires_at,
+    };
+
+    diesel::insert_into(email_verification_tokens::table)
+        .values(&token)
+        .execute(conn)?;
+
+    Ok(code)
+}
+
 
 pub fn generate_reset_token() -> String {
     let mut rng = OsRng;
@@ -138,9 +161,7 @@ pub fn reset_user_password(
         .hash_password(new_password.as_bytes(), &salt)
         .map_err(|_| diesel::result::Error::RollbackTransaction)?
         .to_string();
-    // let hashed = hash_password(new_password)
-    //     .map_err(|_| diesel::result::Error::RollbackTransaction)?;
-    
+ 
     diesel::update(users.filter(id.eq(user_id)))
         .set(password_hash.eq(hashed))
         .execute(conn)?;

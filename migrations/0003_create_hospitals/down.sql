@@ -1,1 +1,1 @@
-DROP TABLE hospitals;
+DROP TABLE IF EXISTS hospitals;

@@ -6,6 +6,7 @@ use crate::{
     schema::{
         users, 
         password_reset_tokens,
+        email_verification_tokens,
     },
     utils::enums::{Gender, Role}
 };
@@ -59,6 +60,16 @@ pub struct NewPasswordResetToken<'a> {
     pub token: &'a str,
     pub expires_at: DateTime<Utc>,
 }
+
+
+#[derive(Insertable)]
+#[diesel(table_name = email_verification_tokens)]
+pub struct NewEmailVerificationToken<'a> {
+    pub user_id: Uuid,
+    pub code: &'a str,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+}
+
 
 
 

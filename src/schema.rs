@@ -20,6 +20,21 @@ diesel::table! {
     use diesel::sql_types::*;
     use diesel::sql_types::Uuid as DieselUuid;
 
+    email_verification_tokens (id) {
+        id -> DieselUuid,
+        user_id -> DieselUuid,
+        code -> Varchar,
+        expires_at -> Timestamptz,
+        used -> Bool,
+        created_at -> Timestamptz,
+    }
+}
+
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
     password_reset_tokens (id) {
         id -> DieselUuid,
         user_id -> DieselUuid,
@@ -71,6 +86,7 @@ diesel::table! {
 }
 
 diesel::joinable!(patients -> users (user_id));
+diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(password_reset_tokens -> users (user_id));
 diesel::joinable!(specialists -> users (user_id));
 diesel::joinable!(specialists -> hospitals (hospital_id));
@@ -80,5 +96,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     patients,
     hospitals,
     specialists,
-		password_reset_tokens,
+    password_reset_tokens,
+    email_verification_tokens,
 );

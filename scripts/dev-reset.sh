@@ -27,6 +27,6 @@ echo "🔧 Granting privileges..."
 PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DATABASE_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "GRANT ALL ON SCHEMA public TO $POSTGRES_USER; GRANT CREATE ON SCHEMA public TO $POSTGRES_USER;"
 
 echo "📦 Running migrations..."
-./scripts/migrate.sh
+./scripts/migrations.sh
 
 echo "✅ Database reset complete!"
