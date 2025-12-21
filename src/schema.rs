@@ -67,6 +67,11 @@ diesel::table! {
     patients (user_id) {
         user_id -> DieselUuid,
         blood_type -> Nullable<Varchar>,
+        chronic_illnesses -> Nullable<Text>,
+        allergies -> Nullable<Text>,
+        hmo_number -> Nullable<Varchar>,
+        emergency_contact_name -> Nullable<Varchar>,
+        emergency_contact_phone -> Nullable<Varchar>,
         medical_notes -> Nullable<Text>,
         created_at -> Timestamptz,
     }

@@ -14,6 +14,8 @@ use crate::handlers::specialists;
         auth::reset_password,
         auth::verify_token,
         auth::verify_email,
+        patients::get_profile,
+        patients::update_profile,
     ),
     components(
         schemas(
@@ -32,7 +34,8 @@ use crate::handlers::specialists;
             hospitals::MessageResponse,
 
             // Patients
-            patients::MessageResponse,
+            patients::UpdateProfileRequest,
+            patients::ProfileResponse,
 
             // Specialists
             specialists::MessageResponse,

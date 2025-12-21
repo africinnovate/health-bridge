@@ -7,6 +7,7 @@ mod handlers;
 mod schema;
 mod docs;
 mod services;
+mod patients;
 mod error;
 mod utils;
 

@@ -1,16 +1,16 @@
 use axum::{extract::State, Json, http::StatusCode,};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use tracing::{info, error };
+use tracing::{info, error};
 use utoipa::ToSchema;
 
 use crate::{
     AppState,
-    auth,
+    auth::service as auth,
     error::AppError,
     models::User,
     utils::{
-        enums::Role, response::{ApiResponse, EmptyData}, validation::{validate_email, validate_phone_length}
+        enums::Role, response::{ApiResponse, EmptyData}, validation::{validate_email}
     },
 };
 

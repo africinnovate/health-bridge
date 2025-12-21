@@ -2,15 +2,15 @@ use diesel::deserialize::{self, FromSql};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use diesel::sql_types::Text;
 use diesel::FromSqlRow;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::str::FromStr;
+use utoipa::ToSchema;
 use crate::schema::sql_types::{GenderType, RoleType};
 use crate::error::AppError;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = GenderType)]
 #[serde(rename_all = "lowercase")]
 pub enum Gender {
@@ -38,7 +38,7 @@ impl FromSql<GenderType, Pg> for Gender {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = RoleType)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {

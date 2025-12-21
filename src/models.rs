@@ -5,6 +5,7 @@ use diesel::prelude::*;
 use crate::{
     schema::{
         users, 
+        patients,
         password_reset_tokens,
         email_verification_tokens,
     },
@@ -87,31 +88,75 @@ pub struct NewEmailVerificationToken<'a> {
 
 
 
-/* Patient */
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
+#[diesel(belongs_to(User, foreign_key = user_id))]
+#[diesel(table_name = patients)]
+#[diesel(primary_key(user_id))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Patient {
-    pub id: Uuid,
-    pub first_name: String,
-    pub last_name: String,
-    pub dob: Option<chrono::NaiveDate>,
-    pub gender: Option<String>,
+    pub user_id: Uuid,
     pub blood_type: Option<String>,
-    pub contact_phone: Option<String>,
-    pub contact_email: Option<String>,
+    pub chronic_illnesses: Option<String>,
+    pub allergies: Option<String>,
+    pub hmo_number: Option<String>,
+    pub emergency_contact_name: Option<String>,
+    pub emergency_contact_phone: Option<String>,
     pub medical_notes: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct CreatePatient {
+#[derive(Debug, Insertable)]
+#[diesel(table_name = patients)]
+pub struct NewPatient<'a> {
+    pub user_id: Uuid,
+    pub blood_type: Option<&'a str>,
+    pub chronic_illnesses: Option<&'a str>,
+    pub allergies: Option<&'a str>,
+    pub hmo_number: Option<&'a str>,
+    pub emergency_contact_name: Option<&'a str>,
+    pub emergency_contact_phone: Option<&'a str>,
+    pub medical_notes: Option<&'a str>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PatientProfile {
+    pub id: Uuid,
     pub first_name: String,
     pub last_name: String,
-    pub dob: Option<chrono::NaiveDate>,
-    pub gender: Option<String>,
+    pub email: String,
+    pub phone: Option<String>,
+    pub gender: Option<Gender>,
+    pub dob: Option<NaiveDate>,
     pub blood_type: Option<String>,
-    pub contact_phone: Option<String>,
-    pub contact_email: Option<String>,
+    pub chronic_illnesses: Option<String>,
+    pub allergies: Option<String>,
+    pub hmo_number: Option<String>,
+    pub emergency_contact_name: Option<String>,
+    pub emergency_contact_phone: Option<String>,
     pub medical_notes: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+impl PatientProfile {
+    pub fn from_user_and_patient(user: User, patient: Patient) -> Self {
+        Self {
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            phone: user.phone,
+            gender: user.gender,
+            dob: user.dob,
+            blood_type: patient.blood_type,
+            chronic_illnesses: patient.chronic_illnesses,
+            allergies: patient.allergies,
+            hmo_number: patient.hmo_number,
+            emergency_contact_name: patient.emergency_contact_name,
+            emergency_contact_phone: patient.emergency_contact_phone,
+            medical_notes: patient.medical_notes,
+            created_at: user.created_at,
+        }
+    }
 }
 
 /* Hospital */
