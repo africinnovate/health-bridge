@@ -1,5 +1,5 @@
 use axum::{
-    Extension, Json, extract::State
+    Extension, Json, extract::{State, Path}
 };
 use diesel::AsChangeset;
 use uuid::Uuid;
@@ -120,8 +120,10 @@ pub async fn create_hospital(
     tag = "hospitals",
     security(("bearer_auth" = []))
 )]
+
 pub async fn update_hospital(
     State(state): State<AppState>,
+    Path(hospital_id): Path<Uuid>,
     Extension(user): Extension<User>,
     Json(payload): Json<UpdateHospitalRequest>,
 ) -> Result<ApiResponse<Hospital>, AppError> {
@@ -129,6 +131,7 @@ pub async fn update_hospital(
 
     let hospital = hospitals::service::update_hospital(
         &mut conn,
+        hospital_id,
         &user,
         payload,
     )?;
@@ -138,3 +141,4 @@ pub async fn update_hospital(
         hospital,
     ))
 }
+

@@ -2,7 +2,7 @@ CREATE TYPE hospital_type AS ENUM ('clinic', 'general', 'teaching', 'specialist'
 
 CREATE TABLE hospitals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
     name VARCHAR NOT NULL,
     hospital_type hospital_type,
@@ -24,3 +24,5 @@ CREATE TABLE hospitals (
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_hospitals_user_id ON hospitals(user_id);

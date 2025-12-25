@@ -47,19 +47,35 @@ pub fn create_hospital(
 /// - Hospital can update own profile
 /// - Only Admin can update `license_status`
 /// - Partial updates allowed
+
 pub fn update_hospital(
     conn: &mut PgConnection,
+    hospital_id: uuid::Uuid,
     user: &User,
     payload: UpdateHospitalRequest,
 ) -> Result<Hospital, AppError> {
-    if payload.license_status.is_some() && user.role != Role::Hospital {
-        return Err(AppError::Unauthorized("Only Hospital users can update license status".into()));
+
+    // Only admins can update license status
+    if payload.license_status.is_some() && user.role != Role::Admin {
+        return Err(AppError::Unauthorized(
+            "Only admins can update license status".into(),
+        ));
     }
 
-    diesel::update(hospitals.filter(user_id.eq(user.id)))
-        .set(payload)
-        .returning(Hospital::as_select())
-        .get_result(conn)
-        .map_err(AppError::from)
+    let updated = diesel::update(
+        hospitals
+            .filter(id.eq(hospital_id))
+            .filter(user_id.eq(user.id)),
+    )
+    .set(payload)
+    .returning(Hospital::as_select())
+    .get_result::<Hospital>(conn)
+    .optional()?;
+
+    match updated {
+        Some(hospital) => Ok(hospital),
+        None => Err(AppError::NotFound("Hospital not found".into())),
+    }
 }
+
 

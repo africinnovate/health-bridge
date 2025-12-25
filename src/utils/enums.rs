@@ -26,6 +26,7 @@ pub enum Role {
     Donor,
     Specialist,
     Hospital,
+    Admin,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -95,6 +96,7 @@ impl ToSql<RoleType, Pg> for Role {
             Role::Donor => out.write_all(b"donor")?,
             Role::Specialist => out.write_all(b"specialist")?,
             Role::Hospital => out.write_all(b"hospital")?,
+            Role::Admin => out.write_all(b"admin")?,
         }
         Ok(IsNull::No)
     }
@@ -107,6 +109,7 @@ impl FromSql<RoleType, Pg> for Role {
             b"donor" => Ok(Role::Donor),
             b"specialist" => Ok(Role::Specialist),
             b"hospital" => Ok(Role::Hospital),
+            b"admin" => Ok(Role::Admin),
             _ => Err("Unrecognized enum variant for Role".into()),
         }
     }
@@ -121,6 +124,7 @@ impl FromStr for Role {
             "donor" => Ok(Role::Donor),
             "specialist" => Ok(Role::Specialist),
             "hospital" => Ok(Role::Hospital),
+            "admin" => Ok(Role::Admin),
             _ => Err(AppError::BadRequest("Invalid role string".to_string())),
         }
     }
@@ -142,6 +146,7 @@ impl std::fmt::Display for Role {
             Role::Donor => write!(f, "donor"),
             Role::Specialist => write!(f, "specialist"),
             Role::Hospital => write!(f, "hospital"),
+            Role::Admin => write!(f, "admin"),
         }
     }
 }

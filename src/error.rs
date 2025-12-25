@@ -11,6 +11,7 @@ use crate::utils::response::ApiResponse;
 pub enum AppError {
     DbError,
     UserAlreadyExists,
+    NotFound(String),
     Unauthorized(String),
     BadRequest(String),
     InternalServerError,
@@ -25,6 +26,10 @@ impl IntoResponse for AppError {
             ),
             AppError::Unauthorized(msg) => (
                 StatusCode::UNAUTHORIZED,
+                msg,
+            ),
+            AppError::NotFound(msg) => (
+                StatusCode::NOT_FOUND,
                 msg,
             ),
             AppError::DbError => (

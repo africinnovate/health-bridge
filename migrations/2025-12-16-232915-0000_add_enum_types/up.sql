@@ -1,7 +1,7 @@
 -- Your SQL goes here
 -- Create ENUM types
 CREATE TYPE gender_type AS ENUM ('male', 'female');
-CREATE TYPE role_type AS ENUM ('patient', 'donor', 'specialist', 'hospital');
+CREATE TYPE role_type AS ENUM ('patient', 'donor', 'specialist', 'hospital', 'admin');
 
 -- Alter the users table to use the new types
 ALTER TABLE users 
