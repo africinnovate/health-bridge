@@ -107,7 +107,7 @@ pub struct Patient {
 
 #[derive(Debug, Insertable)]
 #[diesel(table_name = patients)]
-pub struct NewPatient<'a> {
+pub struct MedicalInfo<'a> {
     pub user_id: Uuid,
     pub blood_type: Option<&'a str>,
     pub chronic_illnesses: Option<&'a str>,
@@ -118,46 +118,6 @@ pub struct NewPatient<'a> {
     pub medical_notes: Option<&'a str>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PatientProfile {
-    pub id: Uuid,
-    pub first_name: String,
-    pub last_name: String,
-    pub email: String,
-    pub phone: Option<String>,
-    pub gender: Option<Gender>,
-    pub dob: Option<NaiveDate>,
-    pub blood_type: Option<String>,
-    pub chronic_illnesses: Option<String>,
-    pub allergies: Option<String>,
-    pub hmo_number: Option<String>,
-    pub emergency_contact_name: Option<String>,
-    pub emergency_contact_phone: Option<String>,
-    pub medical_notes: Option<String>,
-    pub created_at: DateTime<Utc>,
-}
-
-impl PatientProfile {
-    pub fn from_user_and_patient(user: User, patient: Patient) -> Self {
-        Self {
-            id: user.id,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            email: user.email,
-            phone: user.phone,
-            gender: user.gender,
-            dob: user.dob,
-            blood_type: patient.blood_type,
-            chronic_illnesses: patient.chronic_illnesses,
-            allergies: patient.allergies,
-            hmo_number: patient.hmo_number,
-            emergency_contact_name: patient.emergency_contact_name,
-            emergency_contact_phone: patient.emergency_contact_phone,
-            medical_notes: patient.medical_notes,
-            created_at: user.created_at,
-        }
-    }
-}
 
 /* Hospital */
 #[derive(Debug, Serialize, Deserialize)]

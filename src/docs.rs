@@ -18,6 +18,7 @@ use crate::handlers::specialists;
         patients::get_profile,
         patients::update_profile,
         patients::delete_account,
+        patients::update_medical_info,
     ),
     components(
         schemas(
@@ -39,6 +40,7 @@ use crate::handlers::specialists;
             patients::UpdateProfileRequest,
             patients::ProfileResponse,
             patients::DeleteAccountResponse,
+            patients::UpdateMedicalInfoRequest,
 
             // Specialists
             specialists::MessageResponse,

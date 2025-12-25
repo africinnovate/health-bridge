@@ -1,20 +1,24 @@
 use axum::{extract::State, Json, extract::Path};
 use axum::Extension;
 use serde::{Deserialize, Serialize};
+use utoipa::openapi::info;
 use uuid::Uuid;
 use utoipa::ToSchema;
 use chrono::NaiveDate;
 use tracing::{info};
 
+use crate::models::{MedicalInfo, Patient, User};
+use crate::schema::{users, patients};
+use diesel::prelude::*;
 use crate::{
     AppState,
     error::AppError,
+    common,
     utils::{
         response::ApiResponse,
         validation::validate_phone_length,
         enums::Gender,
-    },
-    models::User,
+    }
 };
 
 #[derive(Deserialize, ToSchema)]
@@ -38,6 +42,43 @@ pub struct ProfileResponse {
     pub role: String,
     pub email_verified: bool,
 }
+
+#[derive(Serialize, ToSchema)]
+pub struct PatientProfileResponse {
+    pub id: Uuid,
+
+    // User fields
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub phone: Option<String>,
+    pub gender: Option<Gender>,
+    pub dob: Option<NaiveDate>,
+    pub role: String,
+    pub email_verified: bool,
+
+    // Patient / medical fields
+    pub blood_type: Option<String>,
+    pub chronic_illnesses: Option<String>,
+    pub allergies: Option<String>,
+    pub hmo_number: Option<String>,
+    pub emergency_contact_name: Option<String>,
+    pub emergency_contact_phone: Option<String>,
+    pub medical_notes: Option<String>,
+}
+
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct UpdateMedicalInfoRequest {
+    pub blood_type: Option<String>,
+    pub chronic_illnesses: Option<String>,
+    pub allergies: Option<String>,
+    pub hmo_number: Option<String>,
+    pub emergency_contact_name: Option<String>,
+    pub emergency_contact_phone: Option<String>,
+    pub medical_notes: Option<String>,
+}
+
 
 impl From<User> for ProfileResponse {
     fn from(user: User) -> Self {
@@ -110,7 +151,7 @@ pub async fn update_profile(
     get,
     path = "/api/patients/profile",
     responses(
-        (status = 200, body = ApiResponse<ProfileResponse>),
+        (status = 200, body = ApiResponse<PatientProfileResponse>),
         (status = 401),
         (status = 500)
     ),
@@ -120,17 +161,37 @@ pub async fn update_profile(
 pub async fn get_profile(
     State(state): State<AppState>,
     Extension(current_user): Extension<User>,
-) -> Result<ApiResponse<ProfileResponse>, AppError> {
-    use crate::schema::users::dsl::*;
-    use diesel::prelude::*;
-
+) -> Result<ApiResponse<PatientProfileResponse>, AppError> {
     let mut conn = state.pool.get()?;
 
-    let user = users
-        .filter(id.eq(current_user.id))
-        .first::<User>(&mut conn)?;
+    let (user, patient) = users::table
+        .inner_join(patients::table.on(patients::user_id.eq(users::id)))
+        .filter(users::id.eq(current_user.id))
+        .select((User::as_select(), Patient::as_select()))
+        .first::<(User, Patient)>(&mut conn)?;
 
-    Ok(ApiResponse::success(user.into()))
+    let response = PatientProfileResponse {
+        id: user.id,
+
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        phone: user.phone,
+        gender: user.gender,
+        dob: user.dob,
+        role: user.role.to_string(),
+        email_verified: user.email_verified,
+
+        blood_type: patient.blood_type,
+        chronic_illnesses: patient.chronic_illnesses,
+        allergies: patient.allergies,
+        hmo_number: patient.hmo_number,
+        emergency_contact_name: patient.emergency_contact_name,
+        emergency_contact_phone: patient.emergency_contact_phone,
+        medical_notes: patient.medical_notes,
+    };
+
+    Ok(ApiResponse::success(response))
 }
 
 
@@ -184,5 +245,47 @@ pub async fn delete_account(
             deleted: true,
             user_id,
         },
+    ))
+}
+
+#[utoipa::path(
+    put,
+    path = "/api/patients/medical-info",
+    request_body = UpdateMedicalInfoRequest,
+    responses(
+        (status = 200, description = "Medical info updated"),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "patients",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_medical_info(
+    State(state): State<AppState>,
+    Extension(current_user): Extension<User>,
+    Json(payload): Json<UpdateMedicalInfoRequest>,
+) -> Result<ApiResponse<Patient>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    let medical_info = MedicalInfo {
+        user_id: current_user.id,
+        blood_type: payload.blood_type.as_deref(),
+        chronic_illnesses: payload.chronic_illnesses.as_deref(),
+        allergies: payload.allergies.as_deref(),
+        hmo_number: payload.hmo_number.as_deref(),
+        emergency_contact_name: payload.emergency_contact_name.as_deref(),
+        emergency_contact_phone: payload.emergency_contact_phone.as_deref(),
+        medical_notes: payload.medical_notes.as_deref(),
+    };
+
+    let patient = common::services::upsert_medical_info(
+        &mut conn,
+        current_user.id,
+        medical_info,
+    )?;
+
+    Ok(ApiResponse::success_with_message(
+        "Medical information updated successfully",
+        patient,
     ))
 }

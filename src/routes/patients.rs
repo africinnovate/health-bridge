@@ -6,6 +6,7 @@ pub fn router() -> Router<AppState> {
         .route("/profile", get(patients::get_profile))
         .route("/profile", put(patients::update_profile))
         .route("/profile", delete(patients::delete_account))
+        .route("/medical-info", put(patients::update_medical_info))
         
 
 }

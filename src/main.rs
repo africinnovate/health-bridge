@@ -10,6 +10,7 @@ mod services;
 mod patients;
 mod error;
 mod utils;
+mod common;
 mod middleware;
 
 use axum::{Router, routing::get, http::StatusCode};
