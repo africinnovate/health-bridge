@@ -110,7 +110,7 @@ pub async fn create_hospital(
 /// Update hospital
 #[utoipa::path(
     put,
-    path = "/api/hospitals/update",
+    path = "/api/hospitals/update/{hospital_id}",
     request_body = UpdateHospitalRequest,
     responses(
         (status = 200, body = ApiResponse<HospitalResponse>),

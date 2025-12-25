@@ -20,29 +20,7 @@ use crate::handlers::{auth, hospitals, patients, specialists};
         hospitals::update_hospital,
     ),
     components(
-        schemas(
-            auth::RegisterRequest,
-            auth::LoginRequest,
-            auth::ForgotPasswordRequest,
-            auth::ResetPasswordRequest,
-            auth::VerifyTokenRequest,
-            auth::AuthResponse,
-            auth::UserResponse,
-            auth::MessageResponse,
-            auth::TokenVerifyResponse,
-            auth::VerifyEmailRequest,
 
-            hospitals::HospitalResponse,
-            hospitals::UpdateHospitalRequest,
-
-            patients::UpdateProfileRequest,
-            patients::ProfileResponse,
-            patients::DeleteAccountResponse,
-            patients::UpdateMedicalInfoRequest,
-
-            specialists::MessageResponse,
-
-        ),
 
     
     ),
