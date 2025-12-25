@@ -10,6 +10,7 @@ mod services;
 mod patients;
 mod error;
 mod utils;
+mod middleware;
 
 use axum::{Router, routing::get, http::StatusCode};
 use std::net::SocketAddr;
@@ -50,6 +51,7 @@ async fn main() -> anyhow::Result<()> {
             .url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api", routes::create_router())
         .route("/health", get(|| async { (StatusCode::OK, "The health is healthing! ...") }))
+        .layer(axum::Extension(state.clone())) 
         .with_state(state);
 
     let addr: SocketAddr = cfg.bind_addr.parse()?;

@@ -16,6 +16,7 @@ use crate::handlers::specialists;
         auth::verify_email,
         patients::get_profile,
         patients::update_profile,
+        patients::delete_account,
     ),
     components(
         schemas(
@@ -36,6 +37,7 @@ use crate::handlers::specialists;
             // Patients
             patients::UpdateProfileRequest,
             patients::ProfileResponse,
+            patients::DeleteAccountResponse,
 
             // Specialists
             specialists::MessageResponse,

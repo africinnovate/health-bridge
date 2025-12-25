@@ -1,4 +1,5 @@
 use axum::{extract::State, Json, extract::Path};
+use axum::Extension;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use utoipa::ToSchema;
@@ -54,6 +55,12 @@ impl From<User> for ProfileResponse {
     }
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct DeleteAccountResponse {
+    pub deleted: bool,
+    pub user_id: Uuid,
+}
+
 /// Update user profile
 #[utoipa::path(
     put,
@@ -67,7 +74,7 @@ impl From<User> for ProfileResponse {
         (status = 404, description = "User not found"),
         (status = 500, description = "Internal server error")
     ),
-    tag = "profile"
+    tag = "patients"
 )]
 pub async fn update_profile(
     State(state): State<AppState>,
@@ -112,7 +119,7 @@ pub async fn update_profile(
         (status = 404, description = "User not found"),
         (status = 500, description = "Internal server error")
     ),
-    tag = "profile"
+    tag = "patients"
 )]
 pub async fn get_profile(
     State(state): State<AppState>,
@@ -128,4 +135,86 @@ pub async fn get_profile(
         .first::<User>(&mut conn)?;
 
     Ok(ApiResponse::success(ProfileResponse::from(user)))
+}
+
+/// Delete user account
+#[utoipa::path(
+    delete,
+    path = "/api/patients/delete-account/{user_id}",
+    params(
+        ("user_id" = Uuid, Path, description = "User ID")
+    ),
+    responses(
+        (status = 200, description = "Account deleted successfully", body = ApiResponse<DeleteAccountResponse>),
+        (status = 403, description = "Forbidden - Can only delete your own account"),
+        (status = 404, description = "User not found"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "patients",
+    security(
+        ("bearer_auth" = [])
+    )
+)]
+
+pub async fn delete_account(
+    State(state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+    Extension(current_user): Extension<User>,
+) -> Result<ApiResponse<DeleteAccountResponse>, AppError> {
+    use diesel::prelude::*;
+    info!("User account about to be deleted3: {}", user_id);
+    // Ensure the user can only delete their own account
+    if current_user.id != user_id {
+        return Err(AppError::Unauthorized);
+    }
+
+    let mut conn = state.pool.get()?;
+
+    // Use a transaction to ensure all related data is deleted atomically
+    conn.transaction::<_, AppError, _>(|conn| {
+        // Delete password reset tokens
+        {
+            use crate::schema::password_reset_tokens::dsl::*;
+            diesel::delete(password_reset_tokens.filter(user_id.eq(user_id)))
+                .execute(conn)?;
+        }
+
+        // Delete email verification tokens
+        {
+            use crate::schema::email_verification_tokens::dsl::*;
+            diesel::delete(email_verification_tokens.filter(user_id.eq(user_id)))
+                .execute(conn)?;
+        }
+
+        // Delete patient record if exists
+        {
+            use crate::schema::patients::dsl::*;
+            diesel::delete(patients.filter(user_id.eq(user_id)))
+                .execute(conn)
+                .ok();
+        }
+
+        // Finally, delete the user
+        {
+            use crate::schema::users::dsl::*;
+            let rows_deleted = diesel::delete(users.filter(id.eq(user_id)))
+                .execute(conn)?;
+
+            if rows_deleted == 0 {
+                return Err(AppError::BadRequest);
+            }
+        }
+
+        info!("User account deleted: {}", user_id);
+
+        Ok(())
+    })?;
+
+    Ok(ApiResponse::success_with_message(
+        "Account deleted successfully",
+        DeleteAccountResponse {
+            deleted: true,
+            user_id,
+        },
+    ))
 }
