@@ -99,6 +99,7 @@ pub async fn create_hospital(
         &mut conn,
         &user,
         payload,
+        &state.mail_service,
     )?;
 
     Ok(ApiResponse::success_with_message(

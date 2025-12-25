@@ -1,11 +1,13 @@
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
+use crate::services::mail::MailService;
 use crate::{
     error::AppError,
     models::{Hospital, User},
     schema::hospitals::dsl::*,
     utils::enums::Role,
+    utils::validation::{validate_email, validate_phone_length},
     handlers::hospitals::{CreateHospitalRequest, UpdateHospitalRequest},
 };
 
@@ -14,12 +16,21 @@ pub fn create_hospital(
     conn: &mut PgConnection,
     user: &User,
     payload: CreateHospitalRequest,
+    mail_service: &MailService,
 ) -> Result<Hospital, AppError> {
     if user.role != Role::Hospital {
         return Err(AppError::Unauthorized("Only Hospital users can create hospital profile".into()));
     }
 
-    diesel::insert_into(hospitals)
+    if let Some(ref email_val) = payload.email {
+        validate_email(&email_val)?;
+    }
+    validate_phone_length(&payload.primary_phone, 11, 15)?;
+    if let Some(ref emergency) = payload.emergency_phone {
+        validate_phone_length(emergency, 11, 15)?;
+    }
+
+    let hospital: Hospital = diesel::insert_into(hospitals)
         .values((
             user_id.eq(user.id),
             name.eq(payload.name),
@@ -38,7 +49,26 @@ pub fn create_hospital(
         ))
         .returning(Hospital::as_select())
         .get_result(conn)
-        .map_err(AppError::from)
+        .map_err(AppError::from)?;
+
+      if let Some(ref hospital_email) = hospital.email {
+        let mail_service = mail_service.clone();
+        let hospital_name = hospital.name.clone();
+        let to_email = hospital_email.clone();
+  
+
+        tokio::spawn(async move {
+            let _ = mail_service.send_notification(
+                &to_email,
+                "Hospital Profile Created",
+                &format!("<p>Your hospital <strong>{}</strong> has been successfully created!</p>", hospital_name),
+                Some(&format!("Your hospital {} has been successfully created!", hospital_name)),
+            ).await;
+        });
+    }
+
+    Ok(hospital)
+
 }
 
 

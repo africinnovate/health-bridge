@@ -140,13 +140,6 @@ pub struct Hospital {
 }
 
 
-#[derive(Debug, Deserialize)]
-pub struct CreateHospital {
-    pub name: String,
-    pub address: Option<String>,
-    pub phone: Option<String>,
-}
-
 /* Specialist */
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Specialist {
@@ -160,12 +153,3 @@ pub struct Specialist {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct CreateSpecialist {
-    pub hospital_id: Option<Uuid>,
-    pub full_name: String,
-    pub speciality: Option<String>,
-    pub bio: Option<String>,
-    pub email: Option<String>,
-    pub phone: Option<String>,
-}
