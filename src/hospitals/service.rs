@@ -23,7 +23,7 @@ pub fn create_hospital(
     }
 
     if let Some(ref email_val) = payload.email {
-        validate_email(&email_val)?;
+        validate_email(email_val)?;
     }
     validate_phone_length(&payload.primary_phone, 11, 15)?;
     if let Some(ref emergency) = payload.emergency_phone {
@@ -90,6 +90,16 @@ pub fn update_hospital(
         return Err(AppError::Unauthorized(
             "Only admins can update license status".into(),
         ));
+    }
+
+    if let Some(ref email_val) = payload.email {
+        validate_email(email_val)?;
+    }
+    if let Some(ref phone_val) = payload.primary_phone {
+        validate_phone_length(phone_val, 11, 15)?;
+    }
+    if let Some(ref emergency) = payload.emergency_phone {
+        validate_phone_length(emergency, 11, 15)?;
     }
 
     let updated = diesel::update(
