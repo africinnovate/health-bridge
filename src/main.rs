@@ -8,6 +8,7 @@ mod schema;
 mod docs;
 mod services;
 mod patients;
+mod hospitals;
 mod error;
 mod utils;
 mod common;

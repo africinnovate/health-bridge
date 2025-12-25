@@ -1,5 +1,6 @@
 pub mod sql_types {
     use diesel::sql_types::SqlType;
+     use diesel::query_builder::QueryId;
 
     #[derive(SqlType)]
     #[diesel(postgres_type(name = "gender_type"))]
@@ -8,6 +9,18 @@ pub mod sql_types {
     #[derive(SqlType)]
     #[diesel(postgres_type(name = "role_type"))]
     pub struct RoleType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "hospital_type"))]
+    pub struct HospitalType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "blood_group"))]
+    pub struct BloodGroupType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "genotype"))]
+    pub struct GenotypeType;
 }
 
 
@@ -80,12 +93,25 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::{HospitalType};
 
     hospitals (id) {
         id -> DieselUuid,
+        user_id -> DieselUuid,
         name -> Varchar,
-        address -> Nullable<Text>,
-        phone -> Nullable<Varchar>,
+        hospital_type -> Nullable<HospitalType>,
+        address -> Text,
+        city -> Text,
+        country -> Text,
+        primary_phone -> Varchar,
+        emergency_phone -> Nullable<Varchar>,
+        email -> Nullable<Varchar>,
+        license_number -> Varchar,
+        accreditation_doc_url -> Text,
+        license_status -> Bool,
+        has_blood_bank -> Bool,
+        accepting_donors -> Bool,
+        donating_operating_hours -> Nullable<Text>,
         created_at -> Timestamptz,
     }
 }

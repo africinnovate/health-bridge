@@ -4,12 +4,9 @@ use chrono::{DateTime, Utc, NaiveDate};
 use diesel::prelude::*;
 use crate::{
     schema::{
-        users, 
-        patients,
-        password_reset_tokens,
-        email_verification_tokens,
+        email_verification_tokens, password_reset_tokens, patients, users, hospitals
     },
-    utils::enums::{Gender, Role}
+    utils::enums::{Gender, HospitalTypeEnum, Role}
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
@@ -119,15 +116,29 @@ pub struct MedicalInfo<'a> {
 }
 
 
-/* Hospital */
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = hospitals)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Hospital {
     pub id: Uuid,
+    pub user_id: Uuid,
     pub name: String,
-    pub address: Option<String>,
-    pub phone: Option<String>,
+    pub hospital_type: Option<HospitalTypeEnum>,
+    pub address: String,
+    pub city: String,
+    pub country: String,
+    pub primary_phone: String,
+    pub emergency_phone: Option<String>,
+    pub email: Option<String>,
+    pub license_number: String,
+    pub license_status: bool,
+    pub accreditation_doc_url: String,
+    pub has_blood_bank: bool,
+    pub accepting_donors: bool,
+    pub donating_operating_hours: Option<String>,
     pub created_at: DateTime<Utc>,
 }
+
 
 #[derive(Debug, Deserialize)]
 pub struct CreateHospital {

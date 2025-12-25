@@ -1,9 +1,6 @@
 use utoipa::OpenApi;
 use utoipa::openapi::security::{SecurityScheme, HttpAuthScheme, HttpBuilder};
-use crate::handlers::auth;
-use crate::handlers::hospitals;
-use crate::handlers::patients;
-use crate::handlers::specialists;
+use crate::handlers::{auth, hospitals, patients, specialists};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -19,6 +16,8 @@ use crate::handlers::specialists;
         patients::update_profile,
         patients::delete_account,
         patients::update_medical_info,
+        hospitals::create_hospital,
+        hospitals::update_hospital,
     ),
     components(
         schemas(
@@ -33,16 +32,14 @@ use crate::handlers::specialists;
             auth::TokenVerifyResponse,
             auth::VerifyEmailRequest,
 
-                        // Hospitals
-            hospitals::MessageResponse,
+            hospitals::HospitalResponse,
+            hospitals::UpdateHospitalRequest,
 
-            // Patients
             patients::UpdateProfileRequest,
             patients::ProfileResponse,
             patients::DeleteAccountResponse,
             patients::UpdateMedicalInfoRequest,
 
-            // Specialists
             specialists::MessageResponse,
 
         ),

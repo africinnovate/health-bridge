@@ -1,11 +1,10 @@
-use axum::{Router, routing::get, extract::State, Json};
-use crate::AppState;
+use axum::{Router, routing::{get, post, delete, put}};
+use crate::{AppState, handlers::hospitals};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(get_hospitals))
-}
+        .route("/create", post(hospitals::create_hospital))
+        .route("/update", put(hospitals::update_hospital))
+        
 
-async fn get_hospitals(State(state): State<AppState>) -> Json<&'static str> {
-    Json("list of hospitals")
 }

@@ -250,6 +250,9 @@ pub async fn delete_account(
     ))
 }
 
+/// Update medical information
+/// 
+/// Updates or creates the patient's medical information. Donor and Patient can use this endpoint.
 #[utoipa::path(
     put,
     path = "/api/patients/medical-info",

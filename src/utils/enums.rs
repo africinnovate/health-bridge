@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::str::FromStr;
 use utoipa::ToSchema;
-use crate::schema::sql_types::{GenderType, RoleType};
+use crate::schema::sql_types::{GenderType, RoleType, HospitalType};
 use crate::error::AppError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -17,6 +17,28 @@ pub enum Gender {
     Male,
     Female,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = RoleType)]
+#[serde(rename_all = "lowercase")]
+pub enum Role {
+    Patient,
+    Donor,
+    Specialist,
+    Hospital,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = HospitalType)]
+#[serde(rename_all = "lowercase")]
+pub enum HospitalTypeEnum {
+    Clinic,
+    General,
+    Teaching,
+    Specialist,
+    Diagnostic,
+}
+
 
 impl ToSql<GenderType, Pg> for Gender {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
@@ -38,15 +60,33 @@ impl FromSql<GenderType, Pg> for Gender {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
-#[diesel(sql_type = RoleType)]
-#[serde(rename_all = "lowercase")]
-pub enum Role {
-    Patient,
-    Donor,
-    Specialist,
-    Hospital,
+impl ToSql<HospitalType, Pg> for HospitalTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            HospitalTypeEnum::Clinic => out.write_all(b"clinic")?,
+            HospitalTypeEnum::General => out.write_all(b"general")?,
+            HospitalTypeEnum::Teaching => out.write_all(b"teaching")?,
+            HospitalTypeEnum::Specialist => out.write_all(b"specialist")?,
+            HospitalTypeEnum::Diagnostic => out.write_all(b"diagnostic")?,
+        }
+        Ok(IsNull::No)
+    }
 }
+
+impl FromSql<HospitalType, Pg> for HospitalTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"clinic" => Ok(HospitalTypeEnum::Clinic),
+            b"general" => Ok(HospitalTypeEnum::General),
+            b"teaching" => Ok(HospitalTypeEnum::Teaching),
+            b"specialist" => Ok(HospitalTypeEnum::Specialist),
+            b"diagnostic" => Ok(HospitalTypeEnum::Diagnostic),
+            _ => Err("Unrecognized enum variant for HospitalType".into()),
+        }
+    }
+}
+
+
 
 impl ToSql<RoleType, Pg> for Role {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
@@ -102,6 +142,18 @@ impl std::fmt::Display for Role {
             Role::Donor => write!(f, "donor"),
             Role::Specialist => write!(f, "specialist"),
             Role::Hospital => write!(f, "hospital"),
+        }
+    }
+}
+
+impl std::fmt::Display for HospitalTypeEnum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HospitalTypeEnum::Clinic => write!(f, "clinic"),
+            HospitalTypeEnum::General => write!(f, "general"),
+            HospitalTypeEnum::Teaching => write!(f, "teaching"),
+            HospitalTypeEnum::Specialist => write!(f, "specialist"),
+            HospitalTypeEnum::Diagnostic => write!(f, "diagnostic"),
         }
     }
 }
