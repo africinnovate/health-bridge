@@ -3,9 +3,9 @@ use crate::{AppState, handlers::patients};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/get-profile/{user_id}", get(patients::get_profile))
-        .route("/update-profile/{user_id}", put(patients::update_profile))
-        .route("/delete-account/{user_id}", delete(patients::delete_account))
+        .route("/profile", get(patients::get_profile))
+        .route("/profile", put(patients::update_profile))
+        .route("/profile", delete(patients::delete_account))
         
 
 }

@@ -26,7 +26,6 @@ pub async fn require_auth(
     next: Next,
 ) -> Result<Response, AppError> {
     // Extract token from Authorization header
-    info!("User account about to be deleted1: ");
     let auth_header = req
         .headers()
         .get(header::AUTHORIZATION)
