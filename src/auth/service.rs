@@ -233,10 +233,10 @@ pub fn authenticate_user(
 }
 
 
-pub fn make_jwt(user_id: Uuid, secret: &str) -> Result<String> {
+pub fn make_jwt(user_id: Uuid, secret: &str, expires_in_seconds: i64,) -> Result<String> {
     use chrono::Utc;
 
-    let exp = (Utc::now() + chrono::Duration::hours(24)).timestamp() as usize;
+    let exp = (Utc::now() + Duration::seconds(expires_in_seconds)).timestamp() as usize;
 
     let claims = Claims {
         sub: user_id.to_string(),

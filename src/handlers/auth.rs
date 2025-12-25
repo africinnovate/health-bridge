@@ -176,7 +176,7 @@ pub async fn register(
     )?;
 
     let code = auth::create_email_verification_code(&mut conn, user.id, 4)?;
-    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
+    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret, state.cfg.jwt_expires_in_seconds)?;
 
     let mail = state.mail_service.clone();
     let other_email = user.email.clone();
@@ -231,7 +231,7 @@ pub async fn login(
     )
     .map_err(|_| AppError::Unauthorized("Invalid credentials".to_string()))?;
 
-    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
+    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret, state.cfg.jwt_expires_in_seconds)?;
 
     Ok(ApiResponse::success_with_message(
         "Login successful",
