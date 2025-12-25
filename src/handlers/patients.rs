@@ -165,14 +165,13 @@ pub async fn get_profile(
     let mut conn = state.pool.get()?;
 
     let (user, patient) = users::table
-        .inner_join(patients::table.on(patients::user_id.eq(users::id)))
+        .left_join(patients::table.on(patients::user_id.eq(users::id)))
         .filter(users::id.eq(current_user.id))
-        .select((User::as_select(), Patient::as_select()))
-        .first::<(User, Patient)>(&mut conn)?;
+        .select((User::as_select(), Option::<Patient>::as_select()))
+        .first::<(User, Option<Patient>)>(&mut conn)?;
 
     let response = PatientProfileResponse {
         id: user.id,
-
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
@@ -182,17 +181,18 @@ pub async fn get_profile(
         role: user.role.to_string(),
         email_verified: user.email_verified,
 
-        blood_type: patient.blood_type,
-        chronic_illnesses: patient.chronic_illnesses,
-        allergies: patient.allergies,
-        hmo_number: patient.hmo_number,
-        emergency_contact_name: patient.emergency_contact_name,
-        emergency_contact_phone: patient.emergency_contact_phone,
-        medical_notes: patient.medical_notes,
+        blood_type: patient.as_ref().and_then(|p| p.blood_type.clone()),
+        chronic_illnesses: patient.as_ref().and_then(|p| p.chronic_illnesses.clone()),
+        allergies: patient.as_ref().and_then(|p| p.allergies.clone()),
+        hmo_number: patient.as_ref().and_then(|p| p.hmo_number.clone()),
+        emergency_contact_name: patient.as_ref().and_then(|p| p.emergency_contact_name.clone()),
+        emergency_contact_phone: patient.as_ref().and_then(|p| p.emergency_contact_phone.clone()),
+        medical_notes: patient.as_ref().and_then(|p| p.medical_notes.clone()),
     };
 
     Ok(ApiResponse::success(response))
 }
+
 
 
 /// Delete user account
