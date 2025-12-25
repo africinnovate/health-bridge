@@ -21,6 +21,22 @@ pub mod sql_types {
     #[derive(SqlType)]
     #[diesel(postgres_type(name = "genotype"))]
     pub struct GenotypeType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "blood_type"))]
+    pub struct BloodType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "urgency_type"))]
+    pub struct UrgencyType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "blood_request_status_type"))]
+    pub struct BloodRequestStatusType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "timeline_type"))]
+    pub struct TimelineType;
 }
 
 
@@ -112,6 +128,34 @@ diesel::table! {
         has_blood_bank -> Bool,
         accepting_donors -> Bool,
         donating_operating_hours -> Nullable<Text>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use crate::schema::sql_types::*;
+    use crate::schema::sql_types::{BloodType, UrgencyType, BloodRequestStatusType, TimelineType};
+
+    blood_requests (id) {
+        id -> Uuid,
+        hospital_id -> Uuid,
+        donor_id -> Nullable<Uuid>,
+        recipient_id -> Nullable<Uuid>,
+        ref_id -> Text,
+        units -> Nullable<Int4>,
+        blood_type -> Nullable<BloodType>,
+        urgency -> Nullable<UrgencyType>,
+        timeline_status -> Nullable<TimelineType>,
+        request_status -> Nullable<BloodRequestStatusType>,
+        request_reason -> Nullable<Text>,
+        note -> Nullable<Text>,
+        cancelled_by -> Nullable<Uuid>,
+        cancelled_at -> Nullable<Timestamptz>,
+        cancelled_reason -> Nullable<Text>,
+        preferred_time -> Nullable<Timestamptz>,
+        donated_at -> Nullable<Timestamptz>,
+        administered_at -> Nullable<Timestamptz>,
         created_at -> Timestamptz,
     }
 }

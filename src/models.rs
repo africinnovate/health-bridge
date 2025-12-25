@@ -4,9 +4,22 @@ use chrono::{DateTime, Utc, NaiveDate};
 use diesel::prelude::*;
 use crate::{
     schema::{
-        email_verification_tokens, password_reset_tokens, patients, users, hospitals
+        email_verification_tokens, 
+        password_reset_tokens, 
+        patients, 
+        users, 
+        hospitals,
+        blood_requests,
     },
-    utils::enums::{Gender, HospitalTypeEnum, Role}
+    utils::enums::{
+        Gender, 
+        HospitalTypeEnum,
+        BloodTypeEnum,
+        UrgencyTypeEnum,
+        TimelineTypeEnum,
+        RequestStatusTypeEnum,
+        Role,
+    }
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
@@ -138,6 +151,33 @@ pub struct Hospital {
     pub donating_operating_hours: Option<String>,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = blood_requests)]
+#[diesel(belongs_to(Hospital, foreign_key = hospital_id))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct BloodRequest {
+    pub id: Uuid,
+    pub hospital_id: Uuid,
+    pub donor_id: Option<Uuid>,
+    pub recipient_id: Option<Uuid>,
+    pub ref_id: String,
+    pub units: Option<i32>,
+    pub blood_type: Option<BloodTypeEnum>,
+    pub urgency: Option<UrgencyTypeEnum>,
+    pub timeline_status: Option<TimelineTypeEnum>,
+    pub request_status: Option<RequestStatusTypeEnum>,
+    pub request_reason: Option<String>,
+    pub note: Option<String>,
+    pub cancelled_by: Option<Uuid>,
+    pub cancelled_at: Option<DateTime<Utc>>,
+    pub cancelled_reason: Option<String>,
+    pub preferred_time: Option<DateTime<Utc>>,
+    pub donated_at: Option<DateTime<Utc>>,
+    pub administered_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
 
 
 /* Specialist */

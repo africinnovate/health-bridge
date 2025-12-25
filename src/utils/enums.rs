@@ -7,7 +7,15 @@ use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::str::FromStr;
 use utoipa::ToSchema;
-use crate::schema::sql_types::{GenderType, RoleType, HospitalType};
+use crate::schema::sql_types::{
+    GenderType, 
+    RoleType, 
+    TimelineType,
+    BloodType,
+    UrgencyType,
+    BloodRequestStatusType,
+    HospitalType,
+};
 use crate::error::AppError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -40,6 +48,48 @@ pub enum HospitalTypeEnum {
     Diagnostic,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = BloodType)]
+#[serde(rename_all = "lowercase")]
+pub enum BloodTypeEnum {
+    APositive,
+    ANegative,
+    BPositive,
+    BNegative,
+    ABPositive,
+    ABNegative,
+    OPositive,
+    ONegative,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = UrgencyType)]
+#[serde(rename_all = "lowercase")]
+pub enum UrgencyTypeEnum {
+    Standard,
+    Urgent,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = TimelineType)]
+#[serde(rename_all = "lowercase")]
+pub enum TimelineTypeEnum {
+    RequestCreated,
+    VisibleToDonors,
+    DonationAppointmentScheduled,
+    DonationCompleted,
+    RequestFulfilled,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = BloodRequestStatusType)]
+#[serde(rename_all = "lowercase")]
+pub enum RequestStatusTypeEnum {
+    Confirmed,
+    Accepted,
+    Completed,
+    Cancelled,
+}
 
 impl ToSql<GenderType, Pg> for Gender {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
@@ -129,6 +179,179 @@ impl FromStr for Role {
         }
     }
 }
+
+impl FromStr for BloodTypeEnum {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use BloodTypeEnum::*;
+        match s {
+            "A+" => Ok(APositive),
+            "A-" => Ok(ANegative),
+            "B+" => Ok(BPositive),
+            "B-" => Ok(BNegative),
+            "AB+" => Ok(ABPositive),
+            "AB-" => Ok(ABNegative),
+            "O+" => Ok(OPositive),
+            "O-" => Ok(ONegative),
+            _ => Err("Invalid blood type".into()),
+        }
+    }
+}
+
+impl ToSql<BloodType, Pg> for BloodTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match self {
+            BloodTypeEnum::APositive => out.write_all(b"a_positive")?,
+            BloodTypeEnum::ANegative => out.write_all(b"a_negative")?,
+            BloodTypeEnum::BPositive => out.write_all(b"b_positive")?,
+            BloodTypeEnum::BNegative => out.write_all(b"b_negative")?,
+            BloodTypeEnum::ABPositive => out.write_all(b"ab_positive")?,
+            BloodTypeEnum::ABNegative => out.write_all(b"ab_negative")?,
+            BloodTypeEnum::OPositive => out.write_all(b"o_positive")?,
+            BloodTypeEnum::ONegative => out.write_all(b"o_negative")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<BloodType, Pg> for BloodTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"a_positive" => Ok(BloodTypeEnum::APositive),
+            b"a_negative" => Ok(BloodTypeEnum::ANegative),
+            b"b_positive" => Ok(BloodTypeEnum::BPositive),
+            b"b_negative" => Ok(BloodTypeEnum::BNegative),
+            b"ab_positive" => Ok(BloodTypeEnum::ABPositive),
+            b"ab_negative" => Ok(BloodTypeEnum::ABNegative),
+            b"o_positive" => Ok(BloodTypeEnum::OPositive),
+            b"o_negative" => Ok(BloodTypeEnum::ONegative),
+            _ => Err("Unrecognized enum variant for BloodType".into()),
+        }
+    }
+}
+
+
+impl FromStr for UrgencyTypeEnum {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use UrgencyTypeEnum::*;
+        match s {
+            "standard" => Ok(Standard),
+            "urgent" => Ok(Urgent),
+            _ => Err("Invalid urgency type".into()),
+        }
+    }
+}
+
+impl ToSql<UrgencyType, Pg> for UrgencyTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match self {
+            UrgencyTypeEnum::Standard => out.write_all(b"standard")?,
+            UrgencyTypeEnum::Urgent => out.write_all(b"urgent")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<UrgencyType, Pg> for UrgencyTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"standard" => Ok(UrgencyTypeEnum::Standard),
+            b"urgent" => Ok(UrgencyTypeEnum::Urgent),
+            _ => Err("Unrecognized enum variant for UrgencyType".into()),
+        }
+    }
+}
+
+
+impl FromStr for TimelineTypeEnum {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use TimelineTypeEnum::*;
+        match s {
+            "request_created" => Ok(RequestCreated),
+            "visible_to_donors" => Ok(VisibleToDonors),
+            "donation_appointment_scheduled" => Ok(DonationAppointmentScheduled),
+            "donation_completed" => Ok(DonationCompleted),
+            "request_fulfilled" => Ok(RequestFulfilled),
+            _ => Err("Invalid timeline type".into()),
+        }
+    }
+}
+
+impl ToSql<TimelineType, Pg> for TimelineTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match self {
+            TimelineTypeEnum::RequestCreated => out.write_all(b"request_created")?,
+            TimelineTypeEnum::VisibleToDonors => out.write_all(b"visible_to_donors")?,
+            TimelineTypeEnum::DonationAppointmentScheduled => {
+                out.write_all(b"donation_appointment_scheduled")?
+            }
+            TimelineTypeEnum::DonationCompleted => out.write_all(b"donation_completed")?,
+            TimelineTypeEnum::RequestFulfilled => out.write_all(b"request_fulfilled")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<TimelineType, Pg> for TimelineTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"request_created" => Ok(TimelineTypeEnum::RequestCreated),
+            b"visible_to_donors" => Ok(TimelineTypeEnum::VisibleToDonors),
+            b"donation_appointment_scheduled" => {
+                Ok(TimelineTypeEnum::DonationAppointmentScheduled)
+            }
+            b"donation_completed" => Ok(TimelineTypeEnum::DonationCompleted),
+            b"request_fulfilled" => Ok(TimelineTypeEnum::RequestFulfilled),
+            _ => Err("Unrecognized enum variant for TimelineType".into()),
+        }
+    }
+}
+
+
+impl FromStr for RequestStatusTypeEnum {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use RequestStatusTypeEnum::*;
+        match s {
+            "confirmed" => Ok(Confirmed),
+            "accepted" => Ok(Accepted),
+            "completed" => Ok(Completed),
+            "cancelled" => Ok(Cancelled),
+            _ => Err("Invalid blood request status type".into()),
+        }
+    }
+}
+
+impl ToSql<BloodRequestStatusType, Pg> for RequestStatusTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match self {
+            RequestStatusTypeEnum::Confirmed => out.write_all(b"confirmed")?,
+            RequestStatusTypeEnum::Accepted => out.write_all(b"accepted")?,
+            RequestStatusTypeEnum::Completed => out.write_all(b"completed")?,
+            RequestStatusTypeEnum::Cancelled => out.write_all(b"cancelled")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<BloodRequestStatusType, Pg> for RequestStatusTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"confirmed" => Ok(RequestStatusTypeEnum::Confirmed),
+            b"accepted" => Ok(RequestStatusTypeEnum::Accepted),
+            b"completed" => Ok(RequestStatusTypeEnum::Completed),
+            b"cancelled" => Ok(RequestStatusTypeEnum::Cancelled),
+            _ => Err("Unrecognized enum variant for BloodRequestStatusType".into()),
+        }
+    }
+}
+
 
 impl std::fmt::Display for Gender {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
