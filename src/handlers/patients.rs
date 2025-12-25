@@ -147,6 +147,8 @@ pub async fn update_profile(
 
 
 /// Get user profile
+/// 
+/// Returns the user's profile information, including medical details if available.
 #[utoipa::path(
     get,
     path = "/api/patients/profile",
