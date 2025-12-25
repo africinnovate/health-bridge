@@ -11,7 +11,7 @@ pub fn validate_email(email: &str) -> Result<(), AppError> {
     if email_regex.is_match(email) {
         Ok(())
     } else {
-        Err(AppError::BadRequest)
+        Err(AppError::BadRequest("Invalid email format".to_string()))
     }
 }
 
@@ -24,13 +24,13 @@ pub fn validate_phone_length(
     let digits_only = phone.chars().all(|c| c.is_ascii_digit());
 
     if !digits_only {
-        return Err(AppError::BadRequest);
+        return Err(AppError::BadRequest("Phone number must contain digits only".to_string()));
     }
 
     let len = phone.len();
 
     if len < min_len || len > max_len {
-        return Err(AppError::BadRequest);
+        return Err(AppError::BadRequest(format!("Phone number must be between {} and {} digits long", min_len, max_len)));
     }
 
     Ok(())

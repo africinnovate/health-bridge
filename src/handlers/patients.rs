@@ -165,7 +165,7 @@ pub async fn delete_account(
     info!("User account about to be deleted3: {}", user_id);
     // Ensure the user can only delete their own account
     if current_user.id != user_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Unauthorized("You can only delete your own account".to_string()));
     }
 
     let mut conn = state.pool.get()?;
@@ -201,7 +201,7 @@ pub async fn delete_account(
                 .execute(conn)?;
 
             if rows_deleted == 0 {
-                return Err(AppError::BadRequest);
+                return Err(AppError::BadRequest("User not found".to_string()));
             }
         }
 

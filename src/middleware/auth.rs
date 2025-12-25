@@ -31,12 +31,12 @@ pub async fn require_auth(
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|h| h.to_str().ok())
-        .ok_or_else(|| AppError::Unauthorized)?;
+        .ok_or_else(|| AppError::Unauthorized("Missing or invalid Authorization header".to_string()))?;
 
     // Extract bearer token
     let token = auth_header
         .strip_prefix("Bearer ")
-        .ok_or_else(|| AppError::Unauthorized)?;
+        .ok_or_else(|| AppError::Unauthorized("Missing or invalid Bearer token".to_string()))?;
 
     // Decode and validate token
     let token_data = decode::<Claims>(
@@ -44,18 +44,17 @@ pub async fn require_auth(
         &DecodingKey::from_secret(state.cfg.jwt_secret.as_bytes()),
         &Validation::default(),
     )
-    .map_err(|_| AppError::Unauthorized)?;
+    .map_err(|_| AppError::Unauthorized("Invalid or expired token".to_string()))?;
 
     // Parse user_id from claims
     let user_id = Uuid::parse_str(&token_data.claims.sub)
-        .map_err(|_| AppError::Unauthorized)?;
-
+        .map_err(|_| AppError::Unauthorized("Invalid user ID in token".to_string()))?;
     // Fetch user from database
     let mut conn = state.pool.get()?;
     let user = users::table
         .filter(users::id.eq(user_id))
         .first::<User>(&mut conn)
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| AppError::Unauthorized("User not found".to_string()))?;
 
     // Insert user into request extensions
     req.extensions_mut().insert(user);

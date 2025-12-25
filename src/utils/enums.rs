@@ -81,7 +81,7 @@ impl FromStr for Role {
             "donor" => Ok(Role::Donor),
             "specialist" => Ok(Role::Specialist),
             "hospital" => Ok(Role::Hospital),
-            _ => Err(AppError::BadRequest),
+            _ => Err(AppError::BadRequest("Invalid role string".to_string())),
         }
     }
 }

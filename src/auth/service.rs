@@ -129,7 +129,7 @@ pub fn verify_email_code(
     let user = users::table
         .filter(users::email.eq(user_email))
         .first::<User>(conn)
-        .map_err(|_| AppError::BadRequest)?;
+        .map_err(|_| AppError::BadRequest("User not found".to_string()))?;
 
     let token = email_verification_tokens::table
         .filter(email_verification_tokens::user_id.eq(user.id))
@@ -137,7 +137,7 @@ pub fn verify_email_code(
         .filter(email_verification_tokens::used.eq(false))
         .filter(email_verification_tokens::expires_at.gt(Utc::now()))
         .first::<EmailVerificationToken>(conn)
-        .map_err(|_| AppError::BadRequest)?;
+        .map_err(|_| AppError::BadRequest("Invalid or expired verification code".to_string()))?;
 
     diesel::update(email_verification_tokens::table.find(token.id))
         .set(email_verification_tokens::used.eq(true))

@@ -229,7 +229,7 @@ pub async fn login(
         &payload.email,
         &payload.password,
     )
-    .map_err(|_| AppError::Unauthorized)?;
+    .map_err(|_| AppError::Unauthorized("Invalid credentials".to_string()))?;
 
     let token = auth::make_jwt(user.id, &state.cfg.jwt_secret)?;
 
@@ -326,7 +326,7 @@ pub async fn reset_password(
 
     // Verify the token and get user_id
     let user_id = auth::verify_reset_token(&mut conn, &payload.token)
-        .map_err(|_| AppError::BadRequest)?;
+        .map_err(|_| AppError::BadRequest("Invalid or expired token".to_string()))?;
 
     // Reset the password
     auth::reset_user_password(&mut conn, user_id, &payload.new_password)?;

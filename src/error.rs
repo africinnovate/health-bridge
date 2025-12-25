@@ -11,8 +11,8 @@ use crate::utils::response::ApiResponse;
 pub enum AppError {
     DbError,
     UserAlreadyExists,
-    Unauthorized,
-    BadRequest,
+    Unauthorized(String),
+    BadRequest(String),
     InternalServerError,
 }
 
@@ -21,23 +21,23 @@ impl IntoResponse for AppError {
         let (status, message) = match self {
             AppError::UserAlreadyExists => (
                 StatusCode::CONFLICT,
-                "User already exists",
+                "User already exists".to_string(),
             ),
-            AppError::Unauthorized => (
+            AppError::Unauthorized(msg) => (
                 StatusCode::UNAUTHORIZED,
-                "Invalid credentials",
+                msg,
             ),
             AppError::DbError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Database error",
+                "Database error".to_string(),
             ),
-            AppError::BadRequest => (
+            AppError::BadRequest(msg) => (
                 StatusCode::BAD_REQUEST,
-                "Bad request",
+                msg,
             ),
             AppError::InternalServerError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal server error",
+                "Internal server error".to_string(),
             ),
         };
 
