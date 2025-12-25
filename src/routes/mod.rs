@@ -18,9 +18,16 @@ pub fn create_router() -> Router<AppState> {
             ),
         );
 
+    let protected_hospitals = Router::new()
+        .nest("/hospitals", hospitals::router())
+        .route_layer(
+            middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
+        );
+
+
     Router::new()
         .nest("/auth", auth::router())
         .nest("/specialists", specialists::router())
-        .nest("/hospitals", hospitals::router())
         .merge(protected_patients)
+        .merge(protected_hospitals)
 }
