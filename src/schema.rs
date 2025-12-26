@@ -37,6 +37,19 @@ pub mod sql_types {
     #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "timeline_type"))]
     pub struct TimelineType;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "appointment_type"))]
+    pub struct AppointmentTypeType;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "appointment_status"))]
+    pub struct AppointmentStatusType;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "cancelled_by"))]
+    pub struct CancelledByType;
+
 }
 
 
@@ -156,6 +169,33 @@ diesel::table! {
         preferred_time -> Nullable<Timestamptz>,
         donated_at -> Nullable<Timestamptz>,
         administered_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::{AppointmentTypeType, AppointmentStatusType, CancelledByType};
+
+    appointments (id) {
+        id -> Uuid,
+
+        blood_request_id -> Uuid,
+        hospital_id -> Uuid,
+        user_id -> Uuid,
+
+        appointment_type -> AppointmentTypeType,
+        status -> AppointmentStatusType,
+
+        scheduled_time -> Timestamptz,
+        previous_time -> Nullable<Timestamptz>,
+
+        cancelled_by -> Nullable<CancelledByType>,
+        cancelled_by_id -> Nullable<Uuid>,
+        cancelled_reason -> Nullable<Text>,
+        cancelled_at -> Nullable<Timestamptz>,
+
         created_at -> Timestamptz,
     }
 }
