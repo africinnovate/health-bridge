@@ -22,19 +22,19 @@ pub mod sql_types {
     #[diesel(postgres_type(name = "genotype"))]
     pub struct GenotypeType;
 
-    #[derive(SqlType)]
+    #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "blood_type"))]
     pub struct BloodType;
 
-    #[derive(SqlType)]
+    #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "urgency_type"))]
     pub struct UrgencyType;
 
-    #[derive(SqlType)]
+    #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "blood_request_status_type"))]
     pub struct BloodRequestStatusType;
 
-    #[derive(SqlType)]
+    #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "timeline_type"))]
     pub struct TimelineType;
 }

@@ -1,0 +1,108 @@
+use diesel::prelude::*;
+use diesel::AsChangeset;
+use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+use crate::utils::enums::Role;
+use crate::{
+    models::{BloodRequest, User},
+    schema::blood_requests::dsl::*,
+    error::AppError,
+    utils::enums::{UrgencyTypeEnum, BloodTypeEnum, TimelineTypeEnum, RequestStatusTypeEnum},
+};
+
+#[derive(Debug, Deserialize, Insertable)]
+#[diesel(table_name = crate::schema::blood_requests)]
+pub struct CreateBloodRequest {
+    pub hospital_id: Uuid,
+    pub recipient_id: Uuid,
+    pub units: Option<i32>,
+    pub blood_type: Option<BloodTypeEnum>,
+    pub urgency: Option<UrgencyTypeEnum>,
+    pub request_reason: Option<String>,
+    pub note: Option<String>,
+    pub preferred_time: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, AsChangeset, Selectable)]
+#[diesel(table_name = crate::schema::blood_requests)]
+pub struct UpdateBloodRequest {
+    pub units: Option<i32>,
+    pub urgency: Option<UrgencyTypeEnum>,
+    pub timeline_status: Option<TimelineTypeEnum>,
+    pub request_status: Option<RequestStatusTypeEnum>,
+    pub note: Option<String>,
+    pub donated_at: Option<DateTime<Utc>>,
+    pub administered_at: Option<DateTime<Utc>>,
+}
+
+pub fn create_blood_request(
+    conn: &mut PgConnection,
+    user: &User,
+    payload: CreateBloodRequest,
+) -> Result<BloodRequest, AppError> {
+
+    // Role guard
+    if user.role != Role::Hospital && user.role != Role::Hospital {
+        return Err(AppError::Unauthorized(
+            "Only hospitals can create blood requests".into(),
+        ));
+    }
+
+    // Ownership verification
+    use crate::schema::hospitals::dsl as hospitals_dsl;
+
+    let owns_hospital = hospitals_dsl::hospitals
+        .filter(hospitals_dsl::id.eq(payload.hospital_id))
+        .filter(hospitals_dsl::user_id.eq(user.id))
+        .select(hospitals_dsl::id)
+        .first::<Uuid>(conn)
+        .optional()?;
+
+    if owns_hospital.is_none() {
+        return Err(AppError::Unauthorized("Hospital not found".into()));
+    }
+
+    let new_request = diesel::insert_into(blood_requests)
+        .values((
+            hospital_id.eq(payload.hospital_id),
+            donor_id.eq(user.id),
+            recipient_id.eq(payload.recipient_id),
+            ref_id.eq(Uuid::new_v4().to_string()),
+            units.eq(payload.units),
+            blood_type.eq(payload.blood_type),
+            urgency.eq(payload.urgency),
+            timeline_status.eq(TimelineTypeEnum::RequestCreated),
+            request_status.eq(RequestStatusTypeEnum::Confirmed),
+            request_reason.eq(payload.request_reason),
+            note.eq(payload.note),
+            preferred_time.eq(payload.preferred_time),
+        ))
+        .returning(BloodRequest::as_select())
+        .get_result(conn)?;
+
+    Ok(new_request)
+}
+
+
+pub fn update_blood_request(
+    conn: &mut PgConnection,
+    request_id: Uuid,
+    user: &User,
+    payload: UpdateBloodRequest,
+) -> Result<BloodRequest, AppError> {
+
+    let updated = diesel::update(
+        blood_requests
+            .filter(id.eq(request_id))
+            .filter(donor_id.eq(user.id)),
+    )
+    .set(payload)
+    .returning(BloodRequest::as_select())
+    .get_result::<BloodRequest>(conn)
+    .optional()?;
+
+    updated.ok_or_else(|| AppError::NotFound("Blood request not found".into()))
+}
+

@@ -8,12 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    AppState,
-    error::AppError,
-    models::{Hospital, User},
-    utils::enums::{HospitalTypeEnum},
-    utils::response::ApiResponse,
-    hospitals
+    AppState, error::AppError, hospitals::{self, blood_requests::{CreateBloodRequest, UpdateBloodRequest}}, models::{BloodRequest, Hospital, User}, utils::{enums::HospitalTypeEnum, response::ApiResponse}
 };
 
 /// Create hospital profile
@@ -143,3 +138,41 @@ pub async fn update_hospital(
     ))
 }
 
+pub async fn create(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<CreateBloodRequest>,
+) -> Result<ApiResponse<BloodRequest>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    let request = hospitals::blood_requests::create_blood_request(
+        &mut conn,
+        &user,
+        payload,
+    )?;
+
+    Ok(ApiResponse::created(
+        "Blood request created successfully",
+        request,
+    ))
+}
+
+pub async fn update(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateBloodRequest>,
+) -> Result<ApiResponse<BloodRequest>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    let request = hospitals::blood_requests::update_blood_request(
+        &mut conn,
+        id,
+        &user,
+        payload,
+    )?;
+
+    Ok(ApiResponse::success(
+        "Blood request updated successfully"
+    ))
+}
