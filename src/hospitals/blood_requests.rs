@@ -2,7 +2,8 @@ use diesel::prelude::*;
 use diesel::AsChangeset;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
+use utoipa::ToSchema;
 
 use crate::utils::enums::Role;
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
     utils::enums::{UrgencyTypeEnum, BloodTypeEnum, TimelineTypeEnum, RequestStatusTypeEnum},
 };
 
-#[derive(Debug, Deserialize, Insertable)]
+#[derive(Debug, Deserialize, Insertable, ToSchema)]
 #[diesel(table_name = crate::schema::blood_requests)]
 pub struct CreateBloodRequest {
     pub hospital_id: Uuid,
@@ -25,7 +26,7 @@ pub struct CreateBloodRequest {
     pub preferred_time: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, AsChangeset, Selectable)]
+#[derive(Debug, Deserialize, AsChangeset, Selectable, ToSchema)]
 #[diesel(table_name = crate::schema::blood_requests)]
 pub struct UpdateBloodRequest {
     pub units: Option<i32>,

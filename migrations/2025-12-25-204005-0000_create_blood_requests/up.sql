@@ -6,9 +6,9 @@ CREATE TYPE blood_request_status_type AS ENUM ('confirmed', 'accepted', 'complet
 
 CREATE TABLE blood_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE;
+    hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
     donor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_id UUID REFERENCES users(id) ON DELETE CASCADE,
 
     ref_id TEXT NOT NULL UNIQUE,
 

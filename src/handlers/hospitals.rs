@@ -8,7 +8,13 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    AppState, error::AppError, hospitals::{self, blood_requests::{CreateBloodRequest, UpdateBloodRequest}}, models::{BloodRequest, Hospital, User}, utils::{enums::HospitalTypeEnum, response::ApiResponse}
+    AppState, 
+    error::AppError, 
+    hospitals::{
+        self, 
+        blood_requests::{CreateBloodRequest, UpdateBloodRequest}}, 
+        models::{BloodRequest, Hospital, User}, 
+        utils::{enums::HospitalTypeEnum, response::ApiResponse},
 };
 
 /// Create hospital profile
@@ -137,8 +143,22 @@ pub async fn update_hospital(
         hospital,
     ))
 }
+/// Create blood request
+#[utoipa::path(
+    post,
+    path = "/api/hospitals/blood-request",
+    request_body = CreateBloodRequest,
+    responses(
+        (status = 200, body = ApiResponse<BloodRequest>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
 
-pub async fn create(
+
+pub async fn create_blood_request(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
     Json(payload): Json<CreateBloodRequest>,
@@ -157,7 +177,21 @@ pub async fn create(
     ))
 }
 
-pub async fn update(
+/// Update blood request
+#[utoipa::path(
+    put,
+    path = "/api/hospitals/blood-request/{hospital_id}",
+    request_body = UpdateBloodRequest,
+    responses(
+        (status = 200, body = ApiResponse<BloodRequest>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+
+pub async fn update_blood_request(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
     Path(id): Path<Uuid>,
@@ -172,7 +206,8 @@ pub async fn update(
         payload,
     )?;
 
-    Ok(ApiResponse::success(
-        "Blood request updated successfully"
-    ))
+    Ok(ApiResponse::success_with_message(
+        "Blood request updated successfully",
+        request,
+    ))  
 }

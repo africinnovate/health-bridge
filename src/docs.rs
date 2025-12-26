@@ -18,12 +18,12 @@ use crate::handlers::{auth, hospitals, patients, specialists};
         patients::update_medical_info,
         hospitals::create_hospital,
         hospitals::update_hospital,
+        hospitals::create_blood_request,
+        hospitals::update_blood_request,
     ),
-    components(
-
-
     
-    ),
+    components(),
+
     modifiers(&SecurityAddon),
     tags(
         (name = "auth", description = "User authentication endpoints"),

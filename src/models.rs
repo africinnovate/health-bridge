@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use utoipa::ToSchema;
 use chrono::{DateTime, Utc, NaiveDate};
 use diesel::prelude::*;
 use crate::{
@@ -152,7 +153,7 @@ pub struct Hospital {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
 #[diesel(table_name = blood_requests)]
 #[diesel(belongs_to(Hospital, foreign_key = hospital_id))]
 #[diesel(check_for_backend(diesel::pg::Pg))]
