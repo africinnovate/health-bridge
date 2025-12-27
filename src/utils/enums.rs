@@ -156,7 +156,7 @@ impl ToSql<AppointmentStatusType, Pg> for AppointmentStatusEnum {
 impl FromSql<AppointmentStatusType, Pg> for AppointmentStatusEnum {
     fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
         match bytes.as_bytes() {
-            b"proposed" => Ok(AppointmentStatusEnum::Created),
+            b"created" => Ok(AppointmentStatusEnum::Created),
             b"confirmed" => Ok(AppointmentStatusEnum::Confirmed),
             b"rescheduled" => Ok(AppointmentStatusEnum::Rescheduled),
             b"cancelled" => Ok(AppointmentStatusEnum::Cancelled),
@@ -171,7 +171,7 @@ impl ToSql<AppointmentStatusType, Pg> for CancelledByEnum {
         match *self {
             CancelledByEnum::Hospital => out.write_all(b"hospital")?,
             CancelledByEnum::Donor => out.write_all(b"donor")?,
-            CancelledByEnum::Patient => out.write_all(b"cancelled")?,
+            CancelledByEnum::Patient => out.write_all(b"patient")?,
         }
         Ok(IsNull::No)
     }
@@ -283,14 +283,14 @@ impl FromStr for BloodTypeEnum {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use BloodTypeEnum::*;
         match s {
-            "A+" => Ok(APositive),
-            "A-" => Ok(ANegative),
-            "B+" => Ok(BPositive),
-            "B-" => Ok(BNegative),
-            "AB+" => Ok(ABPositive),
-            "AB-" => Ok(ABNegative),
-            "O+" => Ok(OPositive),
-            "O-" => Ok(ONegative),
+            "apositive" => Ok(APositive),
+            "anegative" => Ok(ANegative),
+            "bpositive" => Ok(BPositive),
+            "bnegative" => Ok(BNegative),
+            "abpositive" => Ok(ABPositive),
+            "abnegative" => Ok(ABNegative),
+            "opositive" => Ok(OPositive),
+            "onegative" => Ok(ONegative),
             _ => Err("Invalid blood type".into()),
         }
     }
@@ -299,14 +299,14 @@ impl FromStr for BloodTypeEnum {
 impl ToSql<BloodType, Pg> for BloodTypeEnum {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         match self {
-            BloodTypeEnum::APositive => out.write_all(b"a_positive")?,
-            BloodTypeEnum::ANegative => out.write_all(b"a_negative")?,
-            BloodTypeEnum::BPositive => out.write_all(b"b_positive")?,
-            BloodTypeEnum::BNegative => out.write_all(b"b_negative")?,
-            BloodTypeEnum::ABPositive => out.write_all(b"ab_positive")?,
-            BloodTypeEnum::ABNegative => out.write_all(b"ab_negative")?,
-            BloodTypeEnum::OPositive => out.write_all(b"o_positive")?,
-            BloodTypeEnum::ONegative => out.write_all(b"o_negative")?,
+            BloodTypeEnum::APositive => out.write_all(b"apositive")?,
+            BloodTypeEnum::ANegative => out.write_all(b"anegative")?,
+            BloodTypeEnum::BPositive => out.write_all(b"bpositive")?,
+            BloodTypeEnum::BNegative => out.write_all(b"bnegative")?,
+            BloodTypeEnum::ABPositive => out.write_all(b"abpositive")?,
+            BloodTypeEnum::ABNegative => out.write_all(b"abnegative")?,
+            BloodTypeEnum::OPositive => out.write_all(b"opositive")?,
+            BloodTypeEnum::ONegative => out.write_all(b"onegative")?,
         }
         Ok(IsNull::No)
     }
@@ -315,14 +315,14 @@ impl ToSql<BloodType, Pg> for BloodTypeEnum {
 impl FromSql<BloodType, Pg> for BloodTypeEnum {
     fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
         match bytes.as_bytes() {
-            b"a_positive" => Ok(BloodTypeEnum::APositive),
-            b"a_negative" => Ok(BloodTypeEnum::ANegative),
-            b"b_positive" => Ok(BloodTypeEnum::BPositive),
-            b"b_negative" => Ok(BloodTypeEnum::BNegative),
-            b"ab_positive" => Ok(BloodTypeEnum::ABPositive),
-            b"ab_negative" => Ok(BloodTypeEnum::ABNegative),
-            b"o_positive" => Ok(BloodTypeEnum::OPositive),
-            b"o_negative" => Ok(BloodTypeEnum::ONegative),
+            b"apositive" => Ok(BloodTypeEnum::APositive),
+            b"anegative" => Ok(BloodTypeEnum::ANegative),
+            b"bpositive" => Ok(BloodTypeEnum::BPositive),
+            b"bnegative" => Ok(BloodTypeEnum::BNegative),
+            b"abpositive" => Ok(BloodTypeEnum::ABPositive),
+            b"abnegative" => Ok(BloodTypeEnum::ABNegative),
+            b"opositive" => Ok(BloodTypeEnum::OPositive),
+            b"onegative" => Ok(BloodTypeEnum::ONegative),
             _ => Err("Unrecognized enum variant for BloodType".into()),
         }
     }

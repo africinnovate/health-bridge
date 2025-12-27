@@ -1,5 +1,5 @@
 -- Your SQL goes here
-CREATE TYPE blood_type AS ENUM ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-');
+CREATE TYPE blood_type AS ENUM ('apositive', 'anegative', 'bpositive', 'bnegative', 'abpositive', 'abnegative', 'opositive', 'onegative');
 CREATE TYPE urgency_type AS ENUM ('standard', 'urgent');
 CREATE TYPE timeline_type AS ENUM ('request_created', 'visible_to_donors', 'donation_appointment_scheduled', 'donation_completed', 'request_fulfilled');
 CREATE TYPE blood_request_status_type AS ENUM ('confirmed', 'accepted', 'completed', 'cancelled');
