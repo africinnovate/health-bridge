@@ -1,7 +1,7 @@
 -- Your SQL goes here
 CREATE TYPE cancelled_by AS ENUM ('hospital', 'donor', 'patient');
 CREATE TYPE appointment_type AS ENUM ('donor', 'patient');
-CREATE TYPE appointment_status AS ENUM ('proposed', 'confirmed', 'rescheduled', 'cancelled');
+CREATE TYPE appointment_status AS ENUM ('created', 'confirmed', 'rescheduled', 'cancelled', 'completed');
 
 CREATE TABLE appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11,7 +11,7 @@ CREATE TABLE appointments (
     user_id UUID NOT NULL REFERENCES users(id), -- donor or patient
 
     appointment_type appointment_type NOT NULL,
-    status appointment_status NOT NULL DEFAULT 'proposed',
+    status appointment_status NOT NULL DEFAULT 'created',
 
     scheduled_time TIMESTAMPTZ NOT NULL,
     previous_time TIMESTAMPTZ,

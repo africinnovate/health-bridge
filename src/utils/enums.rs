@@ -44,7 +44,7 @@ pub enum Role {
 #[diesel(sql_type = AppointmentTypeType)]
 pub enum AppointmentTypeEnum {
     Donor,
-    Recipient,
+    Patient,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -124,7 +124,7 @@ impl ToSql<AppointmentTypeType, Pg> for AppointmentTypeEnum {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         match *self {
             AppointmentTypeEnum::Donor => out.write_all(b"donor")?,
-            AppointmentTypeEnum::Recipient => out.write_all(b"recipient")?,
+            AppointmentTypeEnum::Patient => out.write_all(b"patient")?,
         }
         Ok(IsNull::No)
     }
@@ -134,7 +134,7 @@ impl FromSql<AppointmentTypeType, Pg> for AppointmentTypeEnum {
     fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
         match bytes.as_bytes() {
             b"donor" => Ok(AppointmentTypeEnum::Donor),
-            b"recipient" => Ok(AppointmentTypeEnum::Recipient),
+            b"patient" => Ok(AppointmentTypeEnum::Patient),
             _ => Err("Unrecognized enum variant for AppointmentTypeEnum".into()),
         }
     }
@@ -166,7 +166,7 @@ impl FromSql<AppointmentStatusType, Pg> for AppointmentStatusEnum {
     }
 }
 
-impl ToSql<AppointmentStatusType, Pg> for CancelledByEnum {
+impl ToSql<CancelledByType, Pg> for CancelledByEnum {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         match *self {
             CancelledByEnum::Hospital => out.write_all(b"hospital")?,

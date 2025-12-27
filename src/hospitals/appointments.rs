@@ -8,7 +8,7 @@ use crate::{
     error::AppError,
     models::{Appointment, BloodRequest, User},
     schema::{appointments, blood_requests},
-    utils::enums::{Role, AppointmentStatusEnum, AppointmentTypeEnum},
+    utils::enums::{AppointmentStatusEnum, AppointmentTypeEnum, CancelledByEnum, Role},
 
 };
 
@@ -18,7 +18,6 @@ use crate::{
 #[diesel(table_name = appointments)]
 pub struct CreateAppointment {
     pub blood_request_id: Uuid,
-    pub user_id: Uuid, // donor or patient
     pub appointment_type: AppointmentTypeEnum,
     pub scheduled_time: DateTime<Utc>,
 }
@@ -35,14 +34,15 @@ pub fn create_appointment(
 
     let request = blood_requests::table
         .filter(blood_requests::id.eq(payload.blood_request_id))
-        .filter(blood_requests::hospital_id.eq(user.id))
-        .first::<BloodRequest>(conn)?;
+        .first::<BloodRequest>(conn)
+        .map_err(|_| AppError::NotFound("Blood request not found".into()))?;
+
 
     diesel::insert_into(appointments::table)
         .values((
             appointments::blood_request_id.eq(payload.blood_request_id),
             appointments::hospital_id.eq(request.hospital_id),
-            appointments::user_id.eq(payload.user_id),
+            appointments::user_id.eq(user.id),
             appointments::appointment_type.eq(payload.appointment_type),
             appointments::status.eq(AppointmentStatusEnum::Created),
             appointments::scheduled_time.eq(payload.scheduled_time),
@@ -111,9 +111,17 @@ pub fn cancel_appointment(
         _ => return Err(AppError::Unauthorized("Invalid role".into())),
     }
 
+    let cancelled_by = match user.role {
+        Role::Hospital => CancelledByEnum::Hospital,
+        Role::Donor => CancelledByEnum::Donor,
+        Role::Patient => CancelledByEnum::Patient,
+        _ => unreachable!(), // already guarded above
+    };
+
     diesel::update(appointments::table.find(appointment_id))
         .set((
             appointments::status.eq(AppointmentStatusEnum::Cancelled),
+            appointments::cancelled_by.eq(Some(cancelled_by)),
             appointments::cancelled_by_id.eq(Some(user.id)),
             appointments::cancelled_reason.eq(reason),
             appointments::cancelled_at.eq(Some(Utc::now())),
@@ -150,7 +158,7 @@ fn assert_hospital_owns_appointment(
 ) -> Result<Appointment, AppError> {
     appointments::table
         .filter(appointments::id.eq(appointment_id))
-        .filter(appointments::hospital_id.eq(hospital_id))
+        // .filter(appointments::hospital_id.eq(hospital_id)) use ACL here later
         .first::<Appointment>(conn)
         .map_err(|_| AppError::Unauthorized("Appointment not owned by hospital".into()))
 }

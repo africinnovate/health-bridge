@@ -18,7 +18,6 @@ use crate::{
 #[diesel(table_name = crate::schema::blood_requests)]
 pub struct CreateBloodRequest {
     pub hospital_id: Uuid,
-    pub recipient_id: Uuid,
     pub units: Option<i32>,
     pub blood_type: Option<BloodTypeEnum>,
     pub urgency: Option<UrgencyTypeEnum>,
@@ -61,7 +60,7 @@ info!(
     use crate::schema::hospitals::dsl as hospitals_dsl;
 
     let owns_hospital = hospitals_dsl::hospitals
-        // .filter(hospitals_dsl::id.eq(payload.hospital_id))
+        .filter(hospitals_dsl::id.eq(payload.hospital_id))
         .filter(hospitals_dsl::user_id.eq(user.id))
         .select(hospitals_dsl::id)
         .first::<Uuid>(conn)
@@ -73,8 +72,8 @@ info!(
     let new_request = diesel::insert_into(blood_requests)
         .values((
             hospital_id.eq(payload.hospital_id),
-            donor_id.eq(None::<Uuid>),
-            recipient_id.eq(payload.recipient_id),
+            donor_id.eq::<Option<Uuid>>(None),
+            recipient_id.eq::<Option<Uuid>>(None),
             ref_id.eq(Uuid::new_v4().to_string()),
             units.eq(payload.units),
             blood_type.eq(payload.blood_type),
