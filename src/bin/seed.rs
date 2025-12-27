@@ -1,37 +1,21 @@
 use diesel::prelude::*;
 use uuid::Uuid;
-use chrono::Utc;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
 };
 
+// Use the crate name with underscores replaced by hyphens
+use health_bridge::models::{NewUser, MedicalInfo};
+use health_bridge::schema::{users, patients};
+use health_bridge::utils::enums::{Gender, Role};
 
-use anyhow::{anyhow, Result};
-
-
-use health_bridge::models::{
-    User,
-    NewUser,
-    MedicalInfo,
-};
-
-use health_bridge::schema::{
-    users,
-    patients,
-};
-
-use health_bridge::utils::enums::{
-    Gender,
-    Role,
-};
-
-fn hash_password(password: &str) -> Result<String> {
+fn hash_password(password: &str) -> Result<String, Box<dyn std::error::Error>> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
     let password_hash = argon2
         .hash_password(password.as_bytes(), &salt)
-        .map_err(|e| anyhow!("failed to hash password: {}", e))?
+        .map_err(|e| format!("failed to hash password: {}", e))?
         .to_string();
     Ok(password_hash)
 }
@@ -48,7 +32,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Hash password once for all users
     let password_hash = hash_password("password")?;
-    // let password_hash = hash_password("password")?;
 
     // 1. Create Patient User
     let patient_user_id = Uuid::new_v4();
@@ -219,6 +202,250 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("✓ Created Specialist user");
 
+    // 6. Create Hospital Record
+    use health_bridge::schema::hospitals;
+    
+    let hospital_id = Uuid::new_v4();
+    
+    #[derive(Insertable)]
+    #[diesel(table_name = hospitals)]
+    struct NewHospital<'a> {
+        id: Uuid,
+        user_id: Uuid,
+        name: &'a str,
+        hospital_type: Option<health_bridge::utils::enums::HospitalTypeEnum>,
+        address: &'a str,
+        city: &'a str,
+        country: &'a str,
+        primary_phone: &'a str,
+        emergency_phone: Option<&'a str>,
+        email: Option<&'a str>,
+        license_number: &'a str,
+        accreditation_doc_url: &'a str,
+        license_status: bool,
+        has_blood_bank: bool,
+        accepting_donors: bool,
+        donating_operating_hours: Option<&'a str>,
+    }
+
+    let new_hospital = NewHospital {
+        id: hospital_id,
+        user_id: hospital_user_id,
+        name: "Lagos General Hospital",
+        hospital_type: Some(health_bridge::utils::enums::HospitalTypeEnum::General),
+        address: "123 Medical Center Drive",
+        city: "Lagos",
+        country: "Nigeria",
+        primary_phone: "+2348012345675",
+        emergency_phone: Some("+2348099999999"),
+        email: Some("contact@lagosgeneral.com"),
+        license_number: "LIC-2024-001",
+        accreditation_doc_url: "https://example.com/accreditation.pdf",
+        license_status: true,
+        has_blood_bank: true,
+        accepting_donors: true,
+        donating_operating_hours: Some("Mon-Fri: 8AM-6PM, Sat: 9AM-2PM"),
+    };
+
+    diesel::insert_into(hospitals::table)
+        .values(&new_hospital)
+        .execute(&mut conn)?;
+
+    println!("✓ Created Hospital record");
+
+    // 7. Link Specialist to Hospital
+    use health_bridge::schema::specialists;
+    
+    #[derive(Insertable)]
+    #[diesel(table_name = specialists)]
+    struct NewSpecialist<'a> {
+        user_id: Uuid,
+        hospital_id: Option<Uuid>,
+        speciality: Option<&'a str>,
+        bio: Option<&'a str>,
+        email: Option<&'a str>,
+        phone: Option<&'a str>,
+    }
+
+    let new_specialist = NewSpecialist {
+        user_id: specialist_user_id,
+        hospital_id: Some(hospital_id),
+        speciality: Some("Hematology"),
+        bio: Some("Board-certified hematologist with 15 years of experience in blood disorders and transfusion medicine."),
+        email: Some("dr.sarah@lagosgeneral.com"),
+        phone: Some("+2348012345677"),
+    };
+
+    diesel::insert_into(specialists::table)
+        .values(&new_specialist)
+        .execute(&mut conn)?;
+
+    println!("✓ Linked Specialist to Hospital");
+
+    // 8. Create Blood Requests
+    use health_bridge::schema::blood_requests;
+    
+    #[derive(Insertable)]
+    #[diesel(table_name = blood_requests)]
+    struct NewBloodRequest<'a> {
+        id: Uuid,
+        hospital_id: Uuid,
+        donor_id: Option<Uuid>,
+        recipient_id: Option<Uuid>,
+        ref_id: &'a str,
+        units: Option<i32>,
+        blood_type: Option<health_bridge::utils::enums::BloodTypeEnum>,
+        urgency: Option<health_bridge::utils::enums::UrgencyTypeEnum>,
+        timeline_status: Option<health_bridge::utils::enums::TimelineTypeEnum>,
+        request_status: Option<health_bridge::utils::enums::RequestStatusTypeEnum>,
+        request_reason: Option<&'a str>,
+        note: Option<&'a str>,
+        cancelled_by: Option<Uuid>,
+        cancelled_at: Option<chrono::DateTime<chrono::Utc>>,
+        cancelled_reason: Option<&'a str>,
+        preferred_time: Option<chrono::DateTime<chrono::Utc>>,
+        donated_at: Option<chrono::DateTime<chrono::Utc>>,
+        administered_at: Option<chrono::DateTime<chrono::Utc>>,
+    }
+
+    // Blood Request 1: Urgent request for patient
+    let blood_request_1_id = Uuid::new_v4();
+    let blood_request_1 = NewBloodRequest {
+        id: blood_request_1_id,
+        hospital_id: hospital_id,
+        donor_id: None,
+        recipient_id: Some(patient_user_id),
+        ref_id: "BR-2024-001",
+        units: Some(2),
+        blood_type: Some(health_bridge::utils::enums::BloodTypeEnum::OPositive),
+        urgency: Some(health_bridge::utils::enums::UrgencyTypeEnum::Standard),
+        timeline_status: Some(health_bridge::utils::enums::TimelineTypeEnum::DonationAppointmentScheduled),
+        request_status: Some(health_bridge::utils::enums::RequestStatusTypeEnum::Confirmed),
+        request_reason: Some("Surgery preparation"),
+        note: Some("Patient scheduled for surgery next week"),
+        cancelled_by: None,
+        cancelled_at: None,
+        cancelled_reason: None,
+        preferred_time: Some(chrono::Utc::now() + chrono::Duration::days(5)),
+        donated_at: None,
+        administered_at: None,
+    };
+
+    diesel::insert_into(blood_requests::table)
+        .values(&blood_request_1)
+        .execute(&mut conn)?;
+
+    // Blood Request 2: Completed donation
+    let blood_request_2_id = Uuid::new_v4();
+    let blood_request_2 = NewBloodRequest {
+        id: blood_request_2_id,
+        hospital_id: hospital_id,
+        donor_id: Some(donor_user_id),
+        recipient_id: None,
+        ref_id: "BR-2024-002",
+        units: Some(1),
+        blood_type: Some(health_bridge::utils::enums::BloodTypeEnum::APositive),
+        urgency: Some(health_bridge::utils::enums::UrgencyTypeEnum::Standard),
+        timeline_status: Some(health_bridge::utils::enums::TimelineTypeEnum::DonationCompleted),
+        request_status: Some(health_bridge::utils::enums::RequestStatusTypeEnum::Completed),
+        request_reason: Some("Voluntary donation"),
+        note: Some("Regular donor, no issues"),
+        cancelled_by: None,
+        cancelled_at: None,
+        cancelled_reason: None,
+        preferred_time: Some(chrono::Utc::now() - chrono::Duration::days(2)),
+        donated_at: Some(chrono::Utc::now() - chrono::Duration::days(2)),
+        administered_at: None,
+    };
+
+    diesel::insert_into(blood_requests::table)
+        .values(&blood_request_2)
+        .execute(&mut conn)?;
+
+    println!("✓ Created Blood Requests");
+
+    // 9. Create Appointments
+    use health_bridge::schema::appointments;
+    
+    #[derive(Insertable)]
+    #[diesel(table_name = appointments)]
+    struct NewAppointment<'a> {
+        id: Uuid,
+        blood_request_id: Uuid,
+        hospital_id: Uuid,
+        user_id: Uuid,
+        appointment_type: health_bridge::utils::enums::AppointmentTypeEnum,
+        status: health_bridge::utils::enums::AppointmentStatusEnum,
+        scheduled_time: chrono::DateTime<chrono::Utc>,
+        previous_time: Option<chrono::DateTime<chrono::Utc>>,
+        cancelled_by: Option<health_bridge::utils::enums::CancelledByEnum>,
+        cancelled_by_id: Option<Uuid>,
+        cancelled_reason: Option<&'a str>,
+        cancelled_at: Option<chrono::DateTime<chrono::Utc>>,
+    }
+
+    // Appointment 1: Upcoming donation appointment for patient
+    let appointment_1 = NewAppointment {
+        id: Uuid::new_v4(),
+        blood_request_id: blood_request_1_id,
+        hospital_id: hospital_id,
+        user_id: patient_user_id,
+        appointment_type: health_bridge::utils::enums::AppointmentTypeEnum::Patient,
+        status: health_bridge::utils::enums::AppointmentStatusEnum::Created,
+        scheduled_time: chrono::Utc::now() + chrono::Duration::days(5),
+        previous_time: None,
+        cancelled_by: None,
+        cancelled_by_id: None,
+        cancelled_reason: None,
+        cancelled_at: None,
+    };
+
+    diesel::insert_into(appointments::table)
+        .values(&appointment_1)
+        .execute(&mut conn)?;
+
+    // Appointment 2: Completed appointment for donor
+    let appointment_2 = NewAppointment {
+        id: Uuid::new_v4(),
+        blood_request_id: blood_request_2_id,
+        hospital_id: hospital_id,
+        user_id: donor_user_id,
+        appointment_type: health_bridge::utils::enums::AppointmentTypeEnum::Donor,
+        status: health_bridge::utils::enums::AppointmentStatusEnum::Completed,
+        scheduled_time: chrono::Utc::now() - chrono::Duration::days(2),
+        previous_time: None,
+        cancelled_by: None,
+        cancelled_by_id: None,
+        cancelled_reason: None,
+        cancelled_at: None,
+    };
+
+    diesel::insert_into(appointments::table)
+        .values(&appointment_2)
+        .execute(&mut conn)?;
+
+    // Appointment 3: Cancelled appointment
+    let appointment_3 = NewAppointment {
+        id: Uuid::new_v4(),
+        blood_request_id: blood_request_1_id,
+        hospital_id: hospital_id,
+        user_id: donor_user_id,
+        appointment_type: health_bridge::utils::enums::AppointmentTypeEnum::Patient,
+        status: health_bridge::utils::enums::AppointmentStatusEnum::Cancelled,
+        scheduled_time: chrono::Utc::now() + chrono::Duration::days(3),
+        previous_time: None,
+        cancelled_by: Some(health_bridge::utils::enums::CancelledByEnum::Hospital),
+        cancelled_by_id: Some(donor_user_id),
+        cancelled_reason: Some("Schedule conflict"),
+        cancelled_at: Some(chrono::Utc::now() - chrono::Duration::hours(1)),
+    };
+
+    diesel::insert_into(appointments::table)
+        .values(&appointment_3)
+        .execute(&mut conn)?;
+
+    println!("✓ Created Appointments");
+
     println!("\n=== Seeding Complete ===");
     println!("\nLogin credentials for all users:");
     println!("Password: password\n");
@@ -227,7 +454,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hospital:   hospital@mail.com");
     println!("Admin:      admin@mail.com");
     println!("Specialist: specialist@mail.com");
-    println!("\nAll users have verified emails and are ready to use.");
+    println!("\nSeeded data:");
+    println!("- 5 users (all verified)");
+    println!("- 2 patient medical records");
+    println!("- 1 hospital (Lagos General Hospital)");
+    println!("- 1 specialist linked to hospital");
+    println!("- 2 blood requests (1 pending, 1 completed)");
+    println!("- 3 appointments (1 scheduled, 1 completed, 1 cancelled)");
 
     Ok(())
 }
