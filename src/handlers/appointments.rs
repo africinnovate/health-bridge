@@ -29,7 +29,7 @@ pub struct CancelAppointmentPayload {
 /// Create appointment (donor or patient initiates)
 #[utoipa::path(
     post,
-    path = "/api/appointments",
+    path = "/api/appointments/create",
     request_body = CreateAppointment,
     responses(
         (status = 201, body = ApiResponse<Appointment>),
@@ -85,6 +85,7 @@ pub async fn confirm_appointment(
     Ok(ApiResponse::success(appt))
 }
 
+/// Reschedule an appointment. Used by Hospital staff
 #[utoipa::path(
     put,
     path = "/api/appointments/reschedule/{appointment_id}",
@@ -113,7 +114,7 @@ pub async fn reschedule_appointment(
     Ok(ApiResponse::success(appointment))
 }
 
-
+/// Cancel Appointment
 #[utoipa::path(
     put,
     path = "/api/appointments/cancel/{appointment_id}",
@@ -142,6 +143,7 @@ pub async fn cancel_appointment(
     Ok(ApiResponse::success(appointment))
 }
 
+/// Complete appointment. Used only by Hospital
 #[utoipa::path(
     put,
     path = "/api/appointments/complete/{appointment_id}",
