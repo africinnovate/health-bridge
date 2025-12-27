@@ -1,10 +1,9 @@
 use axum::{
     Extension, Json, extract::{State, Path}
 };
-use diesel::AsChangeset;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use utoipa::ToSchema;
 
 use crate::{
