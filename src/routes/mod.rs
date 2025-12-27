@@ -6,6 +6,7 @@ pub mod auth;
 pub mod hospitals;
 pub mod specialists;
 pub mod patients;
+pub mod appointments;
 
 pub fn create_router() -> Router<AppState> {
     let protected_patients = Router::new()
@@ -24,10 +25,16 @@ pub fn create_router() -> Router<AppState> {
             middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
         );
 
+    let protected_appointments = Router::new()
+        .nest("/appointments", appointments::router())
+        .route_layer(
+            middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
+        );
 
     Router::new()
         .nest("/auth", auth::router())
         .nest("/specialists", specialists::router())
         .merge(protected_patients)
         .merge(protected_hospitals)
+        .merge(protected_appointments)
 }

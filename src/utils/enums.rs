@@ -50,10 +50,11 @@ pub enum AppointmentTypeEnum {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = AppointmentStatusType)]
 pub enum AppointmentStatusEnum {
-    Proposed,
+    Created,
     Confirmed,
     Rescheduled,
     Cancelled,
+    Completed,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -142,10 +143,11 @@ impl FromSql<AppointmentTypeType, Pg> for AppointmentTypeEnum {
 impl ToSql<AppointmentStatusType, Pg> for AppointmentStatusEnum {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         match *self {
-            AppointmentStatusEnum::Proposed => out.write_all(b"proposed")?,
+            AppointmentStatusEnum::Created => out.write_all(b"created")?,
             AppointmentStatusEnum::Confirmed => out.write_all(b"confirmed")?,
             AppointmentStatusEnum::Rescheduled => out.write_all(b"rescheduled")?,
             AppointmentStatusEnum::Cancelled => out.write_all(b"cancelled")?,
+            AppointmentStatusEnum::Completed => out.write_all(b"completed")?,
         }
         Ok(IsNull::No)
     }
@@ -154,10 +156,11 @@ impl ToSql<AppointmentStatusType, Pg> for AppointmentStatusEnum {
 impl FromSql<AppointmentStatusType, Pg> for AppointmentStatusEnum {
     fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
         match bytes.as_bytes() {
-            b"proposed" => Ok(AppointmentStatusEnum::Proposed),
+            b"proposed" => Ok(AppointmentStatusEnum::Created),
             b"confirmed" => Ok(AppointmentStatusEnum::Confirmed),
             b"rescheduled" => Ok(AppointmentStatusEnum::Rescheduled),
             b"cancelled" => Ok(AppointmentStatusEnum::Cancelled),
+            b"completed" => Ok(AppointmentStatusEnum::Completed),
             _ => Err("Unrecognized enum variant for AppointmentStatusEnum".into()),
         }
     }

@@ -13,7 +13,7 @@ use crate::{
     hospitals::{
         self, 
         blood_requests::{CreateBloodRequest, UpdateBloodRequest}}, 
-        models::{BloodRequest, Hospital, User}, 
+        models::{Appointment, BloodRequest, Hospital, User}, 
         utils::{enums::HospitalTypeEnum, response::ApiResponse},
 };
 
@@ -210,4 +210,27 @@ pub async fn update_blood_request(
         "Blood request updated successfully",
         request,
     ))  
+}
+
+/// Update blood request
+#[utoipa::path(
+    put,
+    path = "/api/hospitals/confirm-appointment/{hospital_id}",
+    request_body = UpdateBloodRequest,
+    responses(
+        (status = 200, body = ApiResponse<Appointment>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn confirm_appointment(
+    Path(id): Path<Uuid>,
+    Extension(user): Extension<User>,
+    State(state): State<AppState>,
+) -> Result<ApiResponse<Appointment>, AppError> {
+    let mut conn = state.pool.get()?;
+    let appt = hospitals::appointments::confirm_appointment(&mut conn, id, &user)?;
+    Ok(ApiResponse::success(appt))
 }

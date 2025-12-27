@@ -38,15 +38,15 @@ pub mod sql_types {
     #[diesel(postgres_type(name = "timeline_type"))]
     pub struct TimelineType;
 
-    #[derive(diesel::sql_types::SqlType)]
+    #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "appointment_type"))]
     pub struct AppointmentTypeType;
 
-    #[derive(diesel::sql_types::SqlType)]
+    #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "appointment_status"))]
     pub struct AppointmentStatusType;
 
-    #[derive(diesel::sql_types::SqlType)]
+    #[derive(SqlType)]
     #[diesel(postgres_type(name = "cancelled_by"))]
     pub struct CancelledByType;
 
@@ -220,6 +220,11 @@ diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(password_reset_tokens -> users (user_id));
 diesel::joinable!(specialists -> users (user_id));
 diesel::joinable!(specialists -> hospitals (hospital_id));
+diesel::joinable!(appointments -> users (user_id));
+// diesel::joinable!(appointments -> users (cancelled_by_id));
+diesel::joinable!(appointments -> hospitals (hospital_id));
+diesel::joinable!(appointments -> blood_requests (blood_request_id));
+
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,
@@ -228,4 +233,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     specialists,
     password_reset_tokens,
     email_verification_tokens,
+    appointments,
+    blood_requests,
 );
