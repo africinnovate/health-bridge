@@ -37,6 +37,14 @@ pub mod sql_types {
     #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "timeline_type"))]
     pub struct TimelineType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "consultation_type"))]
+    pub struct ConsultationType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "days_of_week_type"))]
+    pub struct DaysOfWeekType;
 }
 
 
@@ -160,32 +168,70 @@ diesel::table! {
     }
 }
 
+
 diesel::table! {
     use diesel::sql_types::*;
     use diesel::sql_types::Uuid as DieselUuid;
-
-    specialists (user_id) {
-        user_id -> DieselUuid,
-        hospital_id -> Nullable<DieselUuid>,
-        speciality -> Nullable<Varchar>,
-        bio -> Nullable<Text>,
-        email -> Nullable<Varchar>,
-        phone -> Nullable<Varchar>,
+    specialties (id) {
+        id -> Uuid,
+        name -> Varchar,
+        description -> Nullable<Text>,
         created_at -> Timestamptz,
     }
 }
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::{ConsultationType};
+
+    specialists (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        hospital_id -> Nullable<Uuid>,
+        specialty_id -> Uuid,
+        bio -> Nullable<Text>,
+        years_of_experience -> Nullable<Int4>,
+        consultation_type -> ConsultationType,
+        session_duration_minutes -> Nullable<Int4>,
+        primary_phone -> Nullable<Varchar>,
+        secondary_phone -> Nullable<Varchar>,
+        languages_spoken -> Nullable<Varchar>,
+        verified -> Bool,
+        suspended -> Bool,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    specialist_availabilities (id) {
+        id -> Uuid,
+        specialist_id -> Uuid,
+        day_of_week -> Varchar,
+        opens_at -> Time,
+        closes_at -> Time,
+        created_at -> Timestamptz,
+    }
+}
+
 
 diesel::joinable!(patients -> users (user_id));
 diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(password_reset_tokens -> users (user_id));
 diesel::joinable!(specialists -> users (user_id));
+diesel::joinable!(specialists -> specialties (specialty_id));
+diesel::joinable!(specialist_availabilities -> specialists (specialist_id));
 diesel::joinable!(specialists -> hospitals (hospital_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,
     patients,
     hospitals,
+    specialties,
     specialists,
     password_reset_tokens,
+    specialist_availabilities,
     email_verification_tokens,
 );

@@ -15,6 +15,8 @@ use crate::schema::sql_types::{
     UrgencyType,
     BloodRequestStatusType,
     HospitalType,
+    ConsultationType,
+    DaysOfWeekType,
 };
 use crate::error::AppError;
 
@@ -35,6 +37,29 @@ pub enum Role {
     Specialist,
     Hospital,
     Admin,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = ConsultationType)]
+#[serde(rename_all = "snake_case")]
+pub enum ConsultationTypeEnum {
+    VideoCall,
+    VoiceCall,
+    InPerson,
+}
+
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = DaysOfWeekType)]
+#[serde(rename_all = "lowercase")]
+pub enum DaysOfWeekEnum {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -89,6 +114,58 @@ pub enum RequestStatusTypeEnum {
     Accepted,
     Completed,
     Cancelled,
+}
+
+impl ToSql<ConsultationType, Pg> for ConsultationTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            ConsultationTypeEnum::VideoCall => out.write_all(b"video_call")?,
+            ConsultationTypeEnum::VoiceCall => out.write_all(b"voice_call")?,
+            ConsultationTypeEnum::InPerson => out.write_all(b"in_person")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<ConsultationType, Pg> for ConsultationTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"video_call" => Ok(ConsultationTypeEnum::VideoCall),
+            b"voice_call" => Ok(ConsultationTypeEnum::VoiceCall),
+            b"in_person" => Ok(ConsultationTypeEnum::InPerson),
+            _ => Err("Unrecognized enum variant for ConsultationType".into()),
+        }
+    }
+}
+
+impl ToSql<DaysOfWeekType, Pg> for DaysOfWeekEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            DaysOfWeekEnum::Monday => out.write_all(b"monday")?,
+            DaysOfWeekEnum::Tuesday => out.write_all(b"tuesday")?,
+            DaysOfWeekEnum::Wednesday => out.write_all(b"wednesday")?,
+            DaysOfWeekEnum::Thursday => out.write_all(b"thursday")?,
+            DaysOfWeekEnum::Friday => out.write_all(b"friday")?,
+            DaysOfWeekEnum::Saturday => out.write_all(b"saturday")?,
+            DaysOfWeekEnum::Sunday => out.write_all(b"sunday")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<DaysOfWeekType, Pg> for DaysOfWeekEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"monday" => Ok(DaysOfWeekEnum::Monday),
+            b"tuesday" => Ok(DaysOfWeekEnum::Tuesday),
+            b"wednesday" => Ok(DaysOfWeekEnum::Wednesday),
+            b"thursday" => Ok(DaysOfWeekEnum::Thursday),
+            b"friday" => Ok(DaysOfWeekEnum::Friday),
+            b"saturday" => Ok(DaysOfWeekEnum::Saturday),
+            b"sunday" => Ok(DaysOfWeekEnum::Sunday),
+            _ => Err("Unrecognized enum variant for DaysOfWeekType".into()),
+        }
+    }
 }
 
 impl ToSql<GenderType, Pg> for Gender {

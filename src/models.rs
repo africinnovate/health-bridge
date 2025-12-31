@@ -11,6 +11,9 @@ use crate::{
         users, 
         hospitals,
         blood_requests,
+        specialists,
+        specialties,
+        specialist_availabilities,
     },
     utils::enums::{
         Gender, 
@@ -20,6 +23,8 @@ use crate::{
         TimelineTypeEnum,
         RequestStatusTypeEnum,
         Role,
+        ConsultationTypeEnum,
+        DaysOfWeekEnum,
     }
 };
 
@@ -179,18 +184,45 @@ pub struct BloodRequest {
     pub created_at: DateTime<Utc>,
 }
 
-
-
-/* Specialist */
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Specialist {
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = specialties)]
+pub struct Specialty {
     pub id: Uuid,
-    pub hospital_id: Option<Uuid>,
-    pub full_name: String,
-    pub speciality: Option<String>,
-    pub bio: Option<String>,
-    pub email: Option<String>,
-    pub phone: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
+#[diesel(belongs_to(User))]
+#[diesel(belongs_to(Specialty))]
+#[diesel(table_name = specialists)]
+pub struct Specialist {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub hospital_id: Option<Uuid>,
+    pub specialty_id: Uuid,
+    pub bio: Option<String>,
+    pub years_of_experience: Option<i32>,
+    pub consultation_type: ConsultationTypeEnum,
+    pub session_duration_minutes: Option<i32>,
+    pub primary_phone: Option<String>,
+    pub secondary_phone: Option<String>,
+    pub languages_spoken: Option<String>,
+    pub verified: bool,
+    pub suspended: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
+#[diesel(belongs_to(Specialist))]
+#[diesel(table_name = specialist_availabilities)]
+pub struct SpecialistAvailability {
+    pub id: Uuid,
+    pub specialist_id: Uuid,
+    pub day_of_week: DaysOfWeekEnum, // monday, tuesday...
+    pub opens_at: chrono::NaiveTime,
+    pub closes_at: chrono::NaiveTime,
+    pub created_at: DateTime<Utc>,
+}

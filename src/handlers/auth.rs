@@ -69,11 +69,6 @@ pub struct UserResponse {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct MessageResponse {
-    pub message: String,
-}
-
-#[derive(Serialize, ToSchema)]
 pub struct TokenVerifyResponse {
     pub valid: bool,
     pub user_id: Option<String>,
