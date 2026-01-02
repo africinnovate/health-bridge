@@ -6,8 +6,20 @@ use argon2::{
 };
 
 // Use the crate name with underscores replaced by hyphens
-use health_bridge::{models::{MedicalInfo, NewUser}, utils::enums::ConsultationTypeEnum};
-use health_bridge::schema::{users, patients};
+use health_bridge::{
+    models::{MedicalInfo, NewUser}, 
+    utils::enums::ConsultationTypeEnum,
+};
+use health_bridge::schema::{
+    users, 
+    patients, 
+    hospitals,
+    specialties,
+    specialists,
+    specialist_availabilities,
+    appointments,
+    blood_requests
+};
 use health_bridge::utils::enums::{Gender, Role};
 
 fn hash_password(password: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -159,6 +171,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("✓ Created Hospital user");
 
+    // 7. Create Specialty
+let specialty_id = Uuid::new_v4();
+
+#[derive(Insertable)]
+#[diesel(table_name = specialties)]
+struct NewSpecialty<'a> {
+    id: Uuid,
+    name: &'a str,
+    description: Option<&'a str>,
+}
+
+let new_specialty = NewSpecialty {
+    id: specialty_id,
+    name: "Hematology",
+    description: Some("Blood disorders and diseases"),
+};
+
+diesel::insert_into(specialties::table)
+    .values(&new_specialty)
+    .execute(&mut conn)?;
+
+println!("✓ Created Specialty");
+
+// 8. Link Specialist to Hospital
+// ... your existing specialist code, but remove the line:
+// let specialty_id = Uuid::new_v4();  // DELETE THIS LINE
+
     // 4. Create Admin User
     let admin_user_id = Uuid::new_v4();
     let admin_user = NewUser {
@@ -218,7 +257,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Created Specialist user");
 
     // 6. Create Hospital Record
-    use health_bridge::schema::hospitals;
     
     let hospital_id = Uuid::new_v4();
     
@@ -269,7 +307,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Created Hospital record");
 
     // 7. Link Specialist to Hospital
-    use health_bridge::schema::specialists;
     
     #[derive(Insertable)]
     #[diesel(table_name = specialists)]
@@ -279,13 +316,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         specialty_id: Uuid,
         bio: Option<&'static str>,
         years_of_experience: Option<i32>,
-        consultation_type: Option<ConsultationTypeEnum>,
+        consultation_type: ConsultationTypeEnum,
         session_duration_minutes: Option<i32>,
         primary_phone: Option<&'static str>,
         languages_spoken: Option<&'static str>,
     }
-
-    let specialty_id = Uuid::new_v4();
 
     let new_specialist = NewSpecialist {
         user_id: specialist_user_id,
@@ -293,7 +328,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         specialty_id,
         bio: Some("Board-certified hematologist with 15 years of experience."),
         years_of_experience: Some(15),
-        consultation_type: Some(ConsultationTypeEnum::InPerson),
+        consultation_type: ConsultationTypeEnum::InPerson,
         session_duration_minutes: Some(30),
         primary_phone: Some("+2348012345677"),
         languages_spoken: Some("English"),
@@ -301,12 +336,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     diesel::insert_into(specialists::table)
         .values(&new_specialist)
+        .on_conflict(specialists::specialty_id)
+        .do_nothing()
         .execute(&mut conn)?;
 
     println!("✓ Linked Specialist to Hospital");
 
     // 7b. Create Specialist Availability
-    use health_bridge::schema::specialist_availabilities;
     use health_bridge::utils::enums::DaysOfWeekEnum;
 
     #[derive(Insertable)]
@@ -340,7 +376,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Created Specialist Availability");
 
     // 8. Create Blood Requests
-    use health_bridge::schema::blood_requests;
     
     #[derive(Insertable)]
     #[diesel(table_name = blood_requests)]
@@ -422,7 +457,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✓ Created Blood Requests");
 
     // 9. Create Appointments
-    use health_bridge::schema::appointments;
     
     #[derive(Insertable)]
     #[diesel(table_name = appointments)]

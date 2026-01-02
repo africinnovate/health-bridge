@@ -26,4 +26,4 @@ cargo watch \
     --watch src \
     --ignore "target/*" \
     --ignore "*.swp" \
-    -x 'run'
+    -x 'run --bin health-bridge'
