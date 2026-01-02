@@ -1,3 +1,5 @@
+use crate::schema::sql_types::DaysOfWeekType;
+
 pub mod sql_types {
     use diesel::sql_types::SqlType;
      use diesel::query_builder::QueryId;
@@ -206,10 +208,12 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::DaysOfWeekType;
+
     specialist_availabilities (id) {
         id -> Uuid,
         specialist_id -> Uuid,
-        day_of_week -> Varchar,
+        day_of_week -> DaysOfWeekType,
         opens_at -> Time,
         closes_at -> Time,
         created_at -> Timestamptz,

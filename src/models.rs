@@ -218,6 +218,7 @@ pub struct Specialist {
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
 #[diesel(belongs_to(Specialist))]
 #[diesel(table_name = specialist_availabilities)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct SpecialistAvailability {
     pub id: Uuid,
     pub specialist_id: Uuid,

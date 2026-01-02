@@ -1,11 +1,11 @@
-use axum::{Router, routing::get, extract::State, Json};
-use crate::AppState;
+use axum::{Router, routing::{get, post, put}};
+use crate::{AppState, handlers::specialists};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(get_specialists))
-}
+        .route("/specialists", post(specialists::create_specialist_handler))
+        .route("/specialists/{id}", get(specialists::get_specialist_handler))
+        .route("/specialists/{id}", put(specialists::update_specialist_handler))
+        
 
-async fn get_specialists(State(state): State<AppState>) -> Json<&'static str> {
-    Json("list of specialists")
 }

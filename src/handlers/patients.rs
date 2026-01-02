@@ -1,7 +1,6 @@
-use axum::{extract::State, Json, extract::Path};
+use axum::{extract::State, Json};
 use axum::Extension;
 use serde::{Deserialize, Serialize};
-use utoipa::openapi::info;
 use uuid::Uuid;
 use utoipa::ToSchema;
 use chrono::NaiveDate;
