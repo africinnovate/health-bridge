@@ -41,6 +41,19 @@ pub mod sql_types {
     pub struct TimelineType;
 
     #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "appointment_type"))]
+    pub struct AppointmentTypeType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "appointment_status"))]
+    pub struct AppointmentStatusType;
+
+    #[derive(SqlType)]
+    #[diesel(postgres_type(name = "cancelled_by"))]
+    pub struct CancelledByType;
+
+
+    #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "consultation_type"))]
     pub struct ConsultationType;
 
@@ -170,6 +183,33 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::{AppointmentTypeType, AppointmentStatusType, CancelledByType};
+
+    appointments (id) {
+        id -> Uuid,
+
+        blood_request_id -> Uuid,
+        hospital_id -> Uuid,
+        user_id -> Uuid,
+
+        appointment_type -> AppointmentTypeType,
+        status -> AppointmentStatusType,
+
+        scheduled_time -> Timestamptz,
+        previous_time -> Nullable<Timestamptz>,
+
+        cancelled_by -> Nullable<CancelledByType>,
+        cancelled_by_id -> Nullable<Uuid>,
+        cancelled_reason -> Nullable<Text>,
+        cancelled_at -> Nullable<Timestamptz>,
+
+        created_at -> Timestamptz,
+    }
+}
+
 
 diesel::table! {
     use diesel::sql_types::*;
@@ -228,6 +268,11 @@ diesel::joinable!(specialists -> users (user_id));
 diesel::joinable!(specialists -> specialties (specialty_id));
 diesel::joinable!(specialist_availabilities -> specialists (specialist_id));
 diesel::joinable!(specialists -> hospitals (hospital_id));
+diesel::joinable!(appointments -> users (user_id));
+// diesel::joinable!(appointments -> users (cancelled_by_id));
+diesel::joinable!(appointments -> hospitals (hospital_id));
+diesel::joinable!(appointments -> blood_requests (blood_request_id));
+
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,
@@ -238,4 +283,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     password_reset_tokens,
     specialist_availabilities,
     email_verification_tokens,
+    appointments,
+    blood_requests,
 );

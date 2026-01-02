@@ -14,7 +14,7 @@ use crate::{
     schema::specialists,
     schema::specialist_availabilities,
     utils::enums::Role,
-    handlers::specialists::{CreateSpecialistRequest, UpdateSpecialistRequest},
+    handlers::specialists::{CreateSpecialistRequest, UpdateSpecialistWithAvailability},
 };
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -154,18 +154,60 @@ pub fn update_specialist(
     conn: &mut PgConnection,
     specialist_id: Uuid,
     user: &User,
-    payload: UpdateSpecialistRequest,
+    payload: UpdateSpecialistWithAvailability,
 ) -> Result<Specialist, AppError> {
 
+    // Update main specialist fields
     let updated = diesel::update(
         specialists::table
             .filter(specialists::id.eq(specialist_id))
             .filter(specialists::user_id.eq(user.id)),
     )
-    .set(payload)
+    .set(&payload.specialist)  // only the table columns
     .returning(Specialist::as_select())
     .get_result::<Specialist>(conn)
-    .optional()?;
+    .optional()?
+    .ok_or_else(|| AppError::NotFound("Specialist not found".into()))?;
 
-    updated.ok_or_else(|| AppError::NotFound("Specialist not found".into()))
+    // Handle availabilities separately
+    if let Some(availabilities) = payload.availabilities {
+        diesel::delete(
+            specialist_availabilities::table
+                .filter(specialist_availabilities::specialist_id.eq(specialist_id)),
+        )
+        .execute(conn)?;
+
+        for slot in availabilities {
+            diesel::insert_into(specialist_availabilities::table)
+                .values((
+                    specialist_availabilities::specialist_id.eq(specialist_id),
+                    specialist_availabilities::day_of_week.eq(slot.day_of_week),
+                    specialist_availabilities::opens_at.eq(slot.opens_at),
+                    specialist_availabilities::closes_at.eq(slot.closes_at),
+                ))
+                .execute(conn)?;
+        }
+    }
+
+    Ok(updated)
 }
+
+// pub fn update_specialist(
+//     conn: &mut PgConnection,
+//     specialist_id: Uuid,
+//     user: &User,
+//     payload: UpdateSpecialistRequest,
+// ) -> Result<Specialist, AppError> {
+
+//     let updated = diesel::update(
+//         specialists::table
+//             .filter(specialists::id.eq(specialist_id))
+//             .filter(specialists::user_id.eq(user.id)),
+//     )
+//     .set(payload)
+//     .returning(Specialist::as_select())
+//     .get_result::<Specialist>(conn)
+//     .optional()?;
+
+//     updated.ok_or_else(|| AppError::NotFound("Specialist not found".into()))
+// }

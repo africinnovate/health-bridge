@@ -42,7 +42,7 @@ pub struct CreateAvailability {
 }
 
 
-#[derive(Debug, Deserialize, AsChangeset, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, AsChangeset)]
 #[diesel(table_name = specialists)]
 pub struct UpdateSpecialistRequest {
     pub bio: Option<String>,
@@ -53,6 +53,12 @@ pub struct UpdateSpecialistRequest {
     pub secondary_phone: Option<String>,
     pub languages_spoken: Option<String>,
     pub suspended: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct UpdateSpecialistWithAvailability {
+    pub specialist: UpdateSpecialistRequest,
+    pub availabilities: Option<Vec<CreateAvailability>>,
 }
 
 /// Create specialist profile
@@ -141,7 +147,7 @@ pub async fn update_specialist_handler(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
     Extension(user): Extension<User>,
-    Json(payload): Json<UpdateSpecialistRequest>,
+    Json(payload): Json<UpdateSpecialistWithAvailability>,
 ) -> Result<ApiResponse<SpecialistResponse>, AppError> {
 
     let mut conn = state.pool.get()?;

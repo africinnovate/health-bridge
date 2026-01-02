@@ -4,6 +4,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize};
 use utoipa::ToSchema;
+use tracing::{info, error};
 
 use crate::utils::enums::Role;
 use crate::{
@@ -17,7 +18,6 @@ use crate::{
 #[diesel(table_name = crate::schema::blood_requests)]
 pub struct CreateBloodRequest {
     pub hospital_id: Uuid,
-    pub recipient_id: Uuid,
     pub units: Option<i32>,
     pub blood_type: Option<BloodTypeEnum>,
     pub urgency: Option<UrgencyTypeEnum>,
@@ -43,6 +43,11 @@ pub fn create_blood_request(
     user: &User,
     payload: CreateBloodRequest,
 ) -> Result<BloodRequest, AppError> {
+info!(
+    "Checking hospital ownership: hospital_id={}, user_id={}",
+    payload.hospital_id,
+    user.id
+);
 
     // Role guard
     if user.role != Role::Hospital && user.role != Role::Hospital {
@@ -60,7 +65,6 @@ pub fn create_blood_request(
         .select(hospitals_dsl::id)
         .first::<Uuid>(conn)
         .optional()?;
-
     if owns_hospital.is_none() {
         return Err(AppError::Unauthorized("Hospital not found".into()));
     }
@@ -68,8 +72,8 @@ pub fn create_blood_request(
     let new_request = diesel::insert_into(blood_requests)
         .values((
             hospital_id.eq(payload.hospital_id),
-            donor_id.eq(user.id),
-            recipient_id.eq(payload.recipient_id),
+            donor_id.eq::<Option<Uuid>>(None),
+            recipient_id.eq::<Option<Uuid>>(None),
             ref_id.eq(Uuid::new_v4().to_string()),
             units.eq(payload.units),
             blood_type.eq(payload.blood_type),
@@ -94,10 +98,25 @@ pub fn update_blood_request(
     payload: UpdateBloodRequest,
 ) -> Result<BloodRequest, AppError> {
 
+    if user.role != Role::Hospital {
+        return Err(AppError::Unauthorized(
+            "Only hospitals can update blood requests".into(),
+        ));
+    }
+
+    use crate::schema::hospitals::dsl as hospitals_dsl;
+
+    let hospital_id_owned = hospitals_dsl::hospitals
+        .filter(hospitals_dsl::user_id.eq(user.id))
+        .select(hospitals_dsl::id)
+        .first::<Uuid>(conn)
+        .optional()?
+        .ok_or_else(|| AppError::Unauthorized("Hospital not found".into()))?;
+
     let updated = diesel::update(
         blood_requests
             .filter(id.eq(request_id))
-            .filter(donor_id.eq(user.id)),
+            .filter(hospital_id.eq(hospital_id_owned)),
     )
     .set(payload)
     .returning(BloodRequest::as_select())
@@ -106,4 +125,5 @@ pub fn update_blood_request(
 
     updated.ok_or_else(|| AppError::NotFound("Blood request not found".into()))
 }
+
 
