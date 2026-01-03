@@ -4,7 +4,6 @@ use axum::{
     extract::State,
     Json,
 };
-use utoipa::openapi::info;
 use uuid::Uuid;
 use serde::{Deserialize};
 use diesel::prelude::*;
@@ -117,7 +116,7 @@ pub async fn get_specialist(
     Path(id): Path<Uuid>,
     Extension(user): Extension<User>,
 ) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
-info!("Handling get_specialist_handler for ID: {:?}", id);
+
     let mut conn = state.pool.get()?;
 
     let specialist =
@@ -133,7 +132,7 @@ info!("Handling get_specialist_handler for ID: {:?}", id);
 #[utoipa::path(
     put,
     path = "/api/specialists/{id}",
-    request_body = UpdateSpecialistRequest,
+    request_body = UpdateSpecialistWithAvailability,
     responses(
         (status = 200, body = ApiResponse<service::SpecialistResponse>),
         (status = 401),
@@ -149,7 +148,7 @@ pub async fn update_specialist(
     Extension(user): Extension<User>,
     Json(payload): Json<UpdateSpecialistWithAvailability>,
 ) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
-
+    info!("Handling update_specialist_handler for ID: {:?}", id);
     let mut conn = state.pool.get()?;
 
     service::update_specialist(
