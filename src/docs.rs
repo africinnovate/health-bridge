@@ -1,6 +1,6 @@
 use utoipa::OpenApi;
 use utoipa::openapi::security::{SecurityScheme, HttpAuthScheme, HttpBuilder};
-use crate::handlers::{auth, hospitals, patients, appointments};
+use crate::handlers::{auth, hospitals, patients, appointments, specialists};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -20,6 +20,9 @@ use crate::handlers::{auth, hospitals, patients, appointments};
         hospitals::update_hospital,
         hospitals::create_blood_request,
         hospitals::update_blood_request,
+        specialists::create_specialist_handler,
+        specialists::get_specialist_handler,
+        specialists::update_specialist_handler,
         appointments::create_appointment,
         appointments::confirm_appointment,
         appointments::reschedule_appointment,

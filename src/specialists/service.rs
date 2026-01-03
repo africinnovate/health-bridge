@@ -4,6 +4,7 @@ use diesel::pg::PgConnection;
 use uuid::Uuid;
 use utoipa::ToSchema;
 use serde::Serialize;
+use tracing::{info};
 
 use crate::models::SpecialistAvailability;
 use crate::services::mail::MailService;

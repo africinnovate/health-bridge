@@ -13,7 +13,7 @@ use crate::{
     hospitals::{
         self, 
         blood_requests::{CreateBloodRequest, UpdateBloodRequest}}, 
-        models::{Appointment, BloodRequest, Hospital, User}, 
+        models::{BloodRequest, Hospital, User}, 
         utils::{enums::HospitalTypeEnum, response::ApiResponse},
 };
 
