@@ -7,6 +7,7 @@ use serde::Serialize;
 use tracing::{info};
 
 use crate::models::SpecialistAvailability;
+use crate::schema::specialties;
 use crate::services::mail::MailService;
 use crate::utils::enums::{ConsultationTypeEnum, DaysOfWeekEnum, Gender};
 use crate::{
@@ -61,14 +62,16 @@ pub fn get_specialist_with_user(
     specialist_id: Uuid,
 ) -> Result<SpecialistResponse, AppError> {
 
+  info!("Fetching specialist with ID: {:?}", specialist_id);
     use crate::schema::{specialists, users, specialist_availabilities};
-
     let (specialist, user) = specialists::table
         .inner_join(users::table.on(users::id.eq(specialists::user_id)))
         .filter(specialists::id.eq(specialist_id))
         .select((Specialist::as_select(), User::as_select()))
         .first::<(Specialist, User)>(conn)
         .map_err(|_| AppError::NotFound("Specialist not found".into()))?;
+
+      info!("Fetched specialist: {:?}", specialist);
 
     let availability = specialist_availabilities::table
     .filter(specialist_availabilities::specialist_id.eq(specialist.id))
@@ -119,6 +122,16 @@ pub fn create_specialist(
 
     if user.role != Role::Specialist {
         return Err(AppError::Unauthorized("Only specialists allowed".into()));
+    }
+
+    let specialty_exists = specialties::table
+        .find(payload.specialty_id)
+        .select(specialties::id)
+        .first::<Uuid>(conn)
+        .optional()?;
+
+    if specialty_exists.is_none() {
+        return Err(AppError::BadRequest("Invalid specialty_id: specialty does not exist".into()));
     }
 
     let specialist = diesel::insert_into(specialists::table)

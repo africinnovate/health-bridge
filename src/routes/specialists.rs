@@ -3,9 +3,9 @@ use crate::{AppState, handlers::specialists};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/specialists", post(specialists::create_specialist_handler))
-        .route("/specialists/{id}", get(specialists::get_specialist_handler))
-        .route("/specialists/{id}", put(specialists::update_specialist_handler))
+        .route("/", post(specialists::create_specialist))
+        .route("/{id}", get(specialists::get_specialist))
+        .route("/{id}", put(specialists::update_specialist))
         
 
 }

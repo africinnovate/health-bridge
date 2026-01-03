@@ -4,17 +4,15 @@ use axum::{
     extract::State,
     Json,
 };
+use utoipa::openapi::info;
 use uuid::Uuid;
 use serde::{Deserialize};
 use diesel::prelude::*;
 use utoipa::ToSchema;
+use tracing::{info};
 
 use crate::models::User;
-use crate::specialists::service::{
-    create_specialist,
-    get_specialist_with_user, update_specialist,
-    SpecialistResponse,
-};
+use crate::specialists::service;
 use crate::utils::enums::DaysOfWeekEnum;
 use crate::utils::response::ApiResponse;
 use crate::{AppState, error::AppError, utils::enums::ConsultationTypeEnum};
@@ -70,29 +68,29 @@ pub struct UpdateSpecialistWithAvailability {
     path = "/api/specialists",
     request_body = CreateSpecialistRequest,
     responses(
-        (status = 200, body = ApiResponse<SpecialistResponse>),
+        (status = 200, body = ApiResponse<service::SpecialistResponse>),
         (status = 401),
         (status = 500)
     ),
     tag = "specialists",
     security(("bearer_auth" = []))
 )]
-pub async fn create_specialist_handler(
+pub async fn create_specialist(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
     Json(payload): Json<CreateSpecialistRequest>,
-) -> Result<ApiResponse<SpecialistResponse>, AppError> {
+) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
 
     let mut conn = state.pool.get()?;
 
-    let specialist = create_specialist(
+    let specialist = service::create_specialist(
         &mut conn,
         &user,
         payload,
     )?;
 
     let response =
-        get_specialist_with_user(&mut conn, specialist.id)?;
+        service::get_specialist_with_user(&mut conn, specialist.id)?;
 
     Ok(ApiResponse::success(response))
 }
@@ -107,21 +105,23 @@ pub async fn create_specialist_handler(
         ("id" = Uuid, Path, description = "Specialist ID")
     ),
     responses(
-        (status = 200, body = ApiResponse<SpecialistResponse>),
+        (status = 200, body = ApiResponse<service::SpecialistResponse>),
         (status = 404),
         (status = 500)
     ),
-    tag = "specialists"
+    tag = "specialists",
+    security(("bearer_auth" = []))
 )]
-pub async fn get_specialist_handler(
+pub async fn get_specialist(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<ApiResponse<SpecialistResponse>, AppError> {
-
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
+info!("Handling get_specialist_handler for ID: {:?}", id);
     let mut conn = state.pool.get()?;
 
     let specialist =
-    get_specialist_with_user(&mut conn, id)?;
+    service::get_specialist_with_user(&mut conn, id)?;
 
     Ok(ApiResponse::success(specialist))
 }
@@ -135,7 +135,7 @@ pub async fn get_specialist_handler(
     path = "/api/specialists/{id}",
     request_body = UpdateSpecialistRequest,
     responses(
-        (status = 200, body = ApiResponse<SpecialistResponse>),
+        (status = 200, body = ApiResponse<service::SpecialistResponse>),
         (status = 401),
         (status = 404),
         (status = 500)
@@ -143,23 +143,23 @@ pub async fn get_specialist_handler(
     tag = "specialists",
     security(("bearer_auth" = []))
 )]
-pub async fn update_specialist_handler(
+pub async fn update_specialist(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
     Extension(user): Extension<User>,
     Json(payload): Json<UpdateSpecialistWithAvailability>,
-) -> Result<ApiResponse<SpecialistResponse>, AppError> {
+) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
 
     let mut conn = state.pool.get()?;
 
-    update_specialist(
+    service::update_specialist(
         &mut conn,
         id,
         &user,
         payload,
     )?;
 
-    let response = get_specialist_with_user(&mut conn, id)?;
+    let response = service::get_specialist_with_user(&mut conn, id)?;
 
     Ok(ApiResponse::success(response))
 }
