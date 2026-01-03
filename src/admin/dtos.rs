@@ -15,6 +15,15 @@ pub struct AdminStats {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+pub struct StatCard {
+    pub label: String,
+    pub value: i64,
+    pub sub_label: String,
+    pub sub_value: Option<String>,
+}
+
+
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AdminActivity {
     pub title: String,
     pub created_at: DateTime<Utc>,
@@ -22,7 +31,7 @@ pub struct AdminActivity {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AdminDashboardResponse {
-    pub stats: AdminStats,
+    pub stats: Vec<StatCard>,
     pub recent_activities: Vec<AdminActivity>,
 }
 
