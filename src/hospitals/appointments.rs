@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -12,6 +12,12 @@ use crate::{
 
 };
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AppointmentResponse {
+    pub appointment: Appointment,
+    pub user: User,        
+    pub blood_request: BloodRequest,
+}
 
 
 #[derive(Debug, Deserialize, Insertable, ToSchema)]
@@ -102,33 +108,36 @@ pub fn reschedule_appointment(
 
 pub fn get_appointments(
     conn: &mut PgConnection,
-    user: &User,
+    user_ctx: &User,
     filters: AppointmentQuery,
-) -> Result<Vec<Appointment>, AppError> {
-    use crate::schema::appointments::dsl::*;
+) -> Result<Vec<AppointmentResponse>, AppError> {
+    use crate::schema::{
+        appointments::dsl::*,
+        users::dsl as users_dsl,
+        blood_requests::dsl as br_dsl,
+        hospitals::dsl as hospitals_dsl,
+    };
 
-    let mut query = appointments.into_boxed();
+    let mut query = appointments
+        .inner_join(users_dsl::users.on(users_dsl::id.eq(user_id)))
+        .inner_join(br_dsl::blood_requests.on(br_dsl::id.eq(blood_request_id)))
+        .into_boxed();
 
-    match user.role {
+    // 🔐 Access control
+    match user_ctx.role {
         Role::Hospital => {
-            // hospital can only see its own appointments
-            use crate::schema::hospitals::dsl as hospitals_dsl;
-
             let hospital_id_owned = hospitals_dsl::hospitals
-                .filter(hospitals_dsl::user_id.eq(user.id))
+                .filter(hospitals_dsl::user_id.eq(user_ctx.id))
                 .select(hospitals_dsl::id)
                 .first::<Uuid>(conn)?;
 
             query = query.filter(hospital_id.eq(hospital_id_owned));
         }
-        Role::Admin => {
-            // admin sees everything
-        }
-        _ => {
-            return Err(AppError::Unauthorized("Access denied".into()));
-        }
+        Role::Admin => {} // full access
+        _ => return Err(AppError::Unauthorized("Access denied".into())),
     }
 
+    // 🔍 Filters
     if let Some(t) = filters.appointment_type {
         query = query.filter(appointment_type.eq(t));
     }
@@ -137,12 +146,19 @@ pub fn get_appointments(
         query = query.filter(status.eq(s));
     }
 
-    query
+    let rows = query
         .order(created_at.desc())
-        .load::<Appointment>(conn)
-        .map_err(AppError::from)
-}
+        .load::<(Appointment, User, BloodRequest)>(conn)?;
 
+    Ok(rows
+        .into_iter()
+        .map(|(appointment, user, blood_request)| AppointmentResponse {
+            appointment,
+            user,
+            blood_request,
+        })
+        .collect())
+}
 
 
 pub fn cancel_appointment(

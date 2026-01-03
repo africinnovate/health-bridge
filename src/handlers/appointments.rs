@@ -10,10 +10,10 @@ use crate::{
     AppState, 
     error::AppError, 
     hospitals::{
-        self, appointments::{AppointmentQuery, CreateAppointment}, 
+        self, appointments::{AppointmentQuery, AppointmentResponse, CreateAppointment}, 
         }, 
         models::{Appointment, User}, 
-        utils::{response::ApiResponse, enums::{AppointmentStatusEnum, AppointmentTypeEnum}},
+        utils::{enums::{AppointmentStatusEnum, AppointmentTypeEnum}, response::ApiResponse},
 };
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -77,7 +77,7 @@ pub async fn get_appointments(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
     Query(filters): Query<AppointmentQuery>,
-) -> Result<ApiResponse<Vec<Appointment>>, AppError> {
+) -> Result<ApiResponse<Vec<AppointmentResponse>>, AppError> {
     let mut conn = state.pool.get()?;
     let results = hospitals::appointments::get_appointments(&mut conn, &user, filters)?;
     Ok(ApiResponse::success(results))
