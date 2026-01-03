@@ -1,8 +1,9 @@
 use diesel::prelude::*;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
-use utoipa::ToSchema;
+use utoipa::{ToSchema};
 use uuid::Uuid;
+use tracing::{info, error};
 
 use crate::{
     error::AppError,
@@ -24,6 +25,7 @@ pub struct AppointmentResponse {
 #[diesel(table_name = appointments)]
 pub struct CreateAppointment {
     pub blood_request_id: Uuid,
+    pub specialist_id: Uuid,
     pub appointment_type: AppointmentTypeEnum,
     pub scheduled_time: DateTime<Utc>,
 }
@@ -55,6 +57,7 @@ pub fn create_appointment(
             appointments::blood_request_id.eq(payload.blood_request_id),
             appointments::hospital_id.eq(request.hospital_id),
             appointments::user_id.eq(user.id),
+            appointments::specialist_id.eq(payload.specialist_id),
             appointments::appointment_type.eq(payload.appointment_type),
             appointments::status.eq(AppointmentStatusEnum::Created),
             appointments::scheduled_time.eq(payload.scheduled_time),
@@ -133,7 +136,10 @@ pub fn get_appointments(
 
             query = query.filter(hospital_id.eq(hospital_id_owned));
         }
-        Role::Admin => {} // full access
+        Role::Specialist => {
+            query = query.filter(specialist_id.eq(user_ctx.id));
+        }
+        Role::Admin => {}
         _ => return Err(AppError::Unauthorized("Access denied".into())),
     }
 

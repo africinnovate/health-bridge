@@ -193,12 +193,14 @@ pub struct BloodRequest {
 #[diesel(belongs_to(BloodRequest))]
 #[diesel(belongs_to(Hospital))]
 #[diesel(belongs_to(User))]
+#[diesel(belongs_to(Specialist))]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Appointment {
     pub id: Uuid,
     pub blood_request_id: Uuid,
     pub hospital_id: Uuid,
     pub user_id: Uuid,
+    pub specialist_id: Uuid,
 
     pub appointment_type: AppointmentTypeEnum,
     pub status: AppointmentStatusEnum,

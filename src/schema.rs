@@ -194,6 +194,7 @@ diesel::table! {
         blood_request_id -> Uuid,
         hospital_id -> Uuid,
         user_id -> Uuid,
+        specialist_id -> Uuid,
 
         appointment_type -> AppointmentTypeType,
         status -> AppointmentStatusType,
@@ -268,8 +269,7 @@ diesel::joinable!(specialists -> users (user_id));
 diesel::joinable!(specialists -> specialties (specialty_id));
 diesel::joinable!(specialist_availabilities -> specialists (specialist_id));
 diesel::joinable!(specialists -> hospitals (hospital_id));
-diesel::joinable!(appointments -> users (user_id));
-// diesel::joinable!(appointments -> users (cancelled_by_id));
+diesel::joinable!(appointments -> users (specialist_id));
 diesel::joinable!(appointments -> hospitals (hospital_id));
 diesel::joinable!(appointments -> blood_requests (blood_request_id));
 

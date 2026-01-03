@@ -8,7 +8,8 @@ CREATE TABLE appointments (
     blood_request_id UUID NOT NULL REFERENCES blood_requests(id) ON DELETE CASCADE,
 
     hospital_id UUID NOT NULL REFERENCES hospitals(id),
-    user_id UUID NOT NULL REFERENCES users(id), -- donor or patient
+    user_id UUID NOT NULL REFERENCES users(id),
+    specialist_id UUID NOT NULL REFERENCES users(id),
 
     appointment_type appointment_type NOT NULL,
     status appointment_status NOT NULL DEFAULT 'created',
@@ -32,6 +33,9 @@ CREATE INDEX idx_appointments_hospital_id
 
 CREATE INDEX idx_appointments_user_id
     ON appointments (user_id);
+
+CREATE INDEX idx_appointments_specialist_id
+    ON appointments (specialist_id);
 
 CREATE INDEX idx_appointments_scheduled_time
     ON appointments (scheduled_time);
