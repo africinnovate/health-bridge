@@ -1,6 +1,6 @@
 use utoipa::OpenApi;
 use utoipa::openapi::security::{SecurityScheme, HttpAuthScheme, HttpBuilder};
-use crate::handlers::{auth, hospitals, patients, appointments, specialists};
+use crate::handlers::{auth, hospitals, patients, appointments, specialists, admin};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -31,6 +31,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists};
         appointments::reschedule_appointment,
         appointments::cancel_appointment,
         appointments::complete_appointment,
+        admin::admin_dashboard
     ),
     
     components(),
@@ -42,6 +43,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists};
         (name = "specialists", description = "Specialist management endpoints"),
         (name = "hospitals", description = "Hospital management endpoints"),
         (name = "appointments", description = "Appointment management endpoints"),
+        (name = "admin", description = "Admin management endpoints"),
     ),
     info(
         title = "Health Bridge API",
