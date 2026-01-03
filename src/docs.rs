@@ -23,6 +23,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists};
         hospitals::update_blood_request,
         specialists::create_specialist,
         specialists::get_specialist,
+        specialists::get_specialists,
         specialists::update_specialist,
         appointments::get_appointments,
         appointments::create_appointment,

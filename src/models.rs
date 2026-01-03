@@ -246,14 +246,14 @@ pub struct Specialist {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
 #[diesel(belongs_to(Specialist))]
 #[diesel(table_name = specialist_availabilities)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct SpecialistAvailability {
     pub id: Uuid,
     pub specialist_id: Uuid,
-    pub day_of_week: DaysOfWeekEnum, // monday, tuesday...
+    pub day_of_week: DaysOfWeekEnum,
     pub opens_at: chrono::NaiveTime,
     pub closes_at: chrono::NaiveTime,
     pub created_at: DateTime<Utc>,

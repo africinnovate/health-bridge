@@ -32,13 +32,18 @@ pub fn create_router() -> Router<AppState> {
         );
 
         let protected_specialists = Router::new()
-        .nest("/specialists", specialists::router())
+        .nest("/specialists", specialists::protected_router())
         .route_layer(
             middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
         );
 
+        let public_specialists = Router::new()
+        .nest("/specialists", specialists::public_router());
+
+
     Router::new()
         .nest("/auth", auth::router())
+        .merge(public_specialists)
         .merge(protected_specialists)
         .merge(protected_patients)
         .merge(protected_hospitals)

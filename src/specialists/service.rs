@@ -3,11 +3,11 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use uuid::Uuid;
 use utoipa::ToSchema;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use tracing::{info};
 
 use crate::models::SpecialistAvailability;
-use crate::schema::specialties;
+use crate::schema::{specialties, users};
 use crate::services::mail::MailService;
 use crate::utils::enums::{ConsultationTypeEnum, DaysOfWeekEnum, Gender};
 use crate::{
@@ -49,6 +49,13 @@ pub struct SpecialistResponse {
     pub availability: Vec<SpecialistAvailabilityResponse>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SpecialistFilters {
+    pub verified: Option<bool>,
+    pub suspended: Option<bool>,
+    pub specialty_id: Option<Uuid>,
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SpecialistAvailabilityResponse {
     pub day_of_week: DaysOfWeekEnum,
@@ -62,7 +69,6 @@ pub fn get_specialist_with_user(
     specialist_id: Uuid,
 ) -> Result<SpecialistResponse, AppError> {
 
-  info!("Fetching specialist with ID: {:?}", specialist_id);
     use crate::schema::{specialists, users, specialist_availabilities};
     let (specialist, user) = specialists::table
         .inner_join(users::table.on(users::id.eq(specialists::user_id)))
@@ -71,7 +77,6 @@ pub fn get_specialist_with_user(
         .first::<(Specialist, User)>(conn)
         .map_err(|_| AppError::NotFound("Specialist not found".into()))?;
 
-      info!("Fetched specialist: {:?}", specialist);
 
     let availability = specialist_availabilities::table
     .filter(specialist_availabilities::specialist_id.eq(specialist.id))
@@ -163,6 +168,58 @@ pub fn create_specialist(
     Ok(specialist)
 }
 
+pub fn get_specialists(
+    conn: &mut PgConnection,
+    filters: SpecialistFilters,
+) -> Result<Vec<(Specialist, User, Vec<SpecialistAvailability>)>, AppError> {
+
+    let mut query = specialists::table
+        .inner_join(users::table.on(users::id.eq(specialists::user_id)))
+        .into_boxed();
+
+    if let Some(verified) = filters.verified {
+        query = query.filter(specialists::verified.eq(verified));
+    }
+
+    if let Some(suspended) = filters.suspended {
+        query = query.filter(specialists::suspended.eq(suspended));
+    }
+
+    if let Some(specialty_id) = filters.specialty_id {
+        query = query.filter(specialists::specialty_id.eq(specialty_id));
+    }
+
+    let rows = query
+        .select((Specialist::as_select(), User::as_select()))
+        .load::<(Specialist, User)>(conn)?;
+
+    let specialist_ids: Vec<Uuid> = rows.iter().map(|(s, _)| s.id).collect();
+
+    let availability_map = specialist_availabilities::table
+        .filter(specialist_availabilities::specialist_id.eq_any(&specialist_ids))
+        .load::<SpecialistAvailability>(conn)?
+        .into_iter()
+        .fold(
+            std::collections::HashMap::<Uuid, Vec<SpecialistAvailability>>::new(),
+            |mut acc, a| {
+                acc.entry(a.specialist_id).or_default().push(a);
+                acc
+            },
+        );
+
+    Ok(rows
+        .into_iter()
+        .map(|(specialist, user)| {
+            let availability = availability_map
+                .get(&specialist.id)
+                .cloned()
+                .unwrap_or_default();
+
+            (specialist, user, availability)
+        })
+        .collect())
+}
+
 
 pub fn update_specialist(
     conn: &mut PgConnection,
@@ -206,22 +263,3 @@ pub fn update_specialist(
     Ok(updated)
 }
 
-// pub fn update_specialist(
-//     conn: &mut PgConnection,
-//     specialist_id: Uuid,
-//     user: &User,
-//     payload: UpdateSpecialistRequest,
-// ) -> Result<Specialist, AppError> {
-
-//     let updated = diesel::update(
-//         specialists::table
-//             .filter(specialists::id.eq(specialist_id))
-//             .filter(specialists::user_id.eq(user.id)),
-//     )
-//     .set(payload)
-//     .returning(Specialist::as_select())
-//     .get_result::<Specialist>(conn)
-//     .optional()?;
-
-//     updated.ok_or_else(|| AppError::NotFound("Specialist not found".into()))
-// }
