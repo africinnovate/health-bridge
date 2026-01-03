@@ -43,11 +43,6 @@ pub fn create_blood_request(
     user: &User,
     payload: CreateBloodRequest,
 ) -> Result<BloodRequest, AppError> {
-info!(
-    "Checking hospital ownership: hospital_id={}, user_id={}",
-    payload.hospital_id,
-    user.id
-);
 
     // Role guard
     if user.role != Role::Hospital && user.role != Role::Hospital {

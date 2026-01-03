@@ -127,8 +127,8 @@ pub async fn get_specialist(
 
 
 /// Update specialist profile
-/// - Specialist can update own profile
-/// - Partial updates allowed
+/// 
+/// Partial updates allowed
 #[utoipa::path(
     put,
     path = "/api/specialists/{id}",
@@ -148,7 +148,7 @@ pub async fn update_specialist(
     Extension(user): Extension<User>,
     Json(payload): Json<UpdateSpecialistWithAvailability>,
 ) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
-    info!("Handling update_specialist_handler for ID: {:?}", id);
+    
     let mut conn = state.pool.get()?;
 
     service::update_specialist(

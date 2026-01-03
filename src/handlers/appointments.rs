@@ -1,5 +1,5 @@
 use axum::{
-    Extension, Json, extract::{State, Path}
+    Extension, Json, extract::{Path, Query, State}
 };
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
@@ -10,10 +10,10 @@ use crate::{
     AppState, 
     error::AppError, 
     hospitals::{
-        self, appointments::CreateAppointment, 
+        self, appointments::{AppointmentQuery, CreateAppointment}, 
         }, 
         models::{Appointment, User}, 
-        utils::response::ApiResponse,
+        utils::{response::ApiResponse, enums::{AppointmentStatusEnum, AppointmentTypeEnum}},
 };
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -58,6 +58,31 @@ pub async fn create_appointment(
         appointment,
     ))
 }
+
+#[utoipa::path(
+    get,
+    path = "/api/appointments",
+    params(
+        ("appointment_type" = Option<AppointmentTypeEnum>, Query),
+        ("status" = Option<AppointmentStatusEnum>, Query)
+    ),
+    responses(
+        (status = 200, body = ApiResponse<Vec<Appointment>>),
+        (status = 401)
+    ),
+    tag = "appointments",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_appointments(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Query(filters): Query<AppointmentQuery>,
+) -> Result<ApiResponse<Vec<Appointment>>, AppError> {
+    let mut conn = state.pool.get()?;
+    let results = hospitals::appointments::get_appointments(&mut conn, &user, filters)?;
+    Ok(ApiResponse::success(results))
+}
+
 
 
 /// Confirm appointment

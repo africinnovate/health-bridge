@@ -22,6 +22,12 @@ pub struct CreateAppointment {
     pub scheduled_time: DateTime<Utc>,
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct AppointmentQuery {
+    pub appointment_type: Option<AppointmentTypeEnum>,
+    pub status: Option<AppointmentStatusEnum>,
+}
+
 
 pub fn create_appointment(
     conn: &mut PgConnection,
@@ -93,6 +99,50 @@ pub fn reschedule_appointment(
         .get_result(conn)
         .map_err(AppError::from)
 }
+
+pub fn get_appointments(
+    conn: &mut PgConnection,
+    user: &User,
+    filters: AppointmentQuery,
+) -> Result<Vec<Appointment>, AppError> {
+    use crate::schema::appointments::dsl::*;
+
+    let mut query = appointments.into_boxed();
+
+    match user.role {
+        Role::Hospital => {
+            // hospital can only see its own appointments
+            use crate::schema::hospitals::dsl as hospitals_dsl;
+
+            let hospital_id_owned = hospitals_dsl::hospitals
+                .filter(hospitals_dsl::user_id.eq(user.id))
+                .select(hospitals_dsl::id)
+                .first::<Uuid>(conn)?;
+
+            query = query.filter(hospital_id.eq(hospital_id_owned));
+        }
+        Role::Admin => {
+            // admin sees everything
+        }
+        _ => {
+            return Err(AppError::Unauthorized("Access denied".into()));
+        }
+    }
+
+    if let Some(t) = filters.appointment_type {
+        query = query.filter(appointment_type.eq(t));
+    }
+
+    if let Some(s) = filters.status {
+        query = query.filter(status.eq(s));
+    }
+
+    query
+        .order(created_at.desc())
+        .load::<Appointment>(conn)
+        .map_err(AppError::from)
+}
+
 
 
 pub fn cancel_appointment(
