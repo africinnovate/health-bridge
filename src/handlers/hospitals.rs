@@ -1,5 +1,5 @@
 use axum::{
-    Extension, Json, extract::{State, Path}
+    Extension, Json, extract::{Path, Query, State}
 };
 use diesel::AsChangeset;
 use uuid::Uuid;
@@ -12,9 +12,9 @@ use crate::{
     error::AppError, 
     hospitals::{
         self, 
-        blood_requests::{CreateBloodRequest, UpdateBloodRequest}}, 
+        blood_requests::{BloodRequestQuery, BloodRequestResponse, CreateBloodRequest, UpdateBloodRequest}}, 
         models::{BloodRequest, Hospital, User}, 
-        utils::{enums::HospitalTypeEnum, response::ApiResponse},
+        utils::{enums::{HospitalTypeEnum, RequestStatusTypeEnum}, response::ApiResponse},
 };
 
 /// Create hospital profile
@@ -176,6 +176,33 @@ pub async fn create_blood_request(
         request,
     ))
 }
+
+/// Get blood requests for hospital
+///     
+/// Retrieves blood requests associated with the hospital of the authenticated user.
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/blood-request",
+    params(
+        ("request_status" = Option<RequestStatusTypeEnum>, Query)
+    ),
+    responses(
+        (status = 200, body = ApiResponse<Vec<BloodRequest>>),
+        (status = 401)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_blood_requests(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Query(filters): Query<BloodRequestQuery>,
+) -> Result<ApiResponse<Vec<BloodRequestResponse>>, AppError> {
+    let mut conn = state.pool.get()?;
+    let results = hospitals::blood_requests::get_blood_requests(&mut conn, &user, filters)?;
+    Ok(ApiResponse::created("Blood requests retrieved successfully", results))
+}
+
 
 /// Update blood request
 #[utoipa::path(

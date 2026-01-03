@@ -44,6 +44,7 @@ pub enum Role {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = AppointmentTypeType)]
+#[serde(rename_all = "lowercase")]
 pub enum AppointmentTypeEnum {
     Donor,
     Patient,
@@ -51,6 +52,7 @@ pub enum AppointmentTypeEnum {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = AppointmentStatusType)]
+#[serde(rename_all = "lowercase")]
 pub enum AppointmentStatusEnum {
     Created,
     Confirmed,
@@ -61,6 +63,7 @@ pub enum AppointmentStatusEnum {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = CancelledByType)]
+#[serde(rename_all = "lowercase")]
 pub enum CancelledByEnum {
     Hospital,
     Donor,

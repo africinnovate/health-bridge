@@ -1,8 +1,9 @@
 use diesel::prelude::*;
 use diesel::AsChangeset;
+use diesel::associations::HasTable;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize};
+use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 use tracing::{info, error};
 
@@ -25,6 +26,21 @@ pub struct CreateBloodRequest {
     pub note: Option<String>,
     pub preferred_time: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct BloodRequestQuery {
+    pub request_status: Option<RequestStatusTypeEnum>,
+    pub blood_type: Option<BloodTypeEnum>,
+    pub urgency: Option<UrgencyTypeEnum>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BloodRequestResponse {
+    pub blood_request: BloodRequest,
+    pub donor: Option<User>,
+    pub patient: Option<User>,
+}
+
 
 #[derive(Debug, Deserialize, AsChangeset, Selectable, ToSchema)]
 #[diesel(table_name = crate::schema::blood_requests)]
@@ -85,6 +101,69 @@ pub fn create_blood_request(
     Ok(new_request)
 }
 
+pub fn get_blood_requests(
+    conn: &mut PgConnection,
+    user: &User,
+    filters: BloodRequestQuery,
+) -> Result<Vec<BloodRequestResponse>, AppError> {
+    use crate::schema::{
+        blood_requests::dsl::*,
+        hospitals::dsl as hospitals_dsl,
+        users,
+    };
+
+    // Create both aliases in a single call
+    diesel::alias!(users as donor_user: DonorUser, users as patient_user: PatientUser);
+
+    let mut query = blood_requests
+        .left_join(
+            donor_user.on(donor_user.field(users::id).nullable().eq(donor_id))
+        )
+        .left_join(
+            patient_user.on(patient_user.field(users::id).nullable().eq(recipient_id))
+        )
+        .into_boxed();
+
+    // Access control
+    match user.role {
+        Role::Hospital => {
+            let hospital_id_owned = hospitals_dsl::hospitals
+                .filter(hospitals_dsl::user_id.eq(user.id))
+                .select(hospitals_dsl::id)
+                .first::<Uuid>(conn)?;
+
+            query = query.filter(hospital_id.eq(hospital_id_owned));
+        }
+        Role::Admin => {} // full access
+        _ => return Err(AppError::Unauthorized("Access denied".into())),
+    }
+
+    // Filters
+    if let Some(status) = filters.request_status {
+        query = query.filter(request_status.eq(status));
+    }
+
+    if let Some(bt) = filters.blood_type {
+        query = query.filter(blood_type.eq(bt));
+    }
+
+    if let Some(u) = filters.urgency {
+        query = query.filter(urgency.eq(u));
+    }
+
+    let rows = query
+        .order(created_at.desc())
+        .load::<(BloodRequest, Option<User>, Option<User>)>(conn)?;
+
+    Ok(rows
+        .into_iter()
+        .map(|(br, donor, patient)| BloodRequestResponse {
+            blood_request: br,
+            donor,
+            patient,
+        })
+        .collect())
+}
 
 pub fn update_blood_request(
     conn: &mut PgConnection,
