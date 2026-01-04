@@ -142,7 +142,7 @@ pub enum UrgencyTypeEnum {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = TimelineType)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum TimelineTypeEnum {
     RequestCreated,
     VisibleToDonors,
