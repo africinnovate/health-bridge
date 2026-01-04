@@ -118,3 +118,21 @@ pub struct UserListResponse {
     pub data: Vec<AdminUserResponse>,
     pub pagination: PaginationMeta,
 }
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct SpecialistActionRequest {
+    /// Set to true to verify/approve, false to remove verification
+    pub verified: Option<bool>,
+    /// Set suspended status (true = suspended, false = active)
+    pub suspended: Option<bool>,
+    /// Optional reason for the action (required when suspending or removing verification)
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct HospitalActionRequest {
+    /// Set license status (true = approved, false = revoked)
+    pub license_status: Option<bool>,
+    /// Optional reason for the action (required when revoking license)
+    pub reason: Option<String>,
+}

@@ -1,8 +1,12 @@
-use axum::{Extension, extract::{Query, State}};
+use axum::{Extension, Json, extract::{Path, Query, State}};
+use uuid::Uuid;
 
 use crate::{
   AppState, 
-  admin::{dashboard, dtos::{AdminDashboardResponse, UserFilters, UserListResponse}}, 
+  admin::{
+    actions::{HospitalActionResponse, SpecialistActionResponse, update_specialist_status_with_audit, update_hospital_status_with_audit}, 
+    dashboard, dtos::{AdminDashboardResponse, HospitalActionRequest, SpecialistActionRequest, UserFilters, UserListResponse}
+}, 
   error::AppError, 
   models::User, 
   utils::{enums::Role, response::ApiResponse}
@@ -73,4 +77,136 @@ pub async fn get_users(
     )?;
 
     Ok(ApiResponse::success(response))
+}
+
+
+
+/// Update specialist verification/suspension status
+/// 
+/// Allows admins to verify, suspend, or unsuspend specialists
+#[utoipa::path(
+    patch,
+    path = "/api/admin/specialists/{id}/status",
+    request_body = SpecialistActionRequest,
+    responses(
+        (status = 200, body = ApiResponse<SpecialistActionResponse>),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden - Admin only"),
+        (status = 404, description = "Specialist not found"),
+        (status = 500)
+    ),
+    tag = "admin",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_specialist_status(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(specialist_id): Path<Uuid>,
+    Json(payload): Json<SpecialistActionRequest>,
+) -> Result<ApiResponse<SpecialistActionResponse>, AppError> {
+    // Ensure user is admin
+    if !matches!(user.role, crate::utils::enums::Role::Admin) {
+        return Err(AppError::Unauthorized(
+            "Only administrators can perform this action".into(),
+        ));
+    }
+
+    // Validate: if suspending or removing verification, reason should be provided
+    if let Some(false) = payload.verified {
+        if payload.reason.is_none() || payload.reason.as_ref().unwrap().trim().is_empty() {
+            return Err(AppError::BadRequest(
+                "Reason is required when removing verification".into(),
+            ));
+        }
+    }
+
+    if let Some(true) = payload.suspended {
+        if payload.reason.is_none() || payload.reason.as_ref().unwrap().trim().is_empty() {
+            return Err(AppError::BadRequest(
+                "Reason is required when suspending a specialist".into(),
+            ));
+        }
+    }
+
+    let mut conn = state.pool.get()?;
+
+    let response = update_specialist_status_with_audit(
+        &mut conn,
+        specialist_id,
+        &user,
+        payload,
+    )?;
+
+    let action = if response.suspended {
+        "suspended"
+    } else if response.verified {
+        "approved"
+    } else {
+        "updated"
+    };
+
+    Ok(ApiResponse::success_with_message(
+        &format!("Specialist {} successfully", action),
+        response,
+    ))
+}
+
+/// Update hospital license status
+/// 
+/// Allows admins to approve or revoke hospital licenses
+#[utoipa::path(
+    patch,
+    path = "/api/admin/hospitals/{id}/status",
+    request_body = HospitalActionRequest,
+    responses(
+        (status = 200, body = ApiResponse<HospitalActionResponse>),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden - Admin only"),
+        (status = 404, description = "Hospital not found"),
+        (status = 500)
+    ),
+    tag = "admin",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_hospital_status(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(hospital_id): Path<Uuid>,
+    Json(payload): Json<HospitalActionRequest>,
+) -> Result<ApiResponse<HospitalActionResponse>, AppError> {
+    // Ensure user is admin
+    if !matches!(user.role, crate::utils::enums::Role::Admin) {
+        return Err(AppError::Unauthorized(
+            "Only administrators can perform this action".into(),
+        ));
+    }
+
+    // Validate: if revoking license, reason should be provided
+    if let Some(false) = payload.license_status {
+        if payload.reason.is_none() || payload.reason.as_ref().unwrap().trim().is_empty() {
+            return Err(AppError::BadRequest(
+                "Reason is required when revoking hospital license".into(),
+            ));
+        }
+    }
+
+    let mut conn = state.pool.get()?;
+
+    let response = update_hospital_status_with_audit(
+        &mut conn,
+        hospital_id,
+        &user,
+        payload,
+    )?;
+
+    let action = if response.license_status {
+        "approved"
+    } else {
+        "license revoked"
+    };
+
+    Ok(ApiResponse::success_with_message(
+        &format!("Hospital {} successfully", action),
+        response,
+    ))
 }

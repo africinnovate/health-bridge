@@ -60,6 +60,10 @@ pub mod sql_types {
     #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "days_of_week_type"))]
     pub struct DaysOfWeekType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "action_type"))]
+    pub struct ActionType;
 }
 
 
@@ -261,6 +265,24 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::ActionType;
+
+    admin_audit_logs (id) {
+        id -> Uuid,
+        admin_id -> Uuid,
+        target_type -> Varchar,
+        target_id -> Uuid,
+        action_type -> ActionType,
+        reason -> Nullable<Text>,
+        metadata -> Nullable<Text>,
+        created_at -> Timestamptz,
+    }
+}
+
+
 
 diesel::joinable!(patients -> users (user_id));
 diesel::joinable!(email_verification_tokens -> users (user_id));
@@ -272,6 +294,7 @@ diesel::joinable!(specialists -> hospitals (hospital_id));
 diesel::joinable!(appointments -> users (specialist_id));
 diesel::joinable!(appointments -> hospitals (hospital_id));
 diesel::joinable!(appointments -> blood_requests (blood_request_id));
+diesel::joinable!(admin_audit_logs -> users (admin_id));
 
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -285,4 +308,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     email_verification_tokens,
     appointments,
     blood_requests,
+    admin_audit_logs,
 );

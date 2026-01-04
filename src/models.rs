@@ -6,29 +6,31 @@ use diesel::prelude::*;
 use crate::{
     schema::{
         appointments, 
-        blood_requests, 
-        email_verification_tokens, 
-        hospitals, 
-        password_reset_tokens, 
-        patients, 
-        users,
+        blood_requests,
+        email_verification_tokens,
+        hospitals,
+        password_reset_tokens,
+        patients,
+        specialist_availabilities,
         specialists,
         specialties,
-        specialist_availabilities,
+        users,
+        admin_audit_logs,
     },
     utils::enums::{
+        ActionTypeEnum, 
         AppointmentStatusEnum, 
         AppointmentTypeEnum, 
         BloodTypeEnum, 
         CancelledByEnum, 
+        ConsultationTypeEnum, 
+        DaysOfWeekEnum, 
         Gender, 
         HospitalTypeEnum, 
         RequestStatusTypeEnum, 
         Role, 
         TimelineTypeEnum, 
         UrgencyTypeEnum,
-        ConsultationTypeEnum,
-        DaysOfWeekEnum,
     }
 };
 
@@ -256,5 +258,19 @@ pub struct SpecialistAvailability {
     pub day_of_week: DaysOfWeekEnum,
     pub opens_at: chrono::NaiveTime,
     pub closes_at: chrono::NaiveTime,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = admin_audit_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct AdminAuditLog {
+    pub id: Uuid,
+    pub admin_id: Uuid,
+    pub target_type: String,
+    pub target_id: Uuid,
+    pub action_type: ActionTypeEnum,
+    pub reason: Option<String>,
+    pub metadata: Option<String>,
     pub created_at: DateTime<Utc>,
 }

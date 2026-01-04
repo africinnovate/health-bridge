@@ -20,6 +20,7 @@ use crate::schema::sql_types::{
     CancelledByType,
     ConsultationType,
     DaysOfWeekType,
+    ActionType,
 };
 use crate::error::AppError;
 
@@ -40,6 +41,18 @@ pub enum Role {
     Specialist,
     Hospital,
     Admin,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = ActionType)]
+#[serde(rename_all = "snake_case")]
+pub enum ActionTypeEnum {
+    SpecialistVerified,
+    SpecialistUnverified,
+    SpecialistSuspended,
+    SpecialistUnsuspended,
+    HospitalApproved,
+    HospitalRevoked,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -146,6 +159,34 @@ pub enum RequestStatusTypeEnum {
     Accepted,
     Completed,
     Cancelled,
+}
+
+impl ToSql<ActionType, Pg> for ActionTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            ActionTypeEnum::SpecialistVerified => out.write_all(b"specialist_verified")?,
+            ActionTypeEnum::SpecialistUnverified => out.write_all(b"specialist_unverified")?,
+            ActionTypeEnum::SpecialistSuspended => out.write_all(b"specialist_suspended")?,
+            ActionTypeEnum::SpecialistUnsuspended => out.write_all(b"specialist_unsuspended")?,
+            ActionTypeEnum::HospitalApproved => out.write_all(b"hospital_approved")?,
+            ActionTypeEnum::HospitalRevoked => out.write_all(b"hospital_revoked")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<ActionType, Pg> for ActionTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"specialist_verified" => Ok(ActionTypeEnum::SpecialistVerified),
+            b"specialist_unverified" => Ok(ActionTypeEnum::SpecialistUnverified),
+            b"specialist_suspended" => Ok(ActionTypeEnum::SpecialistSuspended),
+            b"specialist_unsuspended" => Ok(ActionTypeEnum::SpecialistUnsuspended),
+            b"hospital_approved" => Ok(ActionTypeEnum::HospitalApproved),
+            b"hospital_revoked" => Ok(ActionTypeEnum::HospitalRevoked),
+            _ => Err("Unrecognized enum variant for ActionTypeEnum".into()),
+        }
+    }
 }
 
 impl ToSql<AppointmentTypeType, Pg> for AppointmentTypeEnum {
