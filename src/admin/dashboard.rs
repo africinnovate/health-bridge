@@ -1,25 +1,16 @@
 use diesel::prelude::*;
 use chrono::{DateTime, Utc};
 use chrono::Datelike;
-use uuid::Uuid;
 
 
-use crate::schema::patients;
+use crate::admin::dtos::{
+    AdminActivity, AdminDashboardResponse, AdminUserResponse, PaginationMeta, StatCard, UserFilters, UserListResponse
+};
+use crate::models::User;
 use crate::{
-    admin::dtos::{
-      AdminActivity, 
-      AdminDashboardResponse, 
-      StatCard,
-      AdminUserResponse,
-      PaginatedResponse,
-      PatientMeta,
-      SpecialistMeta,
-      HospitalMeta,
-      AdminUserFilters
-    }, 
     error::AppError, 
     schema::{
-        appointments, blood_requests, hospitals, specialists, users
+        blood_requests, hospitals, specialists, users
     }
 };
 
@@ -175,93 +166,182 @@ pub fn get_admin_dashboard(
     })
 }
 
-
-
-pub fn get_admin_users(
+pub fn get_users_paginated(
     conn: &mut PgConnection,
-    filters: AdminUserFilters,
-) -> Result<PaginatedResponse<AdminUserResponse>, AppError> {
+    filters: UserFilters,
+) -> Result<UserListResponse, AppError> {
+    use crate::schema::users::dsl::*;
 
-    let page = filters.page.unwrap_or(1).max(1);
-    let per_page = filters.per_page.unwrap_or(20).clamp(1, 100);
-    let offset = (page - 1) * per_page;
+    let mut count_query = users.into_boxed();
+    let mut data_query = users.into_boxed();
 
-    let mut base = users::table.into_boxed();
-
-    // 🔎 Role filter (drives tabs)
-    if let Some(role) = &filters.role {
-        base = base.filter(users::role.eq(role));
+    // Apply role filter
+    if let Some(filter_role) = filters.role {
+        count_query = count_query.filter(role.eq(filter_role));
+        data_query = data_query.filter(role.eq(filter_role));
     }
 
-    let total: i64 = base
+    // Apply search filter
+    if let Some(search_term) = filters.search {
+        let search_pattern = format!("%{}%", search_term);
+        count_query = count_query.filter(
+            first_name.ilike(search_pattern.clone())
+                .or(last_name.ilike(search_pattern.clone()))
+                .or(email.ilike(search_pattern.clone()))
+                .or(phone.ilike(search_pattern.clone()))
+        );
+        data_query = data_query.filter(
+            first_name.ilike(search_pattern.clone())
+                .or(last_name.ilike(search_pattern.clone()))
+                .or(email.ilike(search_pattern.clone()))
+                .or(phone.ilike(search_pattern.clone()))
+        );
+    }
+
+    // Get total count before pagination
+    let total_items = count_query
         .count()
-        .get_result(conn)?;
+        .get_result::<i64>(conn)?;
 
-    let rows = base
-        .order(users::created_at.desc())
-        .limit(per_page)
+    // Calculate pagination
+    let total_pages = (total_items as f64 / filters.page_size as f64).ceil() as i64;
+    let offset = (filters.page - 1) * filters.page_size;
+
+    // Apply pagination and ordering
+    let user_list = data_query
+        .order(created_at.desc())
+        .limit(filters.page_size)
         .offset(offset)
-        .load::<crate::models::User>(conn)?;
+        .select(User::as_select())
+        .load::<User>(conn)?;
 
-    let user_ids: Vec<Uuid> = rows.iter().map(|u| u.id).collect();
-
-    // 🔗 Batch-load related tables (no N+1)
-    let patient_map = patients::table
-        .filter(patients::user_id.eq_any(&user_ids))
-        .load::<crate::models::Patient>(conn)?
+    // Transform to response format
+    let data = user_list
         .into_iter()
-        .map(|p| (p.user_id, p))
-        .collect::<std::collections::HashMap<_, _>>();
+        .map(|user| {
+            // Determine status based on email verification
+            let status = if user.email_verified {
+                "Active".to_string()
+            } else {
+                "Pending".to_string()
+            };
 
-    let specialist_map = specialists::table
-        .filter(specialists::user_id.eq_any(&user_ids))
-        .load::<crate::models::Specialist>(conn)?
-        .into_iter()
-        .map(|s| (s.user_id, s))
-        .collect::<std::collections::HashMap<_, _>>();
-
-    let hospital_map = hospitals::table
-        .filter(hospitals::user_id.eq_any(&user_ids))
-        .select(crate::models::Hospital::as_select())
-.load::<crate::models::Hospital>(conn)?
-        .into_iter()
-        .map(|h| (h.user_id, h))
-        .collect::<std::collections::HashMap<_, _>>();
-
-    let data = rows
-        .into_iter()
-        .map(|u| AdminUserResponse {
-            id: u.id,
-            first_name: u.first_name,
-            last_name: u.last_name,
-            email: u.email,
-            phone: u.phone,
-            role: u.role.to_string(),
-            email_verified: u.email_verified,
-            created_at: u.created_at,
-
-            patient: patient_map.get(&u.id).map(|p| PatientMeta {
-                blood_type: p.blood_type.clone(),
-            }),
-
-            specialist: specialist_map.get(&u.id).map(|s| SpecialistMeta {
-                specialty_id: s.specialty_id,
-                verified: s.verified,
-                suspended: s.suspended,
-            }),
-
-            hospital: hospital_map.get(&u.id).map(|h| HospitalMeta {
-                name: h.name.clone(),
-                city: h.city.clone(),
-                license_status: h.license_status,
-            }),
+            AdminUserResponse {
+                id: user.id,
+                first_name: user.first_name,
+                last_name: user.last_name,
+                email: user.email,
+                phone: user.phone,
+                gender: user.gender,
+                dob: user.dob,
+                role: user.role,
+                email_verified: user.email_verified,
+                created_at: user.created_at,
+                country: Some("Nigeria".to_string()), // You might want to add this to User model
+                status,
+            }
         })
         .collect();
 
-    Ok(PaginatedResponse {
+    Ok(UserListResponse {
         data,
-        page,
-        per_page,
-        total,
+        pagination: PaginationMeta {
+            page: filters.page,
+            page_size: filters.page_size,
+            total_items,
+            total_pages,
+        },
     })
 }
+
+// pub fn get_admin_users(
+//     conn: &mut PgConnection,
+//     filters: AdminUserFilters,
+// ) -> Result<PaginatedResponse<AdminUserResponse>, AppError> {
+
+//     let page = filters.page.unwrap_or(1).max(1);
+//     let per_page = filters.per_page.unwrap_or(20).clamp(1, 100);
+//     let offset = (page - 1) * per_page;
+
+//     // Build base query conditions
+//     let mut count_query = users::table.into_boxed();
+//     let mut data_query = users::table.into_boxed();
+
+//     // 🔎 Role filter (drives tabs)
+//     if let Some(role) = &filters.role {
+//         count_query = count_query.filter(users::role.eq(role));
+//         data_query = data_query.filter(users::role.eq(role));
+//     }
+
+//     let total: i64 = count_query
+//         .count()
+//         .get_result(conn)?;
+
+//     let rows = data_query
+//         .order(users::created_at.desc())
+//         .limit(per_page)
+//         .offset(offset)
+//         .load::<crate::models::User>(conn)?;
+
+//     let user_ids: Vec<Uuid> = rows.iter().map(|u| u.id).collect();
+
+//     // 🔗 Batch-load related tables (no N+1)
+//     let patient_map = patients::table
+//         .filter(patients::user_id.eq_any(&user_ids))
+//         .load::<crate::models::Patient>(conn)?
+//         .into_iter()
+//         .map(|p| (p.user_id, p))
+//         .collect::<std::collections::HashMap<_, _>>();
+
+//     let specialist_map = specialists::table
+//         .filter(specialists::user_id.eq_any(&user_ids))
+//         .load::<crate::models::Specialist>(conn)?
+//         .into_iter()
+//         .map(|s| (s.user_id, s))
+//         .collect::<std::collections::HashMap<_, _>>();
+
+//     let hospital_map = hospitals::table
+//         .filter(hospitals::user_id.eq_any(&user_ids))
+//         .select(crate::models::Hospital::as_select())
+// .load::<crate::models::Hospital>(conn)?
+//         .into_iter()
+//         .map(|h| (h.user_id, h))
+//         .collect::<std::collections::HashMap<_, _>>();
+
+//     let data = rows
+//         .into_iter()
+//         .map(|u| AdminUserResponse {
+//             id: u.id,
+//             first_name: u.first_name,
+//             last_name: u.last_name,
+//             email: u.email,
+//             phone: u.phone,
+//             role: u.role.to_string(),
+//             email_verified: u.email_verified,
+//             created_at: u.created_at,
+
+//             patient: patient_map.get(&u.id).map(|p| PatientMeta {
+//                 blood_type: p.blood_type.clone(),
+//             }),
+
+//             specialist: specialist_map.get(&u.id).map(|s| SpecialistMeta {
+//                 specialty_id: s.specialty_id,
+//                 verified: s.verified,
+//                 suspended: s.suspended,
+//             }),
+
+//             hospital: hospital_map.get(&u.id).map(|h| HospitalMeta {
+//                 name: h.name.clone(),
+//                 city: h.city.clone(),
+//                 license_status: h.license_status,
+//             }),
+//         })
+//         .collect();
+
+//     Ok(PaginatedResponse {
+//         data,
+//         page,
+//         per_page,
+//         total,
+//     })
+// }

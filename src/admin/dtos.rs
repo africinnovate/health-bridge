@@ -2,8 +2,10 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use chrono::NaiveDate;
+use crate::utils::enums::{Gender, Role};
+use utoipa::IntoParams;
 
-use crate::utils::enums::Role;
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct StatCard {
@@ -24,23 +26,6 @@ pub struct AdminActivity {
 pub struct AdminDashboardResponse {
     pub stats: Vec<StatCard>,
     pub recent_activities: Vec<AdminActivity>,
-}
-
-#[derive(Serialize)]
-pub struct AdminUserResponse {
-    pub id: Uuid,
-    pub first_name: String,
-    pub last_name: String,
-    pub email: String,
-    pub phone: Option<String>,
-    pub role: String,
-    pub email_verified: bool,
-    pub created_at: DateTime<Utc>,
-
-    // Optional extended data
-    pub patient: Option<PatientMeta>,
-    pub specialist: Option<SpecialistMeta>,
-    pub hospital: Option<HospitalMeta>,
 }
 
 #[derive(Serialize)]
@@ -77,7 +62,7 @@ pub struct AdminUserFilters {
     pub per_page: Option<i64>,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct UserFilters {
     /// Filter by user role (patient, specialist, hospital, admin)
     pub role: Option<Role>,
@@ -100,4 +85,36 @@ fn default_page() -> i64 {
 
 fn default_page_size() -> i64 {
     10
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AdminUserResponse {
+    pub id: Uuid,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub phone: Option<String>,
+    pub gender: Option<Gender>,
+    pub dob: Option<NaiveDate>,
+    pub role: Role,
+    pub email_verified: bool,
+    pub created_at: DateTime<Utc>,
+    
+    // For patients specifically - could be null for other roles
+    pub country: Option<String>,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PaginationMeta {
+    pub page: i64,
+    pub page_size: i64,
+    pub total_items: i64,
+    pub total_pages: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct UserListResponse {
+    pub data: Vec<AdminUserResponse>,
+    pub pagination: PaginationMeta,
 }

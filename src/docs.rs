@@ -31,7 +31,8 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         appointments::reschedule_appointment,
         appointments::cancel_appointment,
         appointments::complete_appointment,
-        admin::admin_dashboard
+        admin::admin_dashboard,
+        admin::get_users,
     ),
     
     components(),
