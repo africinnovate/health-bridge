@@ -154,24 +154,24 @@ pub fn update_hospital_status_with_audit(
         "hospital_revoked"
     };
 
-    // Update the hospital and log action
-    let updated_hospital = conn.transaction(|conn| {
-        let updated = diesel::update(hospitals.find(hospital_id))
-            .set(license_status.eq(new_status))
-            .returning(Hospital::as_returning())
-            .get_result::<Hospital>(conn)?;
+    let updated_hospital = conn.transaction::<Hospital, diesel::result::Error, _>(|conn| {
+    let updated = diesel::update(hospitals.find(hospital_id))
+        .set(license_status.eq(new_status))
+        .returning(Hospital::as_returning())
+        .get_result(conn)?;
 
-        log_admin_action(
-            conn,
-            admin.id,
-            "hospital",
-            hospital_id,
-            action,
-            payload.reason.as_deref(),
-        )?;
+    log_admin_action(
+        conn,
+        admin.id,
+        "hospital",
+        hospital_id,
+        action,
+        payload.reason.as_deref(),
+    )?;
 
-        Ok(updated)
-    })?;
+    Ok(updated)
+  })?;
+
 
     Ok(HospitalActionResponse {
         id: updated_hospital.id,

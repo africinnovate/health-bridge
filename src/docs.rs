@@ -33,6 +33,8 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         appointments::complete_appointment,
         admin::admin_dashboard,
         admin::get_users,
+        admin::update_specialist_status,
+        admin::update_hospital_status,
     ),
     
     components(),
