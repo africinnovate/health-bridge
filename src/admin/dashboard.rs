@@ -1,10 +1,22 @@
 use diesel::prelude::*;
 use chrono::{DateTime, Utc};
 use chrono::Datelike;
+use uuid::Uuid;
 
 
+use crate::schema::patients;
 use crate::{
-    admin::dtos::{AdminActivity, AdminDashboardResponse, StatCard}, 
+    admin::dtos::{
+      AdminActivity, 
+      AdminDashboardResponse, 
+      StatCard,
+      AdminUserResponse,
+      PaginatedResponse,
+      PatientMeta,
+      SpecialistMeta,
+      HospitalMeta,
+      AdminUserFilters
+    }, 
     error::AppError, 
     schema::{
         appointments, blood_requests, hospitals, specialists, users
@@ -160,5 +172,96 @@ pub fn get_admin_dashboard(
     Ok(AdminDashboardResponse {
         stats,
         recent_activities: activities,
+    })
+}
+
+
+
+pub fn get_admin_users(
+    conn: &mut PgConnection,
+    filters: AdminUserFilters,
+) -> Result<PaginatedResponse<AdminUserResponse>, AppError> {
+
+    let page = filters.page.unwrap_or(1).max(1);
+    let per_page = filters.per_page.unwrap_or(20).clamp(1, 100);
+    let offset = (page - 1) * per_page;
+
+    let mut base = users::table.into_boxed();
+
+    // 🔎 Role filter (drives tabs)
+    if let Some(role) = &filters.role {
+        base = base.filter(users::role.eq(role));
+    }
+
+    let total: i64 = base
+        .count()
+        .get_result(conn)?;
+
+    let rows = base
+        .order(users::created_at.desc())
+        .limit(per_page)
+        .offset(offset)
+        .load::<crate::models::User>(conn)?;
+
+    let user_ids: Vec<Uuid> = rows.iter().map(|u| u.id).collect();
+
+    // 🔗 Batch-load related tables (no N+1)
+    let patient_map = patients::table
+        .filter(patients::user_id.eq_any(&user_ids))
+        .load::<crate::models::Patient>(conn)?
+        .into_iter()
+        .map(|p| (p.user_id, p))
+        .collect::<std::collections::HashMap<_, _>>();
+
+    let specialist_map = specialists::table
+        .filter(specialists::user_id.eq_any(&user_ids))
+        .load::<crate::models::Specialist>(conn)?
+        .into_iter()
+        .map(|s| (s.user_id, s))
+        .collect::<std::collections::HashMap<_, _>>();
+
+    let hospital_map = hospitals::table
+        .filter(hospitals::user_id.eq_any(&user_ids))
+        .select(crate::models::Hospital::as_select())
+.load::<crate::models::Hospital>(conn)?
+        .into_iter()
+        .map(|h| (h.user_id, h))
+        .collect::<std::collections::HashMap<_, _>>();
+
+    let data = rows
+        .into_iter()
+        .map(|u| AdminUserResponse {
+            id: u.id,
+            first_name: u.first_name,
+            last_name: u.last_name,
+            email: u.email,
+            phone: u.phone,
+            role: u.role.to_string(),
+            email_verified: u.email_verified,
+            created_at: u.created_at,
+
+            patient: patient_map.get(&u.id).map(|p| PatientMeta {
+                blood_type: p.blood_type.clone(),
+            }),
+
+            specialist: specialist_map.get(&u.id).map(|s| SpecialistMeta {
+                specialty_id: s.specialty_id,
+                verified: s.verified,
+                suspended: s.suspended,
+            }),
+
+            hospital: hospital_map.get(&u.id).map(|h| HospitalMeta {
+                name: h.name.clone(),
+                city: h.city.clone(),
+                license_status: h.license_status,
+            }),
+        })
+        .collect();
+
+    Ok(PaginatedResponse {
+        data,
+        page,
+        per_page,
+        total,
     })
 }
