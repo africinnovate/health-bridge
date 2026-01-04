@@ -7,7 +7,7 @@ use tracing::{info, error};
 
 use crate::{
     error::AppError,
-    models::{Appointment, BloodRequest, User},
+    models::{Appointment, BloodRequest, Hospital, User},
     schema::{appointments, blood_requests},
     utils::enums::{AppointmentStatusEnum, AppointmentTypeEnum, CancelledByEnum, Role},
 
@@ -17,6 +17,7 @@ use crate::{
 pub struct AppointmentResponse {
     pub appointment: Appointment,
     pub user: User,        
+    pub hospital: Hospital,        
     pub blood_request: BloodRequest,
 }
 
@@ -123,6 +124,7 @@ pub fn get_appointments(
 
     let mut query = appointments
         .inner_join(users_dsl::users.on(users_dsl::id.eq(user_id)))
+        .inner_join(hospitals_dsl::hospitals.on(hospitals_dsl::id.eq(hospital_id)))
         .inner_join(br_dsl::blood_requests.on(br_dsl::id.eq(blood_request_id)))
         .into_boxed();
 
@@ -153,14 +155,21 @@ pub fn get_appointments(
     }
 
     let rows = query
+        .select((
+            Appointment::as_select(),
+            User::as_select(),
+            Hospital::as_select(),
+            BloodRequest::as_select(),
+        ))
         .order(created_at.desc())
-        .load::<(Appointment, User, BloodRequest)>(conn)?;
+        .load::<(Appointment, User, Hospital, BloodRequest)>(conn)?;
 
     Ok(rows
         .into_iter()
-        .map(|(appointment, user, blood_request)| AppointmentResponse {
+        .map(|(appointment, user, hospital, blood_request)| AppointmentResponse {
             appointment,
             user,
+            hospital,
             blood_request,
         })
         .collect())

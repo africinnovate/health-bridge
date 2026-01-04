@@ -141,7 +141,7 @@ pub struct MedicalInfo<'a> {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
 #[diesel(table_name = hospitals)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Hospital {
