@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::admin::dtos::{HospitalActionRequest, SpecialistActionRequest};
 use crate::error::AppError;
-use crate::models::{Hospital, Specialist, User};
+use crate::models::{Hospital, NewAuditLog, Specialist, User};
 use crate::utils::enums::ConsultationTypeEnum;
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -188,19 +188,34 @@ fn log_admin_action(
     admin_id: Uuid,
     target_type: &str,
     target_id: Uuid,
-    action: &str,
+    action_str: &str,
     reason: Option<&str>,
 ) -> Result<(), diesel::result::Error> {
-    diesel::sql_query(
-        "INSERT INTO admin_audit_logs (admin_id, target_type, target_id, action_type, reason) 
-         VALUES ($1, $2, $3, $4, $5)"
-    )
-    .bind::<diesel::sql_types::Uuid, _>(admin_id)
-    .bind::<diesel::sql_types::Text, _>(target_type)
-    .bind::<diesel::sql_types::Uuid, _>(target_id)
-    .bind::<diesel::sql_types::Text, _>(action)
-    .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(reason)
-    .execute(conn)?;
-
+    use crate::schema::admin_audit_logs;
+    use crate::utils::enums::ActionTypeEnum;
+    
+    // Convert string to enum
+    let action_type = match action_str {
+        "specialist_verified" => ActionTypeEnum::SpecialistVerified,
+        "specialist_unverified" => ActionTypeEnum::SpecialistUnverified,
+        "specialist_suspended" => ActionTypeEnum::SpecialistSuspended,
+        "specialist_unsuspended" => ActionTypeEnum::SpecialistUnsuspended,
+        "hospital_approved" => ActionTypeEnum::HospitalApproved,
+        "hospital_revoked" => ActionTypeEnum::HospitalRevoked,
+        _ => return Err(diesel::result::Error::NotFound),
+    };
+    
+    let new_log = NewAuditLog {
+        admin_id,
+        target_type: target_type.to_string(),
+        target_id,
+        action_type,
+        reason: reason.map(|r| r.to_string()),
+    };
+    
+    diesel::insert_into(admin_audit_logs::table)
+        .values(&new_log)
+        .execute(conn)?;
+    
     Ok(())
 }

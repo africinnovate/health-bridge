@@ -261,16 +261,13 @@ pub struct SpecialistAvailability {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[derive(Insertable)]
 #[diesel(table_name = admin_audit_logs)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct AdminAuditLog {
-    pub id: Uuid,
+pub struct NewAuditLog {
     pub admin_id: Uuid,
     pub target_type: String,
     pub target_id: Uuid,
     pub action_type: ActionTypeEnum,
     pub reason: Option<String>,
-    pub metadata: Option<String>,
-    pub created_at: DateTime<Utc>,
 }
+

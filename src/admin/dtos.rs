@@ -136,3 +136,4 @@ pub struct HospitalActionRequest {
     /// Optional reason for the action (required when revoking license)
     pub reason: Option<String>,
 }
+
