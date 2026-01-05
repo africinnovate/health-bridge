@@ -1,6 +1,6 @@
 use utoipa::OpenApi;
 use utoipa::openapi::security::{SecurityScheme, HttpAuthScheme, HttpBuilder};
-use crate::handlers::{auth, hospitals, patients, appointments, specialists, admin};
+use crate::handlers::{auth, hospitals, patients, appointments, specialists, admin, notifications};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -31,6 +31,9 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         appointments::reschedule_appointment,
         appointments::cancel_appointment,
         appointments::complete_appointment,
+        notifications::get_notifications,
+        notifications::mark_notification_as_read,
+        notifications::mark_all_notifications_as_read,
         admin::admin_dashboard,
         admin::get_users,
         admin::update_specialist_status,
@@ -46,6 +49,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         (name = "specialists", description = "Specialist management endpoints"),
         (name = "hospitals", description = "Hospital management endpoints"),
         (name = "appointments", description = "Appointment management endpoints"),
+        (name = "notifications", description = "Notification management endpoints"),
         (name = "admin", description = "Admin management endpoints"),
     ),
     info(

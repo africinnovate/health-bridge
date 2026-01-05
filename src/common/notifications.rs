@@ -60,6 +60,7 @@ pub fn create_notification(
     Ok(notification)
 }
 
+
 // Get paginated notifications
 pub fn get_notifications_paginated(
     conn: &mut PgConnection,
@@ -68,36 +69,37 @@ pub fn get_notifications_paginated(
 ) -> Result<NotificationListResponse, AppError> {
     use crate::schema::notifications::dsl::*;
 
-    let mut query = notifications.into_boxed();
+    // Build query for counting
+    let mut count_query = notifications.into_boxed();
 
     // Non-admins can only see their own notifications
     if !matches!(user.role, Role::Admin) {
-        query = query.filter(user_id.eq(user.id));
+        count_query = count_query.filter(user_id.eq(user.id));
     }
 
     // Admins can filter by category
     if matches!(user.role, Role::Admin) {
-        if let Some(filter_category) = filters.category {
-            query = query.filter(category.eq(filter_category));
+        if let Some(ref filter_category) = filters.category {
+            count_query = count_query.filter(category.eq(filter_category));
         }
     }
 
     // Filter by read status
     if let Some(read_status) = filters.is_read {
-        query = query.filter(is_read.eq(read_status));
+        count_query = count_query.filter(is_read.eq(read_status));
     }
 
     // Search in title or message
-    if let Some(search_term) = filters.search {
+    if let Some(ref search_term) = filters.search {
         let search_pattern = format!("%{}%", search_term);
-        query = query.filter(
+        count_query = count_query.filter(
             title.ilike(search_pattern.clone())
                 .or(message.ilike(search_pattern))
         );
     }
 
     // Get total count
-    let total_items = query.count().get_result::<i64>(conn)?;
+    let total_items = count_query.count().get_result::<i64>(conn)?;
 
     // Get unread count for the user
     let unread_count = notifications
@@ -106,12 +108,38 @@ pub fn get_notifications_paginated(
         .count()
         .get_result::<i64>(conn)?;
 
+    // Build query again for fetching data
+    let mut data_query = notifications.into_boxed();
+
+    // Apply same filters
+    if !matches!(user.role, Role::Admin) {
+        data_query = data_query.filter(user_id.eq(user.id));
+    }
+
+    if matches!(user.role, Role::Admin) {
+        if let Some(filter_category) = filters.category {
+            data_query = data_query.filter(category.eq(filter_category));
+        }
+    }
+
+    if let Some(read_status) = filters.is_read {
+        data_query = data_query.filter(is_read.eq(read_status));
+    }
+
+    if let Some(search_term) = filters.search {
+        let search_pattern = format!("%{}%", search_term);
+        data_query = data_query.filter(
+            title.ilike(search_pattern.clone())
+                .or(message.ilike(search_pattern))
+        );
+    }
+
     // Calculate pagination
     let total_pages = (total_items as f64 / filters.page_size as f64).ceil() as i64;
     let offset = (filters.page - 1) * filters.page_size;
 
     // Get paginated results
-    let notification_list = query
+    let notification_list = data_query
         .order(created_at.desc())
         .limit(filters.page_size)
         .offset(offset)
