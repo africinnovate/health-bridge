@@ -2,6 +2,12 @@ use dotenvy::dotenv;
 use std::env;
 
 #[derive(Clone)]
+pub struct SocialAuthConfig {
+    pub google_client_id: String,
+}
+
+
+#[derive(Clone)]
 pub struct Config {
     pub database_url: String,
     pub jwt_secret: String,
@@ -10,6 +16,7 @@ pub struct Config {
     pub resend_api_key: String,
     pub from_email: String,
     pub frontend_url: String,
+    pub social: SocialAuthConfig,
 }
 
 impl Config {
@@ -24,6 +31,9 @@ impl Config {
             from_email: env::var("FROM_EMAIL").unwrap_or_else(|_| "support@resend.dev".into()),
             frontend_url: env::var("FRONTEND_URL")
                 .unwrap_or_else(|_| "http://localhost:3000".into()),
+            social: SocialAuthConfig {
+                google_client_id: env::var("GOOGLE_CLIENT_ID").expect("GOOGLE_CLIENT_ID must be set"),
+            },
         }
     }
 }

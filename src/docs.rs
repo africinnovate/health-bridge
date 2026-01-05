@@ -1,6 +1,6 @@
 use utoipa::OpenApi;
 use utoipa::openapi::security::{SecurityScheme, HttpAuthScheme, HttpBuilder};
-use crate::handlers::{auth, hospitals, patients, appointments, specialists, admin, notifications};
+use crate::handlers::{auth, hospitals, patients, appointments, specialists, admin, notifications, socials};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -34,6 +34,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         notifications::get_notifications,
         notifications::mark_notification_as_read,
         notifications::mark_all_notifications_as_read,
+        socials::social_login,
         admin::admin_dashboard,
         admin::get_users,
         admin::update_specialist_status,

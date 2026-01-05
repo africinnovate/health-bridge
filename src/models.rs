@@ -17,6 +17,7 @@ use crate::{
         users,
         admin_audit_logs,
         notifications,
+        social_accounts,
     },
     utils::enums::{
         ActionTypeEnum, 
@@ -302,4 +303,26 @@ pub struct NewNotification {
     pub related_type: Option<String>,
     pub metadata: Option<String>,
     pub created_by: Option<Uuid>,
+}
+
+#[derive(Debug, Queryable, Selectable, Identifiable, Associations)]
+#[diesel(table_name = social_accounts)]
+#[diesel(belongs_to(User))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SocialAccount {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub provider: String,
+    pub provider_user_id: String,
+    pub email: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = social_accounts)]
+pub struct NewSocialAccount<'a> {
+    pub user_id: Uuid,
+    pub provider: &'a str,
+    pub provider_user_id: &'a str,
+    pub email: Option<&'a str>,
 }

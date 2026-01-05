@@ -2,6 +2,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use reqwest::Error as ReqwestError;
 
 use tracing::error;
 
@@ -15,6 +16,7 @@ pub enum AppError {
     Unauthorized(String),
     BadRequest(String),
     InternalServerError,
+    ExternalService(String),
 }
 
 impl IntoResponse for AppError {
@@ -44,6 +46,10 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),
             ),
+            AppError::ExternalService(msg) => (
+                StatusCode::BAD_GATEWAY,
+                format!("External service error: {}", msg),
+            ),
         };
 
         ApiResponse::message_only(status, message).into_response()
@@ -68,5 +74,15 @@ impl From<anyhow::Error> for AppError {
     fn from(err: anyhow::Error) -> Self {
         error!("Internal error: {:?}", err);
         AppError::InternalServerError
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(err: reqwest::Error) -> Self {
+        if err.is_timeout() {
+            AppError::ExternalService("OAuth provider timeout".into())
+        } else {
+            AppError::ExternalService(err.to_string())
+        }
     }
 }

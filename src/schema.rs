@@ -307,6 +307,20 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    social_accounts (id) {
+        id -> DieselUuid,
+        user_id -> DieselUuid,
+        provider -> Varchar,
+        provider_user_id -> Varchar,
+        email -> Nullable<Varchar>,
+        created_at -> Timestamptz,
+    }
+}
+
 
 
 
@@ -322,6 +336,7 @@ diesel::joinable!(appointments -> hospitals (hospital_id));
 diesel::joinable!(appointments -> blood_requests (blood_request_id));
 diesel::joinable!(admin_audit_logs -> users (admin_id));
 diesel::joinable!(notifications -> users (user_id));
+diesel::joinable!(social_accounts -> users (user_id));
 
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -337,4 +352,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     blood_requests,
     admin_audit_logs,
     notifications,
+    social_accounts,
 );

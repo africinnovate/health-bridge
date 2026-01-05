@@ -4,4 +4,5 @@ pub mod specialists;
 pub mod patients;
 pub mod appointments;
 pub mod notifications;
+pub mod socials;
 pub mod admin;

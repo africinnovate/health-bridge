@@ -4,9 +4,8 @@ use uuid::Uuid;
 use crate::{
   AppState, admin::{
     actions::{HospitalActionResponse, SpecialistActionResponse, update_hospital_status_with_audit, update_specialist_status_with_audit}, 
-    dashboard, dtos::{AdminDashboardResponse, HospitalActionRequest, NotificationFilters, SpecialistActionRequest, UserFilters, UserListResponse}
+    dashboard, dtos::{AdminDashboardResponse, HospitalActionRequest, SpecialistActionRequest, UserFilters, UserListResponse}
 }, 
-    common::notifications, 
     error::AppError, 
     models::User, 
     utils::{enums::Role, response::ApiResponse}
