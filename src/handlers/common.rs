@@ -1,4 +1,4 @@
-use axum::{extract::State, Json};
+use axum::{extract::State, Json, Extension};
 use utoipa::ToSchema;
 use serde::{Deserialize, Serialize};
 use crate::{
@@ -6,6 +6,7 @@ use crate::{
     common::services, 
     error::AppError, 
     models::{User, UserSettings},
+    utils::response::ApiResponse,
 };
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -44,23 +45,23 @@ pub struct UserSettingsResponse {
 
 pub async fn get_user_settings(
     State(state): State<AppState>,
-    User(user): User,
-) -> Result<Json<UserSettingsResponse>, AppError> {
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<UserSettingsResponse>, AppError> {
     let mut conn = state.pool.get()?;
     let settings = services::get_or_create_user_settings(&mut conn, &user)?;
 
-    Ok(Json(settings.into()))
+    Ok(ApiResponse::success(settings.into()))
 }
 
 pub async fn update_user_settings(
     State(state): State<AppState>,
-    User(user): User,
+    Extension(user): Extension<User>,
     Json(payload): Json<UpdateUserSettingsRequest>,
-) -> Result<Json<UserSettingsResponse>, AppError> {
+) -> Result<ApiResponse<UserSettingsResponse>, AppError> {
     let mut conn = state.pool.get()?;
     let settings = services::update_user_settings(&mut conn, &user, payload)?;
 
-    Ok(Json(settings.into()))
+    Ok(ApiResponse::success(settings.into()))
 }
 impl From<UserSettings> for UserSettingsResponse {
     fn from(settings: UserSettings) -> Self {

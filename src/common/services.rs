@@ -2,9 +2,7 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::{
-    error::AppError,
-    models::{User, UserSettings, NewUserSettings, Patient, MedicalInfo},
-    schema::{user_settings::dsl::*, patients::dsl::*},
+    error::AppError, handlers::common::UpdateUserSettingsRequest, models::{MedicalInfo, NewUserSettings, Patient, User, UserSettings}, schema::{patients::dsl::*, user_settings::dsl::*}
 };
 
 
