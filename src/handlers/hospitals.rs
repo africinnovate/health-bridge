@@ -12,8 +12,8 @@ use crate::{
     error::AppError, 
     hospitals::{
         self, 
-        blood_requests::{BloodRequestQuery, BloodRequestResponse, CreateBloodRequest, UpdateBloodRequest}}, 
-        models::{BloodRequest, Hospital, User}, 
+        blood_requests::{BloodRequestQuery, BloodRequestResponse, CreateBloodRequest, UpdateBloodRequest}, settings}, 
+        models::{BloodRequest, Hospital, HospitalSettings, User}, 
         utils::{enums::{HospitalTypeEnum, RequestStatusTypeEnum}, response::ApiResponse},
 };
 
@@ -74,6 +74,22 @@ pub struct HospitalResponse {
     pub donating_operating_hours: Option<String>,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct UpdateHospitalSettingsRequest {
+    pub donation_requests: Option<bool>,
+
+    pub new_donor_appointments: Option<bool>,
+    pub donor_appointment_reminders: Option<bool>,
+
+    pub login_alerts: Option<bool>,
+    pub account_notifications: Option<bool>,
+
+    pub email_notifications: Option<bool>,
+    pub sms_notifications: Option<bool>,
+    pub push_notifications: Option<bool>,
+}
+
 
 
 /// Create hospital
@@ -237,4 +253,54 @@ pub async fn update_blood_request(
         "Blood request updated successfully",
         request,
     ))  
+}
+
+/// Get hospital settings
+/// 
+/// Retrieves settings for the specified hospital.
+
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/settings/{hospital_id}",
+    responses(
+        (status = 200, body = ApiResponse<HospitalSettings>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_hospital_settings(
+    State(state): State<AppState>,
+    Path(hospital_id): Path<Uuid>,
+) -> Result<ApiResponse<HospitalSettings>, AppError> {
+    let mut conn = state.pool.get()?;
+    let settings = settings::get_or_create_hospital_settings(&mut conn, hospital_id)?;
+    Ok(ApiResponse::success_with_message("Hospital settings retrieved successfully", settings))
+}
+
+/// Update hospital settings
+///
+/// Updates the settings for the specified hospital.
+#[utoipa::path(
+    patch,
+    path = "/api/hospitals/settings/{hospital_id}",
+    request_body = UpdateHospitalSettingsRequest,
+    responses(
+        (status = 200, body = ApiResponse<HospitalSettings>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_hospital_settings(
+    State(state): State<AppState>,
+    Path(hospital_id): Path<Uuid>,
+    Json(payload): Json<UpdateHospitalSettingsRequest>,
+) -> Result<ApiResponse<HospitalSettings>, AppError> {
+    let mut conn = state.pool.get()?;
+    let settings =
+        settings::update_hospital_settings(&mut conn, hospital_id, payload)?;
+    Ok(ApiResponse::success_with_message("Hospital settings updated successfully", settings))
 }

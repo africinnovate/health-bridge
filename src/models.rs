@@ -19,6 +19,7 @@ use crate::{
         notifications,
         social_accounts,
         user_settings,
+        hospital_settings,
     },
     utils::enums::{
         ActionTypeEnum, 
@@ -368,4 +369,33 @@ pub struct UserSettings {
 #[diesel(table_name = user_settings)]
 pub struct NewUserSettings {
     pub user_id: Uuid,
+}
+
+#[derive(Debug, Queryable, Selectable, Identifiable, Associations, Serialize, Deserialize, ToSchema)]
+#[diesel(table_name = hospital_settings)]
+#[diesel(belongs_to(Hospital))]
+pub struct HospitalSettings {
+    pub id: Uuid,
+    pub hospital_id: Uuid,
+
+    pub donation_requests: bool,
+
+    pub new_donor_appointments: bool,
+    pub donor_appointment_reminders: bool,
+
+    pub login_alerts: bool,
+    pub account_notifications: bool,
+
+    pub email_notifications: bool,
+    pub sms_notifications: bool,
+    pub push_notifications: bool,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Insertable)]
+#[diesel(table_name = hospital_settings)]
+pub struct NewHospitalSettings {
+    pub hospital_id: Uuid,
 }

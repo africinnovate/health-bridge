@@ -345,6 +345,28 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    hospital_settings (id) {
+        id -> Uuid,
+        hospital_id -> Uuid,
+
+        donation_requests -> Bool,
+
+        new_donor_appointments -> Bool,
+        donor_appointment_reminders -> Bool,
+
+        login_alerts -> Bool,
+        account_notifications -> Bool,
+
+        email_notifications -> Bool,
+        sms_notifications -> Bool,
+        push_notifications -> Bool,
+
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
 
 
 diesel::joinable!(patients -> users (user_id));
@@ -361,6 +383,7 @@ diesel::joinable!(admin_audit_logs -> users (admin_id));
 diesel::joinable!(notifications -> users (user_id));
 diesel::joinable!(social_accounts -> users (user_id));
 diesel::joinable!(user_settings -> users (user_id));
+diesel::joinable!(hospital_settings -> hospitals (hospital_id));
 
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -378,4 +401,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     notifications,
     social_accounts,
     user_settings,
+    hospital_settings,
 );
