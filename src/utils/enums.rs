@@ -21,6 +21,7 @@ use crate::schema::sql_types::{
     ConsultationType,
     DaysOfWeekType,
     ActionType,
+    NotificationCategoryType
 };
 use crate::error::AppError;
 
@@ -54,6 +55,17 @@ pub enum ActionTypeEnum {
     HospitalApproved,
     HospitalRevoked,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[diesel(sql_type = NotificationCategoryType)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationCategoryEnum {
+    Verification,
+    BloodRequest,
+    Appointment,
+    System,
+}
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = AppointmentTypeType)]
@@ -159,6 +171,30 @@ pub enum RequestStatusTypeEnum {
     Accepted,
     Completed,
     Cancelled,
+}
+
+impl ToSql<NotificationCategoryType, Pg> for NotificationCategoryEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            NotificationCategoryEnum::Verification => out.write_all(b"verification")?,
+            NotificationCategoryEnum::BloodRequest => out.write_all(b"blood_request")?,
+            NotificationCategoryEnum::Appointment => out.write_all(b"appointment")?,
+            NotificationCategoryEnum::System => out.write_all(b"system")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<NotificationCategoryType, Pg> for NotificationCategoryEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"verification" => Ok(NotificationCategoryEnum::Verification),
+            b"blood_request" => Ok(NotificationCategoryEnum::BloodRequest),
+            b"appointment" => Ok(NotificationCategoryEnum::Appointment),
+            b"system" => Ok(NotificationCategoryEnum::System),
+            _ => Err("Unrecognized enum variant for NotificationCategoryEnum".into()),
+        }
+    }
 }
 
 impl ToSql<ActionType, Pg> for ActionTypeEnum {

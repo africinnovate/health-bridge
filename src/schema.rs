@@ -64,6 +64,10 @@ pub mod sql_types {
     #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "action_type"))]
     pub struct ActionType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "notification_category"))]
+    pub struct NotificationCategoryType;
 }
 
 
@@ -282,6 +286,28 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::NotificationCategoryType;
+
+    notifications (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        category -> NotificationCategoryType,
+        title -> Varchar,
+        message -> Text,
+        related_id -> Nullable<Uuid>,
+        related_type -> Nullable<Varchar>,
+        metadata -> Nullable<Text>,
+        is_read -> Bool,
+        created_by -> Nullable<Uuid>,
+        created_at -> Timestamptz,
+        read_at -> Nullable<Timestamptz>,
+    }
+}
+
+
 
 
 diesel::joinable!(patients -> users (user_id));
@@ -295,6 +321,7 @@ diesel::joinable!(appointments -> users (specialist_id));
 diesel::joinable!(appointments -> hospitals (hospital_id));
 diesel::joinable!(appointments -> blood_requests (blood_request_id));
 diesel::joinable!(admin_audit_logs -> users (admin_id));
+diesel::joinable!(notifications -> users (user_id));
 
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -309,4 +336,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     appointments,
     blood_requests,
     admin_audit_logs,
+    notifications,
 );

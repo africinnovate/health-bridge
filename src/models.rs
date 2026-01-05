@@ -16,6 +16,7 @@ use crate::{
         specialties,
         users,
         admin_audit_logs,
+        notifications,
     },
     utils::enums::{
         ActionTypeEnum, 
@@ -31,6 +32,7 @@ use crate::{
         Role, 
         TimelineTypeEnum, 
         UrgencyTypeEnum,
+        NotificationCategoryEnum,
     }
 };
 
@@ -271,3 +273,33 @@ pub struct NewAuditLog {
     pub reason: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = notifications)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Notification {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub category: NotificationCategoryEnum,
+    pub title: String,
+    pub message: String,
+    pub related_id: Option<Uuid>,
+    pub related_type: Option<String>,
+    pub metadata: Option<String>,
+    pub is_read: bool,
+    pub created_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub read_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Insertable)]
+#[diesel(table_name = notifications)]
+pub struct NewNotification {
+    pub user_id: Uuid,
+    pub category: NotificationCategoryEnum,
+    pub title: String,
+    pub message: String,
+    pub related_id: Option<Uuid>,
+    pub related_type: Option<String>,
+    pub metadata: Option<String>,
+    pub created_by: Option<Uuid>,
+}

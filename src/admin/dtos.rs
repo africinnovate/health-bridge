@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use chrono::NaiveDate;
-use crate::utils::enums::{Gender, Role};
+use crate::utils::enums::{Gender, Role, NotificationCategoryEnum};
 use utoipa::IntoParams;
 
 
@@ -137,3 +137,22 @@ pub struct HospitalActionRequest {
     pub reason: Option<String>,
 }
 
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+pub struct NotificationFilters {
+    /// Filter by category (admin only)
+    pub category: Option<NotificationCategoryEnum>,
+    
+    /// Filter by read status
+    pub is_read: Option<bool>,
+    
+    /// Search in title or message
+    pub search: Option<String>,
+    
+    /// Page number (starts from 1)
+    #[serde(default = "default_page")]
+    pub page: i64,
+    
+    /// Number of items per page (default: 10, max: 100)
+    #[serde(default = "default_page_size")]
+    pub page_size: i64,
+}
