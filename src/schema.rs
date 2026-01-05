@@ -1,5 +1,3 @@
-use crate::schema::sql_types::DaysOfWeekType;
-
 pub mod sql_types {
     use diesel::sql_types::SqlType;
      use diesel::query_builder::QueryId;

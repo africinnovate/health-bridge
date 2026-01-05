@@ -113,10 +113,3 @@ pub async fn mark_all_notifications_as_read(
     ))
 }
 
-fn default_page() -> i64 {
-    1
-}
-
-fn default_page_size() -> i64 {
-    10
-}
