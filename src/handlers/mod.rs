@@ -5,4 +5,5 @@ pub mod patients;
 pub mod appointments;
 pub mod notifications;
 pub mod socials;
+pub mod common;
 pub mod admin;

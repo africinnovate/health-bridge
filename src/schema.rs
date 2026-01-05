@@ -321,6 +321,29 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    user_settings (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+
+        appointment_reminders -> Bool,
+        specialist_recommendations -> Bool,
+        donation_alerts -> Bool,
+        account_notifications -> Bool,
+
+        email_notifications -> Bool,
+        sms_notifications -> Bool,
+        push_notifications -> Bool,
+
+        medical_profile_visibility -> Text,
+        allow_specialists_view_history -> Bool,
+        allow_app_analytics -> Bool,
+        allow_marketing_notifications -> Bool,
+
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
 
 
 
@@ -337,6 +360,7 @@ diesel::joinable!(appointments -> blood_requests (blood_request_id));
 diesel::joinable!(admin_audit_logs -> users (admin_id));
 diesel::joinable!(notifications -> users (user_id));
 diesel::joinable!(social_accounts -> users (user_id));
+diesel::joinable!(user_settings -> users (user_id));
 
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -353,4 +377,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     admin_audit_logs,
     notifications,
     social_accounts,
+    user_settings,
 );

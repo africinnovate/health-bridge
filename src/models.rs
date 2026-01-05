@@ -18,6 +18,7 @@ use crate::{
         admin_audit_logs,
         notifications,
         social_accounts,
+        user_settings,
     },
     utils::enums::{
         ActionTypeEnum, 
@@ -325,4 +326,46 @@ pub struct NewSocialAccount<'a> {
     pub provider: &'a str,
     pub provider_user_id: &'a str,
     pub email: Option<&'a str>,
+}
+
+#[derive(
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    Queryable,
+    Selectable,
+    Identifiable,
+    Associations,
+    ToSchema,
+)]
+#[diesel(table_name = user_settings)]
+#[diesel(belongs_to(User))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct UserSettings {
+    pub id: Uuid,
+    pub user_id: Uuid,
+
+    pub appointment_reminders: bool,
+    pub specialist_recommendations: bool,
+    pub donation_alerts: bool,
+    pub account_notifications: bool,
+
+    pub email_notifications: bool,
+    pub sms_notifications: bool,
+    pub push_notifications: bool,
+
+    pub medical_profile_visibility: String,
+    pub allow_specialists_view_history: bool,
+    pub allow_app_analytics: bool,
+    pub allow_marketing_notifications: bool,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Insertable)]
+#[diesel(table_name = user_settings)]
+pub struct NewUserSettings {
+    pub user_id: Uuid,
 }

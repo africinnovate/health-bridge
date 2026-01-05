@@ -2,10 +2,11 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::{
-    models::{Patient, MedicalInfo},
-    schema::patients::dsl::*,
     error::AppError,
+    models::{User, UserSettings, NewUserSettings, Patient, MedicalInfo},
+    schema::{user_settings::dsl::*, patients::dsl::*},
 };
+
 
 pub fn upsert_medical_info(
     conn: &mut PgConnection,
@@ -40,4 +41,54 @@ pub fn upsert_medical_info(
     };
 
     Ok(result)
+}
+
+
+pub fn get_or_create_user_settings(
+    conn: &mut PgConnection,
+    user: &User,
+) -> Result<UserSettings, AppError> {
+    match user_settings
+        .filter(user_id.eq(user.id))
+        .select(UserSettings::as_select())
+        .first::<UserSettings>(conn)
+    {
+        Ok(settings) => Ok(settings),
+        Err(diesel::result::Error::NotFound) => {
+            let new_settings = NewUserSettings { user_id: user.id };
+
+            diesel::insert_into(user_settings)
+                .values(&new_settings)
+                .get_result::<UserSettings>(conn)
+                .map_err(AppError::from)
+        }
+        Err(e) => Err(AppError::from(e)),
+    }
+}
+
+pub fn update_user_settings(
+    conn: &mut PgConnection,
+    user: &User,
+    payload: UpdateUserSettingsRequest,
+) -> Result<UserSettings, AppError> {
+    diesel::update(user_settings.filter(user_id.eq(user.id)))
+        .set((
+            payload.appointment_reminders.map(|v| appointment_reminders.eq(v)),
+            payload.specialist_recommendations.map(|v| specialist_recommendations.eq(v)),
+            payload.donation_alerts.map(|v| donation_alerts.eq(v)),
+            payload.account_notifications.map(|v| account_notifications.eq(v)),
+
+            payload.email_notifications.map(|v| email_notifications.eq(v)),
+            payload.sms_notifications.map(|v| sms_notifications.eq(v)),
+            payload.push_notifications.map(|v| push_notifications.eq(v)),
+
+            payload.medical_profile_visibility.map(|v| medical_profile_visibility.eq(v)),
+            payload.allow_specialists_view_history.map(|v| allow_specialists_view_history.eq(v)),
+            payload.allow_app_analytics.map(|v| allow_app_analytics.eq(v)),
+            payload.allow_marketing_notifications.map(|v| allow_marketing_notifications.eq(v)),
+
+            updated_at.eq(diesel::dsl::now),
+        ))
+        .get_result::<UserSettings>(conn)
+        .map_err(AppError::from)
 }
