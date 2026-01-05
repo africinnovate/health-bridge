@@ -43,6 +43,18 @@ pub struct UserSettingsResponse {
     pub allow_marketing_notifications: bool,
 }
 
+/// Get user settings
+/// 
+/// Retrieves the notification and privacy settings for the authenticated user.
+#[utoipa::path(
+    get,
+    path = "/api/user-settings",
+    responses(
+        (status = 200, body = ApiResponse<UserSettingsResponse>)
+    ),
+    tag = "settings",
+    security(("bearer_auth" = []))
+)]
 pub async fn get_user_settings(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
@@ -53,6 +65,19 @@ pub async fn get_user_settings(
     Ok(ApiResponse::success(settings.into()))
 }
 
+/// Update user settings
+/// 
+/// Updates the notification and privacy settings for the authenticated user.
+#[utoipa::path(
+    put,
+    path = "/api/user-settings",
+    request_body = UpdateUserSettingsRequest,
+    responses(
+        (status = 200, body = ApiResponse<UserSettingsResponse>)
+    ),
+    tag = "settings",
+    security(("bearer_auth" = []))
+)]
 pub async fn update_user_settings(
     State(state): State<AppState>,
     Extension(user): Extension<User>,

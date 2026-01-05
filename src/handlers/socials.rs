@@ -33,6 +33,9 @@ pub struct SocialProfile {
     pub last_name: Option<String>,
 }
 
+/// Social login or register
+///
+/// Logs in or registers a user using social authentication providers like Google or Facebook.
 #[utoipa::path(
     post,
     path = "/api/auth/social-login",
