@@ -517,7 +517,6 @@ pub async fn logout(
 
     auth::logout_user(&mut conn, &payload.refresh_token)?;
 
-    info!("User logged out successfully");
 
     Ok(ApiResponse::message_only(
         StatusCode::OK,
