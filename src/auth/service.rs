@@ -1,9 +1,16 @@
 use crate::error::AppError;
-use crate::models::{EmailVerificationToken, NewEmailVerificationToken, NewUser, User};
 use crate::schema::users;
 use crate::utils::enums::Role;
 use crate::utils::helpers::generate_numeric_code;
 use anyhow::{Result, anyhow};
+use crate::models::{
+    EmailVerificationToken, 
+    NewEmailVerificationToken, 
+    NewUser, 
+    User, 
+    RefreshToken, 
+    NewRefreshToken,
+};
 use argon2::{
     Argon2, 
     PasswordHash, 
@@ -287,6 +294,112 @@ pub fn soft_delete_account(
             "This account cannot be deleted".into(),
         ));
     }
+
+    Ok(())
+}
+
+
+pub fn create_refresh_token(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+) -> Result<String, AppError> {
+    use crate::schema::refresh_tokens;
+    use chrono::{Utc, Duration};
+
+    let token = generate_reset_token();
+    let expires_at = Utc::now() + Duration::days(30);
+
+    let new_token = NewRefreshToken {
+        user_id,
+        token: &token,
+        expires_at,
+    };
+
+    diesel::insert_into(refresh_tokens::table)
+        .values(new_token)
+        .execute(conn)?;
+
+    Ok(token)
+}
+
+
+pub fn refresh_access_token(
+    conn: &mut PgConnection,
+    refresh_token_value: &str,
+    jwt_secret: &str,
+    access_token_ttl: i64,
+) -> Result<(String, String), AppError> {
+    use crate::schema::refresh_tokens::dsl::*;
+    use crate::schema::users::dsl as users_dsl;
+    use chrono::Utc;
+
+    // FIXED: Use refresh_token_value parameter to avoid shadowing
+    let token_row = refresh_tokens
+        .filter(token.eq(refresh_token_value))
+        .filter(revoked.eq(false))
+        .filter(expires_at.gt(Utc::now()))
+        .select(RefreshToken::as_select())
+        .first::<RefreshToken>(conn)
+        .map_err(|e| {
+            tracing::error!("Refresh token query failed: {:?}", e);
+            AppError::Unauthorized("Invalid refresh token".into())
+        })?;
+
+    // Ensure user still exists and is not deleted
+    let user = users_dsl::users
+        .filter(users_dsl::id.eq(token_row.user_id))
+        .filter(users_dsl::deleted_at.is_null())
+        .first::<User>(conn)
+        .map_err(|_| AppError::Unauthorized("User no longer active".into()))?;
+
+    // Revoke old refresh token
+    diesel::update(refresh_tokens.filter(id.eq(token_row.id)))
+        .set(revoked.eq(true))
+        .execute(conn)?;
+
+    // Issue new tokens
+    let access_token = make_jwt(user.id, jwt_secret, access_token_ttl)?;
+    let new_refresh_token = create_refresh_token(conn, user.id)?;
+
+    Ok((access_token, new_refresh_token))
+}
+
+/// Logout user by revoking their refresh token
+pub fn logout_user(
+    conn: &mut PgConnection,
+    refresh_token_value: &str,
+) -> Result<(), AppError> {
+    use crate::schema::refresh_tokens::dsl::*;
+    use diesel::prelude::*;
+
+    let affected = diesel::update(
+        refresh_tokens.filter(token.eq(refresh_token_value))
+    )
+    .set(revoked.eq(true))
+    .execute(conn)?;
+
+    if affected == 0 {
+        return Err(AppError::BadRequest("Invalid refresh token".to_string()));
+    }
+
+    Ok(())
+}
+
+/// Logout user from all devices by revoking all their refresh tokens
+pub fn logout_all_devices(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+) -> Result<(), AppError> {
+    use crate::schema::refresh_tokens::dsl::*;
+    use diesel::prelude::*;
+
+    diesel::update(
+        refresh_tokens
+            .filter(user_id.eq(user_id))
+            .filter(revoked.eq(false))
+    )
+    .set(revoked.eq(true))
+    .execute(conn)?;
 
     Ok(())
 }

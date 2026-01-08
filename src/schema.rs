@@ -369,6 +369,21 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    refresh_tokens (id) {
+        id -> DieselUuid,
+        user_id -> DieselUuid,
+        token -> Text,
+        expires_at -> Timestamptz,
+        revoked -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Nullable<Timestamptz>,
+    }
+}
+
 
 
 diesel::joinable!(patients -> users (user_id));
@@ -386,6 +401,7 @@ diesel::joinable!(notifications -> users (user_id));
 diesel::joinable!(social_accounts -> users (user_id));
 diesel::joinable!(user_settings -> users (user_id));
 diesel::joinable!(hospital_settings -> hospitals (hospital_id));
+diesel::joinable!(refresh_tokens -> users (user_id));
 
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -404,4 +420,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     social_accounts,
     user_settings,
     hospital_settings,
+    refresh_tokens,
 );

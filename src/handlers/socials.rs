@@ -64,6 +64,7 @@ pub async fn social_login(
         &payload.provider,
     )?;
 
+    let refresh_token = auth::create_refresh_token(&mut conn, user.id)?;
     let token = auth::make_jwt(
         user.id,
         &state.cfg.jwt_secret,
@@ -72,6 +73,7 @@ pub async fn social_login(
 
     Ok(ApiResponse::success(AuthResponse {
         token,
+        refresh_token,
         user: user.into(),
     }))
 }

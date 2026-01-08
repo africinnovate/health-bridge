@@ -17,4 +17,8 @@ pub fn public_router() -> Router<AppState> {
 pub fn protected_router() -> Router<AppState> {
     Router::new()
         .route("/delete-account", post(auth::delete_account))
+        .route("/refresh-token", post(auth::refresh_token))
+        .route("/logout", post(auth::logout))
+        .route("/logout-all", post(auth::logout_all_devices))
+
 }

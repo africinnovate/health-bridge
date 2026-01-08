@@ -8,7 +8,7 @@ use crate::{
     AppState,
     auth::service as auth,
     error::AppError,
-    models::User,
+    models::{User, NewRefreshToken},
     utils::{
         enums::Role, response::{ApiResponse, EmptyData}, validation::{validate_email}
     },
@@ -56,6 +56,7 @@ pub struct VerifyTokenRequest {
 #[derive(Serialize, ToSchema)]
 pub struct AuthResponse {
     pub token: String,
+    pub refresh_token: String,
     pub user: UserResponse,
 }
 
@@ -90,6 +91,23 @@ impl From<User> for UserResponse {
 pub struct DeleteAccountRequest {
     pub token: String,
 }
+
+#[derive(Deserialize, ToSchema)]
+pub struct RefreshTokenRequest {
+    pub refresh_token: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct RefreshTokenResponse {
+    pub access_token: String,
+    pub refresh_token: String,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct LogoutRequest {
+    pub refresh_token: String,
+}
+
 
 
 /// List all users
@@ -177,7 +195,7 @@ pub async fn register(
     )?;
 
     let code = auth::create_email_verification_code(&mut conn, user.id, 4)?;
-    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret, state.cfg.jwt_expires_in_seconds)?;
+    // let token = auth::make_jwt(user.id, &state.cfg.jwt_secret, state.cfg.jwt_expires_in_seconds)?;
 
     let mail = state.mail_service.clone();
     let other_email = user.email.clone();
@@ -197,7 +215,8 @@ pub async fn register(
     Ok(ApiResponse::created(
         "User registered successfully",
         AuthResponse {
-            token,
+            token: "".to_string(),
+            refresh_token: "".to_string(),
             user: user.into(),
         },
     ))
@@ -232,12 +251,15 @@ pub async fn login(
     )
     .map_err(|_| AppError::Unauthorized("Invalid credentials".to_string()))?;
 
+    let refresh_token = auth::create_refresh_token(&mut conn, user.id)?;
+
     let token = auth::make_jwt(user.id, &state.cfg.jwt_secret, state.cfg.jwt_expires_in_seconds)?;
 
     Ok(ApiResponse::success_with_message(
         "Login successful",
         AuthResponse {
             token,
+            refresh_token,
             user: user.into(),
         },
     ))
@@ -433,5 +455,103 @@ info!("Deleting account for user: {}", &user.id);
     Ok(ApiResponse::message_only(
         StatusCode::OK,
         "Account deleted successfully",
+    ))
+}
+
+
+/// Refresh access token
+///
+/// Generates a new access token using a valid refresh token
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/refresh-token",
+    request_body = RefreshTokenRequest,
+    responses(
+        (status = 200, description = "Token refreshed", body = ApiResponse<RefreshTokenResponse>),
+        (status = 401, description = "Invalid refresh token")
+    ),
+    tag = "auth",
+    security(("bearer_auth" = []))
+)]
+pub async fn refresh_token(
+    State(state): State<AppState>,
+    Json(payload): Json<RefreshTokenRequest>,
+) -> Result<ApiResponse<RefreshTokenResponse>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    let (access_token, refresh_token) = auth::refresh_access_token(
+        &mut conn,
+        &payload.refresh_token,
+        &state.cfg.jwt_secret,
+        state.cfg.jwt_expires_in_seconds,
+    )?;
+
+    Ok(ApiResponse::success(RefreshTokenResponse {
+        access_token,
+        refresh_token,
+    }))
+}
+
+/// Logout user
+///
+/// Revokes the provided refresh token, logging out the user from the current device
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/logout",
+    request_body = LogoutRequest,
+    responses(
+        (status = 200, description = "Logout successful", body = ApiResponse<EmptyData>),
+        (status = 400, description = "Invalid refresh token"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "auth",
+    security(("bearer_auth" = []))
+)]
+pub async fn logout(
+    State(state): State<AppState>,
+    Json(payload): Json<LogoutRequest>,
+) -> Result<ApiResponse<EmptyData>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    auth::logout_user(&mut conn, &payload.refresh_token)?;
+
+    info!("User logged out successfully");
+
+    Ok(ApiResponse::message_only(
+        StatusCode::OK,
+        "Logout successful",
+    ))
+}
+
+/// Logout from all devices
+///
+/// Revokes all refresh tokens for the authenticated user, logging them out from all devices
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/logout-all",
+    responses(
+        (status = 200, description = "Logged out from all devices", body = ApiResponse<EmptyData>),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "auth",
+    security(("bearer_auth" = []))
+)]
+pub async fn logout_all_devices(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<EmptyData>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    auth::logout_all_devices(&mut conn, user.id)?;
+
+    info!("User {} logged out from all devices", user.id);
+
+    Ok(ApiResponse::message_only(
+        StatusCode::OK,
+        "Logged out from all devices successfully",
     ))
 }

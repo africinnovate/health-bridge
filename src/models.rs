@@ -20,6 +20,7 @@ use crate::{
         social_accounts,
         user_settings,
         hospital_settings,
+        refresh_tokens,
     },
     utils::enums::{
         ActionTypeEnum, 
@@ -400,4 +401,25 @@ pub struct HospitalSettings {
 #[diesel(table_name = hospital_settings)]
 pub struct NewHospitalSettings {
     pub hospital_id: Uuid,
+}
+
+#[derive(Debug, Queryable, Selectable, Identifiable, Associations)]
+#[diesel(table_name = refresh_tokens)]
+#[diesel(belongs_to(User))]
+pub struct RefreshToken {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub token: String,
+    pub expires_at: DateTime<Utc>,
+    pub revoked: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = refresh_tokens)]
+pub struct NewRefreshToken<'a> {
+    pub user_id: Uuid,
+    pub token: &'a str,
+    pub expires_at: DateTime<Utc>,
 }

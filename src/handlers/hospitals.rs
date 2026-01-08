@@ -308,6 +308,8 @@ pub async fn update_hospital_settings(
     Ok(ApiResponse::success_with_message("Hospital settings updated successfully", settings))
 }
 
+
+/// Delete hospital
 #[utoipa::path(
     delete,
     path = "/api/hospitals/{hospital_id}",
