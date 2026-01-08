@@ -267,14 +267,26 @@ pub fn verify_jwt(token: &str, secret: &str) -> Result<TokenData<Claims>> {
 pub fn soft_delete_account(
     conn: &mut PgConnection,
     user_id: &Uuid,
-) -> Result<(), diesel::result::Error> {
+) -> Result<(), AppError> {
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
     use chrono::Utc;
+    use crate::utils::enums::Role;
 
-    diesel::update(users.filter(id.eq(user_id)))
-        .set(deleted_at.eq(Some(Utc::now())))
-        .execute(conn)?;
+    let affected = diesel::update(
+        users
+            .filter(id.eq(user_id))
+            .filter(role.ne(Role::Admin))  
+            .filter(deleted_at.is_null()),
+    )
+    .set(deleted_at.eq(Some(Utc::now())))
+    .execute(conn)?;
+
+    if affected == 0 {
+        return Err(AppError::Unauthorized(
+            "This account cannot be deleted".into(),
+        ));
+    }
 
     Ok(())
 }

@@ -14,7 +14,10 @@ use crate::{
         self, 
         blood_requests::{BloodRequestQuery, BloodRequestResponse, CreateBloodRequest, UpdateBloodRequest}, settings}, 
         models::{BloodRequest, Hospital, HospitalSettings, User}, 
-        utils::{enums::{HospitalTypeEnum, RequestStatusTypeEnum}, response::ApiResponse},
+        utils::{
+            enums::{HospitalTypeEnum, RequestStatusTypeEnum}, 
+            response::{ApiResponse, EmptyData}
+        },
 };
 
 /// Create hospital profile
@@ -304,3 +307,31 @@ pub async fn update_hospital_settings(
         settings::update_hospital_settings(&mut conn, hospital_id, payload)?;
     Ok(ApiResponse::success_with_message("Hospital settings updated successfully", settings))
 }
+
+#[utoipa::path(
+    delete,
+    path = "/api/hospitals/{hospital_id}",
+    responses(
+        (status = 200, description = "Hospital deleted successfully"),
+        (status = 401),
+        (status = 404),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn delete_hospital(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(hospital_id): Path<Uuid>,
+) -> Result<ApiResponse<EmptyData>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    hospitals::service::delete_hospital(&mut conn, hospital_id, &user)?;
+
+    Ok(ApiResponse::message_only(
+        axum::http::StatusCode::OK,
+        "Hospital deleted successfully",
+    ))
+}
+

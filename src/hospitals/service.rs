@@ -1,5 +1,6 @@
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
+use uuid::Uuid;
 
 use crate::services::mail::MailService;
 use crate::{
@@ -118,4 +119,42 @@ pub fn update_hospital(
     }
 }
 
+pub fn delete_hospital(
+    conn: &mut PgConnection,
+    hospital_id: Uuid,
+    user: &User,
+) -> Result<(), AppError> {
+    use crate::schema::hospitals::dsl::*;
+    use crate::utils::enums::Role;
+    use diesel::prelude::*;
+    use chrono::Utc;
 
+    let affected = if user.role == Role::Admin {
+        // Admin can delete any hospital
+        diesel::update(
+            hospitals
+                .filter(id.eq(hospital_id))
+                .filter(deleted_at.is_null()),
+        )
+        .set(deleted_at.eq(Some(Utc::now())))
+        .execute(conn)?
+    } else {
+        // Hospital can only delete their own
+        diesel::update(
+            hospitals
+                .filter(id.eq(hospital_id))
+                .filter(user_id.eq(user.id))
+                .filter(deleted_at.is_null()),
+        )
+        .set(deleted_at.eq(Some(Utc::now())))
+        .execute(conn)?
+    };
+
+    if affected == 0 {
+        return Err(AppError::NotFound(
+            "Hospital not found or not authorized to delete".into(),
+        ));
+    }
+
+    Ok(())
+}

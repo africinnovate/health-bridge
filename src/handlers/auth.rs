@@ -414,7 +414,6 @@ pub async fn verify_email(
 #[utoipa::path(
     post,
     path = "/api/auth/delete-account",
-    request_body = DeleteAccountRequest,
     responses(
         (status = 200, description = "Account deleted successfully"),
         (status = 401, description = "Unauthorized"),
