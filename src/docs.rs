@@ -12,6 +12,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         auth::reset_password,
         auth::verify_token,
         auth::verify_email,
+        auth::delete_account,
         patients::get_profile,
         patients::update_profile,
         patients::delete_account,

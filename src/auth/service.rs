@@ -262,3 +262,61 @@ pub fn verify_jwt(token: &str, secret: &str) -> Result<TokenData<Claims>> {
 
     Ok(token_data)
 }
+
+pub fn delete_account(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+) -> Result<(), diesel::result::Error> {
+    use crate::schema::{
+        users,
+        appointments,
+        email_verification_tokens,
+        password_reset_tokens,
+        social_accounts,
+        user_settings,
+        patients,
+        specialists,
+        notifications,
+    };
+    use diesel::prelude::*;
+
+    conn.transaction(|conn| {
+        // ---- Appointments (VERY IMPORTANT) ----
+        diesel::delete(
+            appointments::table
+                .filter(
+                    appointments::user_id
+                        .eq(user_id)
+                        .or(appointments::specialist_id.eq(user_id))
+                )
+        ).execute(conn)?;
+
+        // ---- Other dependents ----
+        diesel::delete(email_verification_tokens::table.filter(email_verification_tokens::user_id.eq(user_id)))
+            .execute(conn)?;
+
+        diesel::delete(password_reset_tokens::table.filter(password_reset_tokens::user_id.eq(user_id)))
+            .execute(conn)?;
+
+        diesel::delete(social_accounts::table.filter(social_accounts::user_id.eq(user_id)))
+            .execute(conn)?;
+
+        diesel::delete(user_settings::table.filter(user_settings::user_id.eq(user_id)))
+            .execute(conn)?;
+
+        diesel::delete(patients::table.filter(patients::user_id.eq(user_id)))
+            .execute(conn)?;
+
+        diesel::delete(specialists::table.filter(specialists::user_id.eq(user_id)))
+            .execute(conn)?;
+
+        diesel::delete(notifications::table.filter(notifications::user_id.eq(user_id)))
+            .execute(conn)?;
+
+        // ---- Finally delete user ----
+        diesel::delete(users::table.filter(users::id.eq(user_id)))
+            .execute(conn)?;
+
+        Ok(())
+    })
+}

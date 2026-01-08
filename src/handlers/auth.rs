@@ -86,6 +86,12 @@ impl From<User> for UserResponse {
     }
 }
 
+#[derive(Deserialize, ToSchema)]
+pub struct DeleteAccountRequest {
+    pub token: String,
+}
+
+
 /// List all users
 ///
 /// Gets all users on the application
@@ -402,3 +408,40 @@ pub async fn verify_email(
     ))
 }
 
+/// Delete user account
+///
+/// Permanently deletes the authenticated user's account
+#[utoipa::path(
+    post,
+    path = "/api/auth/delete-account",
+    request_body = DeleteAccountRequest,
+    responses(
+        (status = 200, description = "Account deleted successfully"),
+        (status = 401, description = "Unauthorized"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "auth",
+    security(("bearer_auth" = []))
+)]
+pub async fn delete_account(
+    State(state): State<AppState>,
+    Json(payload): Json<DeleteAccountRequest>,
+) -> Result<ApiResponse<EmptyData>, AppError> {
+
+    // --- Verify JWT ---
+    let token_data = auth::verify_jwt(&payload.token, &state.cfg.jwt_secret)
+        .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))?;
+
+    let user_id = Uuid::parse_str(&token_data.claims.sub)
+        .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))?;
+
+    let mut conn = state.pool.get()?;
+
+    // --- Delete account ---
+    auth::delete_account(&mut conn, user_id)?;
+
+    Ok(ApiResponse::message_only(
+        StatusCode::OK,
+        "Account deleted successfully.",
+    ))
+}

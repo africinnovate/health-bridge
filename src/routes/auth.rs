@@ -11,4 +11,5 @@ pub fn router() -> Router<AppState> {
         .route("/verify-token", post(auth::verify_token))
         .route("/verify-email", post(auth::verify_email))
         .route("/social-login", post(socials::social_login))
-}
+        .route("/delete-account", post(auth::delete_account))
+    }
