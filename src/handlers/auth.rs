@@ -1,4 +1,4 @@
-use axum::{extract::State, Json, http::StatusCode,};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use tracing::{info, error};
@@ -425,23 +425,17 @@ pub async fn verify_email(
 )]
 pub async fn delete_account(
     State(state): State<AppState>,
-    Json(payload): Json<DeleteAccountRequest>,
+    Extension(user_id): Extension<String>,
 ) -> Result<ApiResponse<EmptyData>, AppError> {
-
-    // --- Verify JWT ---
-    let token_data = auth::verify_jwt(&payload.token, &state.cfg.jwt_secret)
-        .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))?;
-
-    let user_id = Uuid::parse_str(&token_data.claims.sub)
+    let user_id = Uuid::parse_str(&user_id)
         .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))?;
 
     let mut conn = state.pool.get()?;
 
-    // --- Delete account ---
-    auth::delete_account(&mut conn, user_id)?;
+    auth::soft_delete_account(&mut conn, user_id)?;
 
     Ok(ApiResponse::message_only(
         StatusCode::OK,
-        "Account deleted successfully.",
+        "Account deleted successfully",
     ))
 }

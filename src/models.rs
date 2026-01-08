@@ -55,6 +55,7 @@ pub struct User {
     pub role: Role,
     pub email_verified: bool,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Insertable)]
@@ -167,6 +168,7 @@ pub struct Hospital {
     pub accepting_donors: bool,
     pub donating_operating_hours: Option<String>,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]

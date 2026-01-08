@@ -23,6 +23,7 @@ CREATE TABLE hospitals (
     donating_operating_hours TEXT,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    deleted_at TIMESTAMPTZ NULLABLE
 );
 
 CREATE INDEX idx_hospitals_user_id ON hospitals(user_id);

@@ -1,3 +1,5 @@
+use crate::schema::users::deleted_at;
+
 pub mod sql_types {
     use diesel::sql_types::SqlType;
      use diesel::query_builder::QueryId;
@@ -86,6 +88,7 @@ diesel::table! {
         role -> RoleType,
         email_verified -> Bool,
         created_at -> Timestamptz,
+        deleted_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -158,6 +161,7 @@ diesel::table! {
         accepting_donors -> Bool,
         donating_operating_hours -> Nullable<Text>,
         created_at -> Timestamptz,
+        deleted_at -> Nullable<Timestamptz>,
     }
 }
 
