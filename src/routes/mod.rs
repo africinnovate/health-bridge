@@ -12,6 +12,19 @@ pub mod admin;
 pub mod user_settings;
 
 pub fn create_router() -> Router<AppState> {
+    let protected_auth = Router::new()
+        .nest("/auth", auth::protected_router())
+        .route_layer(
+            middleware::from_fn_with_state(
+                |state: &AppState| state.clone(),
+                require_auth,
+            ),
+        );
+
+    let public_auth = Router::new()
+        .nest("/auth", auth::public_router());
+
+
     let protected_patients = Router::new()
         .nest("/patients", patients::router())
         .route_layer(
@@ -62,7 +75,8 @@ pub fn create_router() -> Router<AppState> {
         );
 
     Router::new()
-        .nest("/auth", auth::router())
+        .merge(public_auth)
+        .merge(protected_auth)
         .merge(public_specialists)
         .merge(protected_specialists)
         .merge(protected_patients)

@@ -2,7 +2,7 @@ use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use tracing::{info, error};
-use utoipa::ToSchema;
+use utoipa::{ToSchema, openapi::info};
 
 use crate::{
     AppState,
@@ -425,15 +425,12 @@ pub async fn verify_email(
 )]
 pub async fn delete_account(
     State(state): State<AppState>,
-    Extension(user_id): Extension<String>,
+    Extension(user): Extension<User>,
 ) -> Result<ApiResponse<EmptyData>, AppError> {
-    let user_id = Uuid::parse_str(&user_id)
-        .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))?;
-
+   
     let mut conn = state.pool.get()?;
-
-    auth::soft_delete_account(&mut conn, user_id)?;
-
+info!("Deleting account for user: {}", &user.id);
+    auth::soft_delete_account(&mut conn, &user.id)?;
     Ok(ApiResponse::message_only(
         StatusCode::OK,
         "Account deleted successfully",

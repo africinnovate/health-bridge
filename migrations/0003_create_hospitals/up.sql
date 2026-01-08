@@ -22,8 +22,8 @@ CREATE TABLE hospitals (
     accepting_donors BOOLEAN NOT NULL DEFAULT false,
     donating_operating_hours TEXT,
 
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    deleted_at TIMESTAMPTZ NULLABLE
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ NULL
 );
 
 CREATE INDEX idx_hospitals_user_id ON hospitals(user_id);

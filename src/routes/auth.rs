@@ -1,7 +1,7 @@
 use axum::{Router, routing::{get, post}};
 use crate::{AppState, handlers::{auth, socials}};
 
-pub fn router() -> Router<AppState> {
+pub fn public_router() -> Router<AppState> {
     Router::new()
         .route("/", get(auth::get_users))
         .route("/register", post(auth::register))
@@ -11,5 +11,10 @@ pub fn router() -> Router<AppState> {
         .route("/verify-token", post(auth::verify_token))
         .route("/verify-email", post(auth::verify_email))
         .route("/social-login", post(socials::social_login))
-        .route("/delete-account", post(auth::delete_account))
+        
     }
+
+pub fn protected_router() -> Router<AppState> {
+    Router::new()
+        .route("/delete-account", post(auth::delete_account))
+}

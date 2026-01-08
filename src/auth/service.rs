@@ -266,7 +266,7 @@ pub fn verify_jwt(token: &str, secret: &str) -> Result<TokenData<Claims>> {
 
 pub fn soft_delete_account(
     conn: &mut PgConnection,
-    user_id: Uuid,
+    user_id: &Uuid,
 ) -> Result<(), diesel::result::Error> {
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;

@@ -12,5 +12,5 @@ CREATE TABLE users (
     role VARCHAR NOT NULL,
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ NULLABLE
+    deleted_at TIMESTAMPTZ NULL
 );
