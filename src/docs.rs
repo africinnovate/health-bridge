@@ -5,7 +5,6 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        auth::get_users,
         auth::register,
         auth::login,
         auth::forgot_password,

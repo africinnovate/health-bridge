@@ -108,44 +108,6 @@ pub struct LogoutRequest {
     pub refresh_token: String,
 }
 
-
-
-/// List all users
-///
-/// Gets all users on the application
-
-#[utoipa::path(
-    get,
-    path = "/api/auth",
-    responses(
-        (status = 200, description = "List of users retrieved successfully", body = ApiResponse<Vec<UserResponse>>),
-        (status = 500, description = "Internal server error")
-    ),
-    tag = "auth"
-)]
-pub async fn get_users(
-    State(state): State<AppState>,
-) -> Result<ApiResponse<Vec<UserResponse>>, AppError> {
-    use crate::schema::users::dsl::*;
-    use diesel::prelude::*;
-
-    let mut conn = state.pool.get()?;
-
-    let user_list = users
-        .select(User::as_select())
-        .load::<User>(&mut conn)?;
-
-    let users_response: Vec<UserResponse> = user_list
-        .into_iter()
-        .map(UserResponse::from)
-        .collect();
-
-    Ok(ApiResponse::success_with_message(
-        "Users retrieved successfully",
-        users_response,
-    ))
-}
-
 /// Register a new user
 ///
 /// Creates a new user account and returns an authentication token

@@ -3,7 +3,6 @@ use crate::{AppState, handlers::{auth, socials}};
 
 pub fn public_router() -> Router<AppState> {
     Router::new()
-        .route("/", get(auth::get_users))
         .route("/register", post(auth::register))
         .route("/login", post(auth::login))
         .route("/forgot-password", post(auth::forgot_password))
