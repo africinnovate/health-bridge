@@ -1,7 +1,7 @@
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use tracing::{info, error};
+use tracing::{error, info, info_span};
 use utoipa::{ToSchema, openapi::info};
 
 use crate::{
@@ -40,6 +40,11 @@ pub struct ForgotPasswordRequest {
 pub struct VerifyEmailRequest {
     pub email: String,
     pub code: String,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct ResendVerificationRequest {
+    pub email: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -157,7 +162,6 @@ pub async fn register(
     )?;
 
     let code = auth::create_email_verification_code(&mut conn, user.id, 4)?;
-    // let token = auth::make_jwt(user.id, &state.cfg.jwt_secret, state.cfg.jwt_expires_in_seconds)?;
 
     let mail = state.mail_service.clone();
     let other_email = user.email.clone();
@@ -391,6 +395,57 @@ pub async fn verify_email(
         "Email verified successfully.",
     ))
 }
+
+/// Resend email verification code
+///
+/// Sends a new verification code to the user's email
+
+#[utoipa::path(
+    post,
+    path = "/api/auth/resend-verification-code",
+    request_body = ResendVerificationRequest,
+    responses(
+        (status = 200, description = "Verification code resent", body = ApiResponse<EmptyData>),
+        (status = 400, description = "Invalid request"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "auth"
+)]
+pub async fn resend_verification_code(
+    State(state): State<AppState>,
+    Json(payload): Json<ResendVerificationRequest>,
+) -> Result<ApiResponse<EmptyData>, AppError> {
+    info!("Resending verification code to {}", &payload.email);
+    validate_email(&payload.email)?;
+
+    let mut conn = state.pool.get()?;
+    
+    let code = auth::resend_email_verification_code(
+        &mut conn,
+        &payload.email,
+    )?;
+
+    let mail_service = state.mail_service.clone();
+    let email = payload.email.clone();
+
+    tokio::spawn(async move {
+        let _ = mail_service.send_notification(
+            &email,
+            "Verify your HealthBridge account",
+            &format!(
+                "<p>Your new verification code is:</p><h2>{}</h2><p>This code expires in 10 minutes.</p>",
+                code
+            ),
+            Some(&format!("Your verification code is: {}", code)),
+        ).await;
+    });
+
+    Ok(ApiResponse::message_only(
+        StatusCode::OK,
+        "Verification code sent successfully.",
+    ))
+}
+
 
 /// Delete user account
 ///

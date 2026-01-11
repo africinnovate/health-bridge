@@ -3,6 +3,7 @@ use crate::schema::users;
 use crate::utils::enums::Role;
 use crate::utils::helpers::generate_numeric_code;
 use anyhow::{Result, anyhow};
+use tracing::info;
 use crate::models::{
     EmailVerificationToken, 
     NewEmailVerificationToken, 
@@ -93,6 +94,53 @@ pub fn create_email_verification_code(
 
     Ok(code)
 }
+
+pub fn resend_email_verification_code(
+    conn: &mut PgConnection,
+    user_email: &str,
+) -> Result<String, AppError> {
+    use crate::schema::{users, email_verification_tokens};
+    use diesel::prelude::*;
+    use chrono::{Utc, Duration};
+
+    info!("Resending email verification code to {}", user_email);
+
+    let user = users::table
+        .filter(users::email.eq(user_email))
+        .filter(users::deleted_at.is_null())
+        .first::<User>(conn)
+        .map_err(|_| AppError::BadRequest("User not found".into()))?;
+
+    if user.email_verified {
+        return Err(AppError::BadRequest(
+            "Email is already verified".into(),
+        ));
+    }
+
+    let code = generate_numeric_code(4);
+    let expires_at = Utc::now() + Duration::minutes(10);
+
+    let new_token = NewEmailVerificationToken {
+        user_id: user.id,
+        code: &code,
+        expires_at,
+    };
+
+    diesel::insert_into(email_verification_tokens::table)
+        .values(&new_token)
+        .on_conflict(email_verification_tokens::user_id)
+        .do_update()
+        .set((
+            email_verification_tokens::code.eq(&code),
+            email_verification_tokens::expires_at.eq(expires_at),
+            email_verification_tokens::used.eq(false),
+            email_verification_tokens::created_at.eq(Utc::now()),
+        ))
+        .execute(conn)?;
+
+    Ok(code)
+}
+
 
 
 pub fn generate_reset_token() -> String {

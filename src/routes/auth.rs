@@ -9,6 +9,7 @@ pub fn public_router() -> Router<AppState> {
         .route("/reset-password", post(auth::reset_password))
         .route("/verify-token", post(auth::verify_token))
         .route("/verify-email", post(auth::verify_email))
+        .route("/resend-verification-code", post(auth::resend_verification_code))
         .route("/social-login", post(socials::social_login))
         
     }
