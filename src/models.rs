@@ -51,6 +51,7 @@ pub struct User {
     pub phone: Option<String>,
     pub gender: Option<Gender>,
     pub image_url: Option<String>,
+    pub address: Option<String>,
     pub dob: Option<NaiveDate>,
     #[serde(skip_serializing)]
     pub password_hash: String,
@@ -69,6 +70,7 @@ pub struct NewUser<'a> {
     pub phone: Option<&'a str>,
     pub gender: Option<Gender>,
     pub image_url: Option<&'a str>,
+    pub address: Option<&'a str>,
     pub dob: Option<NaiveDate>,
     pub password_hash: &'a str,
     pub role: Role,

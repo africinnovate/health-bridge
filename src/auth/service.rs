@@ -58,7 +58,9 @@ pub fn create_user(
         email,
         phone: None,
         gender: None,
+        address: None,
         dob: None,
+        image_url: None,
         password_hash: &password_hash,
         role,
     };

@@ -82,7 +82,7 @@ diesel::table! {
         phone -> Nullable<Varchar>,
         gender -> Nullable<GenderType>,
         image_url -> Nullable<Varchar>,
-        address -> Text,
+        address -> Nullable<Text>,
         dob -> Nullable<Date>,
         password_hash -> Text,
         role -> RoleType,

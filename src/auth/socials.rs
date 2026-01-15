@@ -46,7 +46,9 @@ pub fn login_or_register_social_user(
                 email: profile.email.as_deref().unwrap_or(""),
                 phone: None,
                 gender: None,
+                address: None,
                 dob: None,
+                image_url: None,
                 password_hash: "", // IMPORTANT: no password
                 role: Role::Patient,
             };

@@ -220,7 +220,9 @@ pub async fn get_profile(
         email: user.email,
         phone: user.phone,
         gender: user.gender,
+        address: user.address,
         dob: user.dob,
+        image_url: user.image_url,
         role: user.role.to_string(),
         email_verified: user.email_verified,
 
