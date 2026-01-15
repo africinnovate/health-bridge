@@ -96,6 +96,8 @@ pub struct AdminUserResponse {
     pub phone: Option<String>,
     pub gender: Option<Gender>,
     pub dob: Option<NaiveDate>,
+    pub address: Option<String>,
+    pub image_url: Option<String>,
     pub role: Role,
     pub email_verified: bool,
     pub created_at: DateTime<Utc>,

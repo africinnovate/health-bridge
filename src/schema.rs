@@ -69,6 +69,7 @@ pub mod sql_types {
     pub struct NotificationCategoryType;
 }
 
+
 diesel::table! {
     use diesel::sql_types::*;
     use diesel::sql_types::Uuid as DieselUuid;
@@ -81,6 +82,8 @@ diesel::table! {
         email -> Varchar,
         phone -> Nullable<Varchar>,
         gender -> Nullable<GenderType>,
+        image_url -> Nullable<Varchar>,
+        address -> Text,
         dob -> Nullable<Date>,
         password_hash -> Text,
         role -> RoleType,
@@ -103,6 +106,7 @@ diesel::table! {
         created_at -> Timestamptz,
     }
 }
+
 
 diesel::table! {
     use diesel::sql_types::*;
@@ -220,6 +224,7 @@ diesel::table! {
         created_at -> Timestamptz,
     }
 }
+
 
 diesel::table! {
     use diesel::sql_types::*;
@@ -383,6 +388,8 @@ diesel::table! {
     }
 }
 
+
+
 diesel::joinable!(patients -> users (user_id));
 diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(password_reset_tokens -> users (user_id));
@@ -399,6 +406,7 @@ diesel::joinable!(social_accounts -> users (user_id));
 diesel::joinable!(user_settings -> users (user_id));
 diesel::joinable!(hospital_settings -> hospitals (hospital_id));
 diesel::joinable!(refresh_tokens -> users (user_id));
+
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,

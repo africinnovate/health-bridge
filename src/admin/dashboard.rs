@@ -233,6 +233,8 @@ pub fn get_users_paginated(
                 email: user.email,
                 phone: user.phone,
                 gender: user.gender,
+                address: user.address,
+                image_url: user.image_url,
                 dob: user.dob,
                 role: user.role,
                 email_verified: user.email_verified,

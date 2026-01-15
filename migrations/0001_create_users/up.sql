@@ -7,6 +7,8 @@ CREATE TABLE users (
     email VARCHAR NOT NULL UNIQUE,
     phone VARCHAR,
     gender VARCHAR,
+    image_url VARCHAR,
+    address TEXT,
     dob DATE,
     password_hash TEXT NOT NULL,
     role VARCHAR NOT NULL,
