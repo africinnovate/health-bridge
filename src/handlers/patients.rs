@@ -43,6 +43,14 @@ pub struct ProfileResponse {
 }
 
 #[derive(Serialize, ToSchema)]
+pub struct PhysicianInfo {
+    pub id: Uuid,
+    pub fullname: String,
+    pub email: String,
+    pub phone: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
 pub struct PatientProfileResponse {
     pub id: Uuid,
 
@@ -60,12 +68,14 @@ pub struct PatientProfileResponse {
     pub blood_type: Option<String>,
     pub chronic_illnesses: Option<String>,
     pub allergies: Option<String>,
+    pub medications: Option<String>,
+    pub existing_conditions: Option<String>,
+    pub primary_physician: Option<PhysicianInfo>,
     pub hmo_number: Option<String>,
     pub emergency_contact_name: Option<String>,
     pub emergency_contact_phone: Option<String>,
     pub medical_notes: Option<String>,
 }
-
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateMedicalInfoRequest {
@@ -80,7 +90,6 @@ pub struct UpdateMedicalInfoRequest {
     pub emergency_contact_phone: Option<String>,
     pub medical_notes: Option<String>,
 }
-
 
 impl From<User> for ProfileResponse {
     fn from(user: User) -> Self {
@@ -147,9 +156,8 @@ pub async fn update_profile(
     ))
 }
 
-
 /// Get user profile
-/// 
+///
 /// Returns the user's profile information, including medical details if available.
 #[utoipa::path(
     get,
@@ -174,6 +182,27 @@ pub async fn get_profile(
         .select((User::as_select(), Option::<Patient>::as_select()))
         .first::<(User, Option<Patient>)>(&mut conn)?;
 
+    // Fetch physician details if primary_physician is set
+    let physician_info = if let Some(ref p) = patient {
+        if let Some(physician_id) = p.primary_physician {
+            users::table
+                .filter(users::id.eq(physician_id))
+                .select(User::as_select())
+                .first::<User>(&mut conn)
+                .ok()
+                .map(|physician| PhysicianInfo {
+                    id: physician.id,
+                    fullname: format!("{} {}", physician.first_name, physician.last_name),
+                    email: physician.email,
+                    phone: physician.phone,
+                })
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let response = PatientProfileResponse {
         id: user.id,
         first_name: user.first_name,
@@ -187,17 +216,22 @@ pub async fn get_profile(
 
         blood_type: patient.as_ref().and_then(|p| p.blood_type.clone()),
         chronic_illnesses: patient.as_ref().and_then(|p| p.chronic_illnesses.clone()),
+        medications: patient.as_ref().and_then(|p| p.medications.clone()),
+        existing_conditions: patient.as_ref().and_then(|p| p.existing_conditions.clone()),
+        primary_physician: physician_info,
         allergies: patient.as_ref().and_then(|p| p.allergies.clone()),
         hmo_number: patient.as_ref().and_then(|p| p.hmo_number.clone()),
-        emergency_contact_name: patient.as_ref().and_then(|p| p.emergency_contact_name.clone()),
-        emergency_contact_phone: patient.as_ref().and_then(|p| p.emergency_contact_phone.clone()),
+        emergency_contact_name: patient
+            .as_ref()
+            .and_then(|p| p.emergency_contact_name.clone()),
+        emergency_contact_phone: patient
+            .as_ref()
+            .and_then(|p| p.emergency_contact_phone.clone()),
         medical_notes: patient.as_ref().and_then(|p| p.medical_notes.clone()),
     };
 
     Ok(ApiResponse::success(response))
 }
-
-
 
 /// Delete user account
 #[utoipa::path(
@@ -223,18 +257,21 @@ pub async fn delete_account(
     conn.transaction::<_, AppError, _>(|conn| {
         use crate::schema::*;
 
-        diesel::delete(password_reset_tokens::table.filter(password_reset_tokens::user_id.eq(user_id)))
-            .execute(conn)?;
+        diesel::delete(
+            password_reset_tokens::table.filter(password_reset_tokens::user_id.eq(user_id)),
+        )
+        .execute(conn)?;
 
-        diesel::delete(email_verification_tokens::table.filter(email_verification_tokens::user_id.eq(user_id)))
-            .execute(conn)?;
+        diesel::delete(
+            email_verification_tokens::table.filter(email_verification_tokens::user_id.eq(user_id)),
+        )
+        .execute(conn)?;
 
         diesel::delete(patients::table.filter(patients::user_id.eq(user_id)))
             .execute(conn)
             .ok();
 
-        let rows = diesel::delete(users::table.filter(users::id.eq(user_id)))
-            .execute(conn)?;
+        let rows = diesel::delete(users::table.filter(users::id.eq(user_id))).execute(conn)?;
 
         if rows == 0 {
             return Err(AppError::BadRequest("User not found".into()));
@@ -253,7 +290,7 @@ pub async fn delete_account(
 }
 
 /// Update medical information
-/// 
+///
 /// Updates or creates the patient's medical information. Donor and Patient can use this endpoint.
 #[utoipa::path(
     put,
@@ -288,11 +325,7 @@ pub async fn update_medical_info(
         medical_notes: payload.medical_notes.as_deref(),
     };
 
-    let patient = common::services::upsert_medical_info(
-        &mut conn,
-        current_user.id,
-        medical_info,
-    )?;
+    let patient = common::services::upsert_medical_info(&mut conn, current_user.id, medical_info)?;
 
     Ok(ApiResponse::success_with_message(
         "Medical information updated successfully",

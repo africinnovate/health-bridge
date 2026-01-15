@@ -1,8 +1,8 @@
 use crate::schema::users::deleted_at;
 
 pub mod sql_types {
+    use diesel::query_builder::QueryId;
     use diesel::sql_types::SqlType;
-     use diesel::query_builder::QueryId;
 
     #[derive(SqlType)]
     #[diesel(postgres_type(name = "gender_type"))]
@@ -52,7 +52,6 @@ pub mod sql_types {
     #[diesel(postgres_type(name = "cancelled_by"))]
     pub struct CancelledByType;
 
-
     #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "consultation_type"))]
     pub struct ConsultationType;
@@ -69,7 +68,6 @@ pub mod sql_types {
     #[diesel(postgres_type(name = "notification_category"))]
     pub struct NotificationCategoryType;
 }
-
 
 diesel::table! {
     use diesel::sql_types::*;
@@ -105,7 +103,6 @@ diesel::table! {
         created_at -> Timestamptz,
     }
 }
-
 
 diesel::table! {
     use diesel::sql_types::*;
@@ -223,7 +220,6 @@ diesel::table! {
         created_at -> Timestamptz,
     }
 }
-
 
 diesel::table! {
     use diesel::sql_types::*;
@@ -387,8 +383,6 @@ diesel::table! {
     }
 }
 
-
-
 diesel::joinable!(patients -> users (user_id));
 diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(password_reset_tokens -> users (user_id));
@@ -405,7 +399,6 @@ diesel::joinable!(social_accounts -> users (user_id));
 diesel::joinable!(user_settings -> users (user_id));
 diesel::joinable!(hospital_settings -> hospitals (hospital_id));
 diesel::joinable!(refresh_tokens -> users (user_id));
-
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,
