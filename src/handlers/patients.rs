@@ -67,6 +67,8 @@ pub struct PatientProfileResponse {
     pub dob: Option<NaiveDate>,
     pub role: String,
     pub email_verified: bool,
+    pub address: Option<String>,
+    pub image_url: Option<String>,
 
     // Patient / medical fields
     pub blood_type: Option<String>,
@@ -104,6 +106,8 @@ impl From<User> for ProfileResponse {
             email: user.email,
             phone: user.phone,
             gender: user.gender,
+            address: user.address,
+            image_url: user.image_url,
             dob: user.dob,
             role: user.role.to_string(),
             email_verified: user.email_verified,
