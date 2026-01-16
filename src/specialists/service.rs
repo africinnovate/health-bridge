@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
-use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use uuid::Uuid;
+use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
+use tracing::info;
 use utoipa::ToSchema;
-use serde::{Serialize, Deserialize};
-use tracing::{info};
+use uuid::Uuid;
 
 use crate::models::SpecialistAvailability;
 use crate::schema::{specialties, users};
@@ -12,11 +12,11 @@ use crate::services::mail::MailService;
 use crate::utils::enums::{ConsultationTypeEnum, DaysOfWeekEnum, Gender};
 use crate::{
     error::AppError,
-    models::{Specialist, User},
-    schema::specialists,
-    schema::specialist_availabilities,
-    utils::enums::Role,
     handlers::specialists::{CreateSpecialistRequest, UpdateSpecialistWithAvailability},
+    models::{Specialist, User},
+    schema::specialist_availabilities,
+    schema::specialists,
+    utils::enums::Role,
 };
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -63,32 +63,29 @@ pub struct SpecialistAvailabilityResponse {
     pub closes_at: chrono::NaiveTime,
 }
 
-
 pub fn get_specialist_with_user(
     conn: &mut PgConnection,
-    specialist_id: Uuid,
+    user_id: Uuid,
 ) -> Result<SpecialistResponse, AppError> {
-
-    use crate::schema::{specialists, users, specialist_availabilities};
+    use crate::schema::{specialist_availabilities, specialists, users};
     let (specialist, user) = specialists::table
         .inner_join(users::table.on(users::id.eq(specialists::user_id)))
-        .filter(specialists::id.eq(specialist_id))
+        .filter(users::id.eq(user_id))
         .select((Specialist::as_select(), User::as_select()))
         .first::<(Specialist, User)>(conn)
         .map_err(|_| AppError::NotFound("Specialist not found".into()))?;
 
-
     let availability = specialist_availabilities::table
-    .filter(specialist_availabilities::specialist_id.eq(specialist.id))
-    .select(SpecialistAvailability::as_select())
-    .load::<SpecialistAvailability>(conn)?
-    .into_iter()
-    .map(|a| SpecialistAvailabilityResponse {
-        day_of_week: a.day_of_week,
-        opens_at: a.opens_at,
-        closes_at: a.closes_at,
-    })
-    .collect();
+        .filter(specialist_availabilities::specialist_id.eq(specialist.id))
+        .select(SpecialistAvailability::as_select())
+        .load::<SpecialistAvailability>(conn)?
+        .into_iter()
+        .map(|a| SpecialistAvailabilityResponse {
+            day_of_week: a.day_of_week,
+            opens_at: a.opens_at,
+            closes_at: a.closes_at,
+        })
+        .collect();
 
     Ok(SpecialistResponse {
         id: specialist.id,
@@ -117,14 +114,11 @@ pub fn get_specialist_with_user(
     })
 }
 
-
-
 pub fn create_specialist(
     conn: &mut PgConnection,
     user: &User,
     payload: CreateSpecialistRequest,
 ) -> Result<Specialist, AppError> {
-
     if user.role != Role::Specialist {
         return Err(AppError::Unauthorized("Only specialists allowed".into()));
     }
@@ -136,7 +130,9 @@ pub fn create_specialist(
         .optional()?;
 
     if specialty_exists.is_none() {
-        return Err(AppError::BadRequest("Invalid specialty_id: specialty does not exist".into()));
+        return Err(AppError::BadRequest(
+            "Invalid specialty_id: specialty does not exist".into(),
+        ));
     }
 
     let specialist = diesel::insert_into(specialists::table)
@@ -172,7 +168,6 @@ pub fn get_specialists(
     conn: &mut PgConnection,
     filters: SpecialistFilters,
 ) -> Result<Vec<(Specialist, User, Vec<SpecialistAvailability>)>, AppError> {
-
     let mut query = specialists::table
         .inner_join(users::table.on(users::id.eq(specialists::user_id)))
         .into_boxed();
@@ -220,21 +215,19 @@ pub fn get_specialists(
         .collect())
 }
 
-
 pub fn update_specialist(
     conn: &mut PgConnection,
     specialist_id: Uuid,
     user: &User,
     payload: UpdateSpecialistWithAvailability,
 ) -> Result<Specialist, AppError> {
-
     // Update main specialist fields
     let updated = diesel::update(
         specialists::table
             .filter(specialists::id.eq(specialist_id))
             .filter(specialists::user_id.eq(user.id)),
     )
-    .set(&payload.specialist)  // only the table columns
+    .set(&payload.specialist) // only the table columns
     .returning(Specialist::as_select())
     .get_result::<Specialist>(conn)
     .optional()?
@@ -262,4 +255,3 @@ pub fn update_specialist(
 
     Ok(updated)
 }
-

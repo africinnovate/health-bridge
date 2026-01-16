@@ -1,21 +1,20 @@
 use axum::Extension;
 use axum::extract::{Path, Query};
-use axum::{
-    extract::State,
-    Json,
-};
-use uuid::Uuid;
-use serde::{Deserialize};
+use axum::{Json, extract::State};
 use diesel::prelude::*;
+use serde::Deserialize;
+use tracing::info;
 use utoipa::ToSchema;
-use tracing::{info};
+use uuid::Uuid;
 
 use crate::models::User;
-use crate::specialists::service::{self, SpecialistAvailabilityResponse, SpecialistFilters, SpecialistResponse};
+use crate::schema::specialists;
+use crate::specialists::service::{
+    self, SpecialistAvailabilityResponse, SpecialistFilters, SpecialistResponse,
+};
 use crate::utils::enums::DaysOfWeekEnum;
 use crate::utils::response::ApiResponse;
 use crate::{AppState, error::AppError, utils::enums::ConsultationTypeEnum};
-use crate::schema::{specialists};
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateSpecialistRequest {
@@ -30,14 +29,12 @@ pub struct CreateSpecialistRequest {
     pub availabilities: Vec<CreateAvailability>,
 }
 
-
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateAvailability {
     pub day_of_week: DaysOfWeekEnum,
     pub opens_at: chrono::NaiveTime,
     pub closes_at: chrono::NaiveTime,
 }
-
 
 #[derive(Debug, Deserialize, ToSchema, AsChangeset)]
 #[diesel(table_name = specialists)]
@@ -59,7 +56,7 @@ pub struct UpdateSpecialistWithAvailability {
 }
 
 /// Create specialist profile
-/// 
+///
 /// Creates a new specialist profile for a user.
 
 #[utoipa::path(
@@ -79,23 +76,17 @@ pub async fn create_specialist(
     Extension(user): Extension<User>,
     Json(payload): Json<CreateSpecialistRequest>,
 ) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
-
     let mut conn = state.pool.get()?;
 
-    let specialist = service::create_specialist(
-        &mut conn,
-        &user,
-        payload,
-    )?;
+    let specialist = service::create_specialist(&mut conn, &user, payload)?;
 
-    let response =
-        service::get_specialist_with_user(&mut conn, specialist.id)?;
+    let response = service::get_specialist_with_user(&mut conn, specialist.user_id)?;
 
     Ok(ApiResponse::success(response))
 }
 
 /// Get list of specialists
-/// 
+///
 /// Retrieves a list of specialists with optional filtering by verified status, suspended status, and specialty ID
 #[utoipa::path(
     get,
@@ -116,7 +107,6 @@ pub async fn get_specialists(
     State(state): State<AppState>,
     Query(query): Query<SpecialistFilters>,
 ) -> Result<ApiResponse<Vec<SpecialistResponse>>, AppError> {
-
     let mut conn = state.pool.get()?;
 
     let rows = service::get_specialists(
@@ -168,7 +158,7 @@ pub async fn get_specialists(
 }
 
 /// Get specialist by ID
-/// 
+///
 /// Retrieves a specialist's profile along with associated user information by their ID.
 #[utoipa::path(
     get,
@@ -187,18 +177,18 @@ pub async fn get_specialist(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
-
     let mut conn = state.pool.get()?;
 
-    let specialist =
-    service::get_specialist_with_user(&mut conn, id)?;
+    let specialist = service::get_specialist_with_user(&mut conn, id)?;
 
-    Ok(ApiResponse::success_with_message("Specialist retrieved successfully", specialist))
+    Ok(ApiResponse::success_with_message(
+        "Specialist retrieved successfully",
+        specialist,
+    ))
 }
 
-
 /// Update specialist profile
-/// 
+///
 /// Partial updates allowed
 #[utoipa::path(
     put,
@@ -219,17 +209,14 @@ pub async fn update_specialist(
     Extension(user): Extension<User>,
     Json(payload): Json<UpdateSpecialistWithAvailability>,
 ) -> Result<ApiResponse<service::SpecialistResponse>, AppError> {
-    
     let mut conn = state.pool.get()?;
 
-    service::update_specialist(
-        &mut conn,
-        id,
-        &user,
-        payload,
-    )?;
+    service::update_specialist(&mut conn, id, &user, payload)?;
 
-    let response = service::get_specialist_with_user(&mut conn, id)?;
+    let response = service::get_specialist_with_user(&mut conn, user.id)?;
 
-    Ok(ApiResponse::success_with_message("Specialist updated successfully", response))
+    Ok(ApiResponse::success_with_message(
+        "Specialist updated successfully",
+        response,
+    ))
 }
