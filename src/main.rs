@@ -1,22 +1,22 @@
-mod db;
-mod config;
-mod auth;
-mod models;
-mod routes;
-mod handlers;
-mod schema;
-mod docs;
-mod services;
-mod patients;
-mod hospitals;
-mod specialists;
 mod admin;
-mod error;
-mod utils;
+mod auth;
 mod common;
+mod config;
+mod db;
+mod docs;
+mod error;
+mod handlers;
+mod hospitals;
 mod middleware;
+mod models;
+mod patients;
+mod routes;
+mod schema;
+mod services;
+mod specialists;
+mod utils;
 
-use axum::{Router, routing::get, http::StatusCode};
+use axum::{Router, http::StatusCode, routing::get};
 use std::net::SocketAddr;
 use tracing_subscriber;
 use utoipa::OpenApi;
@@ -31,6 +31,7 @@ struct AppState {
     pool: DbPool,
     cfg: config::Config,
     mail_service: MailService,
+    cloudinary_service: std::sync::Arc<common::services::CloudinaryService>,
 }
 
 #[tokio::main]
@@ -39,23 +40,24 @@ async fn main() -> anyhow::Result<()> {
 
     let cfg = config::Config::from_env();
     let pool = db::init_db(&cfg.database_url)?;
-    let mail_service = MailService::new(
-        cfg.resend_api_key.clone(),
-        cfg.from_email.clone(),
-    );
+    let mail_service = MailService::new(cfg.resend_api_key.clone(), cfg.from_email.clone());
+    let cloudinary_service = std::sync::Arc::new(common::services::CloudinaryService::new(&cfg));
 
     let state = AppState {
         pool: pool.clone(),
         cfg: cfg.clone(),
-        mail_service: mail_service.clone()
+        mail_service: mail_service.clone(),
+        cloudinary_service,
     };
 
     let app = Router::new()
-        .merge(SwaggerUi::new("/docs")
-            .url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api", routes::create_router())
-        .route("/health", get(|| async { (StatusCode::OK, "The health is healthing! ...") }))
-        .layer(axum::Extension(state.clone())) 
+        .route(
+            "/health",
+            get(|| async { (StatusCode::OK, "The health is healthing! ...") }),
+        )
+        .layer(axum::Extension(state.clone()))
         .with_state(state);
 
     let addr: SocketAddr = cfg.bind_addr.parse()?;

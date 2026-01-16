@@ -44,6 +44,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         socials::social_login,
         common::get_user_settings,
         common::update_user_settings,
+        common::upload_image,
         admin::admin_dashboard,
         admin::get_users,
         admin::update_specialist_status,

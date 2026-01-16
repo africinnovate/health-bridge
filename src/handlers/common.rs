@@ -1,13 +1,66 @@
-use axum::{extract::State, Json, Extension};
-use utoipa::ToSchema;
-use serde::{Deserialize, Serialize};
 use crate::{
-    AppState, 
-    common::services, 
-    error::AppError, 
+    AppState,
+    common::services,
+    error::AppError,
     models::{User, UserSettings},
     utils::response::ApiResponse,
 };
+use axum::{
+    Extension, Json,
+    extract::{Multipart, State},
+};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+
+/// Upload user profile image
+///
+/// Uploads an image to Cloudinary and updates the user's profile with the new image URL.
+#[utoipa::path(
+    post,
+    path = "/api/user-settings/upload-image",
+    request_body(content = String, content_type = "multipart/form-data"),
+    responses(
+        (status = 200, body = ApiResponse<String>)
+    ),
+    tag = "settings",
+    security(("bearer_auth" = []))
+)]
+pub async fn upload_image(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    mut multipart: Multipart,
+) -> Result<ApiResponse<String>, AppError> {
+    let mut image_data = Vec::new();
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::BadRequest(e.to_string()))?
+    {
+        let name = field.name().unwrap_or_default().to_string();
+        if name == "image" || name == "file" {
+            let data = field
+                .bytes()
+                .await
+                .map_err(|e| AppError::BadRequest(e.to_string()))?;
+            image_data = data.to_vec();
+            break;
+        }
+    }
+
+    if image_data.is_empty() {
+        return Err(AppError::BadRequest(
+            "No image file provided in 'image' or 'file' field".into(),
+        ));
+    }
+
+    let image_url = state.cloudinary_service.upload_image(image_data).await?;
+
+    let mut conn = state.pool.get()?;
+    services::update_user_image(&mut conn, user.id, &image_url)?;
+
+    Ok(ApiResponse::success(image_url))
+}
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateUserSettingsRequest {
@@ -44,7 +97,7 @@ pub struct UserSettingsResponse {
 }
 
 /// Get user settings
-/// 
+///
 /// Retrieves the notification and privacy settings for the authenticated user.
 #[utoipa::path(
     get,
@@ -66,7 +119,7 @@ pub async fn get_user_settings(
 }
 
 /// Update user settings
-/// 
+///
 /// Updates the notification and privacy settings for the authenticated user.
 #[utoipa::path(
     put,
