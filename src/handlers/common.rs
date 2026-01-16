@@ -14,7 +14,7 @@ use utoipa::ToSchema;
 
 /// Upload user profile image
 ///
-/// Uploads an image to Cloudinary and updates the user's profile with the new image URL.
+/// The field name must be 'image' and the content type must be 'multipart/form-data'.
 #[utoipa::path(
     post,
     path = "/api/user-settings/upload-image",
