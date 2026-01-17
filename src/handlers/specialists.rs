@@ -26,6 +26,9 @@ pub struct CreateSpecialistRequest {
     pub primary_phone: Option<String>,
     pub secondary_phone: Option<String>,
     pub languages_spoken: Option<String>,
+    pub country: Option<String>,
+    pub time_zone: Option<String>,
+    pub license_url: Option<String>,
     pub availabilities: Vec<CreateAvailability>,
 }
 
@@ -46,6 +49,9 @@ pub struct UpdateSpecialistRequest {
     pub primary_phone: Option<String>,
     pub secondary_phone: Option<String>,
     pub languages_spoken: Option<String>,
+    pub country: Option<String>,
+    pub time_zone: Option<String>,
+    pub license_url: Option<String>,
     pub suspended: Option<bool>,
 }
 

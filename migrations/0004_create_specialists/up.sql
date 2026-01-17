@@ -33,6 +33,9 @@ CREATE TABLE specialists (
     primary_phone VARCHAR,
     secondary_phone VARCHAR,
     languages_spoken VARCHAR,
+    country VARCHAR,
+    time_zone VARCHAR,
+    license_url TEXT,
     verified BOOLEAN NOT NULL DEFAULT false,
     suspended BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
