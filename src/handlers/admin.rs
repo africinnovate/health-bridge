@@ -2,17 +2,25 @@ use axum::{Extension, Json, extract::{Path, Query, State}};
 use uuid::Uuid;
 
 use crate::{
-  AppState, admin::{
-    actions::{HospitalActionResponse, SpecialistActionResponse, update_hospital_status_with_audit, update_specialist_status_with_audit}, 
-    dashboard, dtos::{AdminDashboardResponse, HospitalActionRequest, SpecialistActionRequest, UserFilters, UserListResponse}
-}, 
-    error::AppError, 
-    models::User, 
+    AppState,
+    admin::{
+        actions::{
+            HospitalActionResponse, SpecialistActionResponse, update_hospital_status_with_audit,
+            update_specialist_status_with_audit,
+        },
+        dashboard,
+        dtos::{
+            AdminDashboardResponse, HospitalActionRequest, SpecialistActionRequest, UserFilters,
+            UserListResponse,
+        },
+    },
+    error::AppError,
+    models::User,
     utils::{enums::Role, response::ApiResponse}
 };
 
 /// Get admin dashboard statistics
-/// 
+///
 ///  Retrieves key statistics for the admin dashboard
 #[utoipa::path(
     get,
@@ -42,7 +50,7 @@ pub async fn admin_dashboard(
 
 
 /// Get list of users
-/// 
+///
 /// Retrieves a paginated list of users with optional filtering by role and search term
 #[utoipa::path(
     get,
@@ -81,7 +89,7 @@ pub async fn get_users(
 
 
 /// Update specialist verification/suspension status
-/// 
+///
 /// Allows admins to verify, suspend, or unsuspend specialists
 #[utoipa::path(
     patch,
@@ -151,7 +159,7 @@ pub async fn update_specialist_status(
 }
 
 /// Update hospital license status
-/// 
+///
 /// Allows admins to approve or revoke hospital licenses
 #[utoipa::path(
     patch,

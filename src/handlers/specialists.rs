@@ -7,10 +7,10 @@ use tracing::info;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::models::User;
+use crate::models::{Specialty, User};
 use crate::schema::specialists;
 use crate::specialists::service::{
-    self, SpecialistAvailabilityResponse, SpecialistFilters, SpecialistResponse,
+    self, CreateSpecialtyRequest, SpecialistAvailabilityResponse, SpecialistFilters, SpecialistResponse
 };
 use crate::utils::enums::DaysOfWeekEnum;
 use crate::utils::response::ApiResponse;
@@ -220,4 +220,59 @@ pub async fn update_specialist(
         "Specialist updated successfully",
         response,
     ))
+}
+
+/// Add a new specialty
+#[utoipa::path(
+    post,
+    path = "/api/specialists/specialties",
+    request_body = CreateSpecialtyRequest,
+    responses(
+        (status = 201, body = ApiResponse<Specialty>),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 500)
+    ),
+    tag = "specialists",
+    security(("bearer_auth" = []))
+)]
+pub async fn add_specialty(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<service::CreateSpecialtyRequest>,
+) -> Result<ApiResponse<crate::models::Specialty>, AppError> {
+    use crate::utils::enums::Role;
+
+    if matches!(user.role, Role::Donor | Role::Patient) {
+        return Err(AppError::Unauthorized(
+            "Access restricted for patients and donors".into(),
+        ));
+    }
+
+    let mut conn = state.pool.get()?;
+    let specialty = service::add_specialty(&mut conn, payload)?;
+
+    Ok(ApiResponse::created(
+        "Specialty added successfully",
+        specialty,
+    ))
+}
+
+/// List all specialties
+#[utoipa::path(
+    get,
+    path = "/api/specialists/specialties",
+    responses(
+        (status = 200, body = ApiResponse<Vec<Specialty>>),
+        (status = 500)
+    ),
+    tag = "specialists",
+)]
+pub async fn list_specialties(
+    State(state): State<AppState>,
+) -> Result<ApiResponse<Vec<crate::models::Specialty>>, AppError> {
+    let mut conn = state.pool.get()?;
+    let specialties = service::list_specialties(&mut conn)?;
+
+    Ok(ApiResponse::success(specialties))
 }

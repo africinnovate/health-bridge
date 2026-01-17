@@ -31,7 +31,6 @@ pub struct SpecialistResponse {
     pub phone: Option<String>,
     pub gender: Option<Gender>,
     pub image_url: Option<String>,
-    
 
     // specialist fields
     pub hospital_id: Option<Uuid>,
@@ -257,4 +256,34 @@ pub fn update_specialist(
     }
 
     Ok(updated)
+}
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct CreateSpecialtyRequest {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+pub fn add_specialty(
+    conn: &mut PgConnection,
+    payload: CreateSpecialtyRequest,
+) -> Result<crate::models::Specialty, AppError> {
+    use crate::schema::specialties::dsl::*;
+
+    let new_specialty = diesel::insert_into(specialties)
+        .values((name.eq(payload.name), description.eq(payload.description)))
+        .get_result::<crate::models::Specialty>(conn)?;
+
+    Ok(new_specialty)
+}
+
+pub fn list_specialties(
+    conn: &mut PgConnection,
+) -> Result<Vec<crate::models::Specialty>, AppError> {
+    use crate::schema::specialties::dsl::*;
+
+    let results = specialties
+        .order_by(name.asc())
+        .load::<crate::models::Specialty>(conn)?;
+
+    Ok(results)
 }

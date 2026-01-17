@@ -235,7 +235,7 @@ pub struct Appointment {
 
     pub created_at: DateTime<Utc>,
 }
-#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
 #[diesel(table_name = specialties)]
 pub struct Specialty {
     pub id: Uuid,
@@ -261,6 +261,9 @@ pub struct Specialist {
     pub primary_phone: Option<String>,
     pub secondary_phone: Option<String>,
     pub languages_spoken: Option<String>,
+    pub country: Option<String>,
+    pub time_zone: Option<String>,
+    pub license_url: Option<String>,
     pub verified: bool,
     pub suspended: bool,
     pub created_at: DateTime<Utc>,
