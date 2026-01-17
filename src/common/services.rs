@@ -27,7 +27,12 @@ impl CloudinaryService {
         }
     }
 
-    pub async fn upload_image(&self, image_bytes: Vec<u8>) -> Result<String, AppError> {
+    pub async fn upload_file(
+        &self,
+        file_bytes: Vec<u8>,
+        file_name: &str,
+        mime_type: &str,
+    ) -> Result<String, AppError> {
         let timestamp = Utc::now().timestamp();
 
         let params_to_sign = format!("timestamp={}{}", timestamp, self.api_secret);
@@ -36,22 +41,32 @@ impl CloudinaryService {
         hasher.update(params_to_sign.as_bytes());
         let signature = hex::encode(hasher.finalize());
 
+        let resource_type = if mime_type == "application/pdf" {
+            "raw"
+        } else {
+            "image"
+        };
+
         let url = format!(
-            "https://api.cloudinary.com/v1_1/{}/image/upload",
-            self.cloud_name
+            "https://api.cloudinary.com/v1_1/{}/{}/upload",
+            self.cloud_name, resource_type
         );
 
         let client = reqwest::Client::new();
-        let part = reqwest::multipart::Part::bytes(image_bytes)
-            .file_name("upload.jpg")
-            .mime_str("image/jpeg")
+        let part = reqwest::multipart::Part::bytes(file_bytes)
+            .file_name(file_name.to_string())
+            .mime_str(mime_type)
             .map_err(|e| AppError::BadRequest(e.to_string()))?;
 
-        let form = reqwest::multipart::Form::new()
+        let mut form = reqwest::multipart::Form::new()
             .text("api_key", self.api_key.clone())
             .text("timestamp", timestamp.to_string())
             .text("signature", signature)
             .part("file", part);
+
+        if resource_type == "raw" {
+            form = form.text("resource_type", "raw");
+        }
 
         let response = client.post(url).multipart(form).send().await?;
 
@@ -69,6 +84,11 @@ impl CloudinaryService {
         })?;
 
         Ok(secure_url.to_string())
+    }
+
+    pub async fn upload_image(&self, image_bytes: Vec<u8>) -> Result<String, AppError> {
+        self.upload_file(image_bytes, "upload.jpg", "image/jpeg")
+            .await
     }
 }
 

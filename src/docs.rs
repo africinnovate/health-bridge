@@ -28,6 +28,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         hospitals::get_hospital_settings,
         hospitals::update_hospital_settings,
         hospitals::delete_hospital,
+        hospitals::upload_accreditation_doc,
         specialists::create_specialist,
         specialists::get_specialist,
         specialists::get_specialists,

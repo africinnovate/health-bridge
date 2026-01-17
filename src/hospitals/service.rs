@@ -1,15 +1,16 @@
-use diesel::prelude::*;
 use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use tracing::info;
 use uuid::Uuid;
 
 use crate::services::mail::MailService;
 use crate::{
     error::AppError,
+    handlers::hospitals::{CreateHospitalRequest, UpdateHospitalRequest},
     models::{Hospital, User},
     schema::hospitals::dsl::*,
     utils::enums::Role,
     utils::validation::{validate_email, validate_phone_length},
-    handlers::hospitals::{CreateHospitalRequest, UpdateHospitalRequest},
 };
 
 /// Create hospital profile (Hospital users only)
@@ -20,7 +21,9 @@ pub fn create_hospital(
     mail_service: &MailService,
 ) -> Result<Hospital, AppError> {
     if user.role != Role::Hospital {
-        return Err(AppError::Unauthorized("Only Hospital users can create hospital profile".into()));
+        return Err(AppError::Unauthorized(
+            "Only Hospital users can create hospital profile".into(),
+        ));
     }
 
     if let Some(ref email_val) = payload.email {
@@ -52,26 +55,31 @@ pub fn create_hospital(
         .get_result(conn)
         .map_err(AppError::from)?;
 
-      if let Some(ref hospital_email) = hospital.email {
+    if let Some(ref hospital_email) = hospital.email {
         let mail_service = mail_service.clone();
         let hospital_name = hospital.name.clone();
         let to_email = hospital_email.clone();
-  
 
         tokio::spawn(async move {
-            let _ = mail_service.send_notification(
-                &to_email,
-                "Hospital Profile Created",
-                &format!("<p>Your hospital <strong>{}</strong> has been successfully created!</p>", hospital_name),
-                Some(&format!("Your hospital {} has been successfully created!", hospital_name)),
-            ).await;
+            let _ = mail_service
+                .send_notification(
+                    &to_email,
+                    "Hospital Profile Created",
+                    &format!(
+                        "<p>Your hospital <strong>{}</strong> has been successfully created!</p>",
+                        hospital_name
+                    ),
+                    Some(&format!(
+                        "Your hospital {} has been successfully created!",
+                        hospital_name
+                    )),
+                )
+                .await;
         });
     }
 
     Ok(hospital)
-
 }
-
 
 /// Update hospital profile
 ///
@@ -85,7 +93,6 @@ pub fn update_hospital(
     user: &User,
     payload: UpdateHospitalRequest,
 ) -> Result<Hospital, AppError> {
-
     // Only admins can update license status
     if payload.license_status.is_some() && user.role != Role::Admin {
         return Err(AppError::Unauthorized(
@@ -126,8 +133,8 @@ pub fn delete_hospital(
 ) -> Result<(), AppError> {
     use crate::schema::hospitals::dsl::*;
     use crate::utils::enums::Role;
-    use diesel::prelude::*;
     use chrono::Utc;
+    use diesel::prelude::*;
 
     let affected = if user.role == Role::Admin {
         // Admin can delete any hospital
@@ -157,4 +164,34 @@ pub fn delete_hospital(
     }
 
     Ok(())
+}
+
+/// Update hospital accreditation document URL
+pub fn update_accreditation_doc(
+    conn: &mut PgConnection,
+    hospital_id_: Uuid,
+    user: &User,
+    url: &str,
+) -> Result<Hospital, AppError> {
+    use crate::schema::hospitals::dsl::*;
+
+    info!("Updating hospital accreditation document URL for hospital {}", hospital_id_);
+    info!("Updating hospital accreditation document URL for user {}", user.id);
+
+    let updated = diesel::update(
+        hospitals
+            .filter(id.eq(hospital_id_))
+            .filter(user_id.eq(user.id)),
+    )
+    .set(accreditation_doc_url.eq(url))
+    .returning(Hospital::as_select())
+    .get_result::<Hospital>(conn)
+    .optional()?;
+
+    match updated {
+        Some(hospital) => Ok(hospital),
+        None => Err(AppError::NotFound(
+            "Hospital not found or unauthorized".into(),
+        )),
+    }
 }

@@ -1,23 +1,28 @@
 use axum::{
-    Extension, Json, extract::{Path, Query, State}
+    Extension, Json,
+    extract::{Path, Query, State},
 };
-use diesel::AsChangeset;
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use diesel::AsChangeset;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 use crate::{
-    AppState, 
-    error::AppError, 
+    AppState,
+    error::AppError,
     hospitals::{
-        self, 
-        blood_requests::{BloodRequestQuery, BloodRequestResponse, CreateBloodRequest, UpdateBloodRequest}, settings}, 
-        models::{BloodRequest, Hospital, HospitalSettings, User}, 
-        utils::{
-            enums::{HospitalTypeEnum, RequestStatusTypeEnum}, 
-            response::{ApiResponse, EmptyData}
+        self,
+        blood_requests::{
+            BloodRequestQuery, BloodRequestResponse, CreateBloodRequest, UpdateBloodRequest,
         },
+        settings,
+    },
+    models::{BloodRequest, Hospital, HospitalSettings, User},
+    utils::{
+        enums::{HospitalTypeEnum, RequestStatusTypeEnum},
+        response::{ApiResponse, EmptyData},
+    },
 };
 
 /// Create hospital profile
@@ -93,8 +98,6 @@ pub struct UpdateHospitalSettingsRequest {
     pub push_notifications: Option<bool>,
 }
 
-
-
 /// Create hospital
 #[utoipa::path(
     post,
@@ -115,12 +118,8 @@ pub async fn create_hospital(
 ) -> Result<ApiResponse<Hospital>, AppError> {
     let mut conn = state.pool.get()?;
 
-    let hospital = hospitals::service::create_hospital(
-        &mut conn,
-        &user,
-        payload,
-        &state.mail_service,
-    )?;
+    let hospital =
+        hospitals::service::create_hospital(&mut conn, &user, payload, &state.mail_service)?;
 
     Ok(ApiResponse::success_with_message(
         "Hospital profile created successfully",
@@ -150,12 +149,7 @@ pub async fn update_hospital(
 ) -> Result<ApiResponse<Hospital>, AppError> {
     let mut conn = state.pool.get()?;
 
-    let hospital = hospitals::service::update_hospital(
-        &mut conn,
-        hospital_id,
-        &user,
-        payload,
-    )?;
+    let hospital = hospitals::service::update_hospital(&mut conn, hospital_id, &user, payload)?;
 
     Ok(ApiResponse::success_with_message(
         "Hospital profile updated successfully",
@@ -176,7 +170,6 @@ pub async fn update_hospital(
     security(("bearer_auth" = []))
 )]
 
-
 pub async fn create_blood_request(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
@@ -184,11 +177,7 @@ pub async fn create_blood_request(
 ) -> Result<ApiResponse<BloodRequest>, AppError> {
     let mut conn = state.pool.get()?;
 
-    let request = hospitals::blood_requests::create_blood_request(
-        &mut conn,
-        &user,
-        payload,
-    )?;
+    let request = hospitals::blood_requests::create_blood_request(&mut conn, &user, payload)?;
 
     Ok(ApiResponse::created(
         "Blood request created successfully",
@@ -219,9 +208,11 @@ pub async fn get_blood_requests(
 ) -> Result<ApiResponse<Vec<BloodRequestResponse>>, AppError> {
     let mut conn = state.pool.get()?;
     let results = hospitals::blood_requests::get_blood_requests(&mut conn, &user, filters)?;
-    Ok(ApiResponse::created("Blood requests retrieved successfully", results))
+    Ok(ApiResponse::created(
+        "Blood requests retrieved successfully",
+        results,
+    ))
 }
-
 
 /// Update blood request
 #[utoipa::path(
@@ -245,21 +236,16 @@ pub async fn update_blood_request(
 ) -> Result<ApiResponse<BloodRequest>, AppError> {
     let mut conn = state.pool.get()?;
 
-    let request = hospitals::blood_requests::update_blood_request(
-        &mut conn,
-        id,
-        &user,
-        payload,
-    )?;
+    let request = hospitals::blood_requests::update_blood_request(&mut conn, id, &user, payload)?;
 
     Ok(ApiResponse::success_with_message(
         "Blood request updated successfully",
         request,
-    ))  
+    ))
 }
 
 /// Get hospital settings
-/// 
+///
 /// Retrieves settings for the specified hospital.
 
 #[utoipa::path(
@@ -279,7 +265,10 @@ pub async fn get_hospital_settings(
 ) -> Result<ApiResponse<HospitalSettings>, AppError> {
     let mut conn = state.pool.get()?;
     let settings = settings::get_or_create_hospital_settings(&mut conn, hospital_id)?;
-    Ok(ApiResponse::success_with_message("Hospital settings retrieved successfully", settings))
+    Ok(ApiResponse::success_with_message(
+        "Hospital settings retrieved successfully",
+        settings,
+    ))
 }
 
 /// Update hospital settings
@@ -303,11 +292,12 @@ pub async fn update_hospital_settings(
     Json(payload): Json<UpdateHospitalSettingsRequest>,
 ) -> Result<ApiResponse<HospitalSettings>, AppError> {
     let mut conn = state.pool.get()?;
-    let settings =
-        settings::update_hospital_settings(&mut conn, hospital_id, payload)?;
-    Ok(ApiResponse::success_with_message("Hospital settings updated successfully", settings))
+    let settings = settings::update_hospital_settings(&mut conn, hospital_id, payload)?;
+    Ok(ApiResponse::success_with_message(
+        "Hospital settings updated successfully",
+        settings,
+    ))
 }
-
 
 /// Delete hospital
 #[utoipa::path(
@@ -337,3 +327,69 @@ pub async fn delete_hospital(
     ))
 }
 
+/// Upload hospital accreditation document
+///
+/// The field name must be 'file' or 'accreditation_doc' and the content type must be 'multipart/form-data'.
+#[utoipa::path(
+    post,
+    path = "/api/hospitals/upload-accreditation/{hospital_id}",
+    params(
+        ("hospital_id" = Uuid, Path, description = "Hospital ID")
+    ),
+    request_body(content = String, content_type = "multipart/form-data"),
+    responses(
+        (status = 200, body = ApiResponse<String>)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn upload_accreditation_doc(
+    State(state): State<AppState>,
+    Path(hospital_id): Path<Uuid>,
+    Extension(user): Extension<User>,
+    mut multipart: axum::extract::Multipart,
+) -> Result<ApiResponse<String>, AppError> {
+    let mut file_data = Vec::new();
+    let mut filename = String::new();
+    let mut mime_type = String::new();
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::BadRequest(e.to_string()))?
+    {
+        let name = field.name().unwrap_or_default().to_string();
+        if name == "file" || name == "accreditation_doc" {
+            filename = field.file_name().unwrap_or("upload.pdf").to_string();
+            mime_type = field
+                .content_type()
+                .unwrap_or("application/pdf")
+                .to_string();
+            let data = field
+                .bytes()
+                .await
+                .map_err(|e| AppError::BadRequest(e.to_string()))?;
+            file_data = data.to_vec();
+            break;
+        }
+    }
+
+    if file_data.is_empty() {
+        return Err(AppError::BadRequest(
+            "No file provided in 'file' or 'accreditation_doc' field".into(),
+        ));
+    }
+
+    let url = state
+        .cloudinary_service
+        .upload_file(file_data, &filename, &mime_type)
+        .await?;
+
+    let mut conn = state.pool.get()?;
+    hospitals::service::update_accreditation_doc(&mut conn, hospital_id, &user, &url)?;
+
+    Ok(ApiResponse::success_with_message(
+        "Accreditation document uploaded successfully",
+        url,
+    ))
+}
