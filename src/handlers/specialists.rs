@@ -282,3 +282,63 @@ pub async fn list_specialties(
 
     Ok(ApiResponse::success(specialties))
 }
+
+/// Upload license
+#[utoipa::path(
+    post,
+    path = "/api/specialists/license",
+    responses(
+        (status = 200, body = ApiResponse<String>),
+        (status = 500)
+    ),
+    tag = "specialists",
+)]
+pub async fn upload_license(
+    State(state): State<AppState>,
+    mut multipart: axum::extract::Multipart,
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<String>, AppError> {
+    let mut file_data = Vec::new();
+    let mut filename = String::new();
+    let mut mime_type = String::new();
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::BadRequest(e.to_string()))?
+    {
+        let name = field.name().unwrap_or_default().to_string();
+        if name == "file" {
+            filename = field.file_name().unwrap_or("upload.pdf").to_string();
+            mime_type = field
+                .content_type()
+                .unwrap_or("application/pdf")
+                .to_string();
+            let data = field
+                .bytes()
+                .await
+                .map_err(|e| AppError::BadRequest(e.to_string()))?;
+            file_data = data.to_vec();
+            break;
+        }
+    }
+
+    if file_data.is_empty() {
+        return Err(AppError::BadRequest(
+            "No file provided in 'file' field".into(),
+        ));
+    }
+
+    let url = state
+        .cloudinary_service
+        .upload_file(file_data, &filename, &mime_type)
+        .await?;
+
+    let mut conn = state.pool.get()?;
+    service::upload_license(&mut conn, user.id, &user, &url)?;
+
+    Ok(ApiResponse::success_with_message(
+        "License uploaded successfully",
+        url,
+    ))
+}

@@ -287,3 +287,19 @@ pub fn list_specialties(
 
     Ok(results)
 }
+
+pub fn upload_license(
+    conn: &mut PgConnection,
+    user_id: Uuid,
+    user: &User,
+    url: &str,
+) -> Result<(), AppError> {
+    use crate::schema::specialists::dsl::*;
+
+    diesel::update(specialists.filter(user_id.eq(user_id)))
+        .set((license_url.eq(url)))
+        .execute(conn)?;
+
+    Ok(())
+}
+
