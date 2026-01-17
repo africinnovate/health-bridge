@@ -35,6 +35,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         specialists::update_specialist,
         specialists::add_specialty,
         specialists::list_specialties,
+        specialists::upload_license,
         appointments::get_appointments,
         appointments::create_appointment,
         appointments::confirm_appointment,

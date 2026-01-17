@@ -42,6 +42,9 @@ pub struct SpecialistResponse {
     pub primary_phone: Option<String>,
     pub secondary_phone: Option<String>,
     pub languages_spoken: Option<String>,
+    pub license_url: Option<String>,
+    pub country: Option<String>,
+    pub time_zone: Option<String>,
     pub verified: bool,
     pub suspended: bool,
     pub created_at: DateTime<Utc>,
@@ -108,6 +111,9 @@ pub fn get_specialist_with_user(
         primary_phone: specialist.primary_phone,
         secondary_phone: specialist.secondary_phone,
         languages_spoken: specialist.languages_spoken,
+        license_url: specialist.license_url,
+        country: specialist.country,
+        time_zone: specialist.time_zone,
         verified: specialist.verified,
         suspended: specialist.suspended,
         created_at: specialist.created_at,
@@ -148,6 +154,9 @@ pub fn create_specialist(
             specialists::primary_phone.eq(payload.primary_phone),
             specialists::secondary_phone.eq(payload.secondary_phone),
             specialists::languages_spoken.eq(payload.languages_spoken),
+            specialists::license_url.eq(payload.license_url),
+            specialists::country.eq(payload.country),
+            specialists::time_zone.eq(payload.time_zone),
         ))
         .returning(Specialist::as_select())
         .get_result(conn)?;

@@ -146,6 +146,9 @@ pub async fn get_specialists(
             primary_phone: specialist.primary_phone,
             secondary_phone: specialist.secondary_phone,
             languages_spoken: specialist.languages_spoken,
+            license_url: specialist.license_url,
+            country: specialist.country,
+            time_zone: specialist.time_zone,
             verified: specialist.verified,
             suspended: specialist.suspended,
             created_at: specialist.created_at,
@@ -295,8 +298,8 @@ pub async fn list_specialties(
 )]
 pub async fn upload_license(
     State(state): State<AppState>,
-    mut multipart: axum::extract::Multipart,
     Extension(user): Extension<User>,
+    mut multipart: axum::extract::Multipart,
 ) -> Result<ApiResponse<String>, AppError> {
     let mut file_data = Vec::new();
     let mut filename = String::new();
