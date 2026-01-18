@@ -133,6 +133,11 @@ pub fn create_specialist(
         return Err(AppError::Unauthorized("Only specialists allowed".into()));
     }
 
+    // check if email is verified
+    if !user.email_verified {
+        return Err(AppError::Unauthorized("Email not verified".into()));
+    }
+
     let specialty_exists = specialties::table
         .find(payload.specialty_id)
         .select(specialties::id)
