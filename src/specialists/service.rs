@@ -204,6 +204,7 @@ pub fn get_specialists(
     }
 
     let rows = query
+        .filter(users::deleted_at.is_null())
         .select((Specialist::as_select(), User::as_select()))
         .load::<(Specialist, User)>(conn)?;
 
