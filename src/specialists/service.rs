@@ -76,6 +76,7 @@ pub fn get_specialist_with_user(
     let (specialist, user) = specialists::table
         .inner_join(users::table.on(users::id.eq(specialists::user_id)))
         .filter(users::id.eq(user_id))
+        .filter(users::deleted_at.is_null())
         .select((Specialist::as_select(), User::as_select()))
         .first::<(Specialist, User)>(conn)
         .map_err(|_| AppError::NotFound("Specialist not found".into()))?;
