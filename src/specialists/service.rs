@@ -31,6 +31,7 @@ pub struct SpecialistResponse {
     pub phone: Option<String>,
     pub gender: Option<Gender>,
     pub image_url: Option<String>,
+    pub email_verified: bool,
 
     // specialist fields
     pub hospital_id: Option<Uuid>,
@@ -101,6 +102,7 @@ pub fn get_specialist_with_user(
         phone: user.phone,
         gender: user.gender,
         image_url: user.image_url,
+        email_verified: user.email_verified,
 
         hospital_id: specialist.hospital_id,
         specialty_id: specialist.specialty_id,
