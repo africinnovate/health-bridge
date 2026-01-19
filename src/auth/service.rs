@@ -1,4 +1,4 @@
-use crate::error::AppError;
+use crate::{error::AppError, models::UpdateUser};
 use crate::schema::users;
 use crate::utils::enums::Role;
 use crate::utils::helpers::generate_numeric_code;
@@ -26,7 +26,7 @@ use diesel::pg::PgConnection;
 use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, TokenData};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use chrono::Duration;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,36 +37,58 @@ pub struct Claims {
 
 pub fn create_user(
     conn: &mut PgConnection,
-    email: &str,
-    password: &str,
-    role: Role,
+    user_email: &str,
+    raw_password: &str,
+    user_role: Role,
 ) -> Result<User> {
+    use diesel::prelude::*;
+    use crate::schema::users::dsl::*;
 
-    // ---- Hash password using Argon2 ----
+    // Find soft-deleted user
+    let deleted = users
+        .filter(email.eq(user_email))
+        .filter(deleted_at.is_not_null())
+        .first::<User>(conn)
+        .optional()?;
+
+    // ---- Hash password ----
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
 
-    let password_hash = argon2
-        .hash_password(password.as_bytes(), &salt)
+    let hashed_password = argon2
+        .hash_password(raw_password.as_bytes(), &salt)
         .map_err(|e| anyhow!("failed to hash password: {}", e))?
         .to_string();
 
-    // ---- Prepare new user struct ----
+    // ---- Restore soft-deleted user ----
+    if let Some(deleted_user) = deleted {
+        let restored = diesel::update(users.find(deleted_user.id))
+            .set((
+                password_hash.eq(&hashed_password),
+                role.eq(user_role),
+                deleted_at.eq::<Option<DateTime<Utc>>>(None), // ✅ FORCE NULL
+            ))
+            .returning(User::as_returning())
+            .get_result::<User>(conn)?;
+
+        return Ok(restored);
+    }
+
+    // ---- Insert new user ----
     let new_user = NewUser {
         first_name: "",
         last_name: "",
-        email,
+        email: user_email,
         phone: None,
         gender: None,
         address: None,
         dob: None,
         image_url: None,
-        password_hash: &password_hash,
-        role,
+        password_hash: &hashed_password,
+        role: user_role,
     };
 
-    // ---- Insert and return the newly created user ----
-    let user = diesel::insert_into(users::table)
+    let user = diesel::insert_into(users)
         .values(&new_user)
         .returning(User::as_returning())
         .get_result::<User>(conn)?;

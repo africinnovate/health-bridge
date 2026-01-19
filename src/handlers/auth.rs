@@ -146,13 +146,51 @@ pub async fn register(
         .first::<User>(&mut conn)
         .optional()?;
 
-    if existing_user.is_some() {
-        return Err(AppError::UserAlreadyExists);
-    }
-
     let other_role = payload
     .role
     .parse::<Role>()?;
+
+    if let Some(user) = existing_user {
+        if user.deleted_at.is_some() {
+            if user.email_verified {
+                // Email already verified: send welcome back email instead
+                let mail_service = state.mail_service.clone();
+                let email_clone = user.email.clone();
+                tokio::spawn(async move {
+                    let _ = mail_service.send_notification(
+                        &email_clone,
+                        "Welcome back to HealthBridge",
+                        "<p>Welcome back! Your email is already verified.</p>",
+                        Some("Welcome back! Your email is already verified."),
+                    ).await;
+                });
+
+                let user = auth::create_user(
+                    &mut conn,
+                    &payload.email,
+                    &payload.password,
+                    other_role,
+                )?;
+
+                return Ok(ApiResponse::success_with_message(
+                    "Welcome back! Your email is already verified.",
+                    AuthResponse {
+                        token: "".to_string(),
+                        refresh_token: "".to_string(),
+                        user: user.into(),
+                    },
+                ));
+            } else {
+                return Err(AppError::UserAlreadyExists);
+            }
+        }
+    }
+
+    info!("User not deletedddd");
+
+    // let other_role = payload
+    // .role
+    // .parse::<Role>()?;
 
     let user = auth::create_user(
         &mut conn,

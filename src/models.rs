@@ -76,6 +76,22 @@ pub struct NewUser<'a> {
     pub role: Role,
 }
 
+#[derive(AsChangeset)]
+#[diesel(table_name = users)]
+pub struct UpdateUser<'a> {
+    pub first_name: &'a str,
+    pub last_name: &'a str,
+    pub phone: Option<&'a str>,
+    pub gender: Option<Gender>,
+    pub address: Option<&'a str>,
+    pub dob: Option<NaiveDate>,
+    pub image_url: Option<&'a str>,
+    pub password_hash: &'a str,
+    pub role: Role,
+    pub deleted_at: Option<DateTime<Utc>>,
+}
+
+
 #[derive(Debug, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = email_verification_tokens)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
