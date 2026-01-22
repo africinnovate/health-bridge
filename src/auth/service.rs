@@ -370,22 +370,21 @@ pub fn soft_delete_account(
 
     diesel::delete(
         evt::email_verification_tokens
-            .filter(evt::user_id.eq(user_id)),
+        .filter(evt::user_id.eq(user_id)),
     )
     .execute(conn)?;
 
     diesel::delete(
-    password_reset_tokens::table
+        password_reset_tokens::table
         .filter(password_reset_tokens::user_id.eq(user_id)),
-)
-.execute(conn)?;
+    )
+    .execute(conn)?;
 
-// refresh_tokens
-diesel::delete(
-    refresh_tokens::table
+    diesel::delete(
+        refresh_tokens::table
         .filter(refresh_tokens::user_id.eq(user_id)),
-)
-.execute(conn)?;
+    )
+    .execute(conn)?;
 
     Ok(())
 }

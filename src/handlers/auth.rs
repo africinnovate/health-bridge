@@ -1,11 +1,15 @@
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use tracing::{error, info, info_span};
-use utoipa::{ToSchema, openapi::info};
+use tracing::{error, info};
+use utoipa::{ToSchema};
 
 use crate::{
-    AppState, auth::service as auth, error::AppError, models::{NewRefreshToken, User}, schema::email_verification_tokens, utils::{
+    AppState, 
+    auth::service as auth, 
+    error::AppError, 
+    models::{User}, 
+    utils::{
         enums::Role, response::{ApiResponse, EmptyData}, validation::validate_email
     }
 };
@@ -88,10 +92,6 @@ impl From<User> for UserResponse {
     }
 }
 
-#[derive(Deserialize, ToSchema)]
-pub struct DeleteAccountRequest {
-    pub token: String,
-}
 
 #[derive(Deserialize, ToSchema)]
 pub struct RefreshTokenRequest {
@@ -465,8 +465,44 @@ pub async fn delete_account(
 ) -> Result<ApiResponse<EmptyData>, AppError> {
    
     let mut conn = state.pool.get()?;
-info!("Deleting account for user: {}", &user.id);
+    info!("Deleting account for user: {}", &user.id);
     auth::soft_delete_account(&mut conn, &user.id)?;
+    
+    let mail_service = state.mail_service.clone();
+    let user_email = user.email.clone();
+    let user_name = format!("{} {}", user.first_name, user.last_name);
+
+    // Send email asynchronously
+    tokio::spawn(async move {
+        let subject = "Your HealthBridge account has been deleted";
+        let html_body = format!(
+            r#"
+            <p>Hi {},</p>
+            <p>Your HealthBridge account has been successfully deleted.</p>
+            <p>If this action was not initiated by you, please contact our support team immediately.</p>
+            <p>— HealthBridge Team</p>
+            "#,
+            user_name
+        );
+
+        let text_body = format!(
+            "Hi {},\n\nYour HealthBridge account has been successfully deleted.\nIf this wasn’t you, please contact support.\n\n— HealthBridge Team",
+            user_name
+        );
+
+        if let Err(e) = mail_service
+            .send_notification(
+                &user_email,
+                subject,
+                &html_body,
+                Some(&text_body),
+            )
+            .await
+        {
+            error!("Failed to send account deletion email: {:?}", e);
+        }
+    });
+
     Ok(ApiResponse::message_only(
         StatusCode::OK,
         "Account deleted successfully",
