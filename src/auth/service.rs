@@ -1,5 +1,6 @@
-use crate::{error::AppError, models::UpdateUser};
-use crate::schema::users;
+use crate::schema::{password_reset_tokens, refresh_tokens};
+use crate::{error::AppError};
+use crate::schema::email_verification_tokens::dsl as evt;
 use crate::utils::enums::Role;
 use crate::utils::helpers::generate_numeric_code;
 use anyhow::{Result, anyhow};
@@ -359,13 +360,32 @@ pub fn soft_delete_account(
             .filter(deleted_at.is_null()),
     )
     .set(deleted_at.eq(Some(Utc::now())))
-    .execute(conn)?;
+    .execute(conn)?;           
 
     if affected == 0 {
         return Err(AppError::Unauthorized(
             "This account cannot be deleted".into(),
         ));
     }
+
+    diesel::delete(
+        evt::email_verification_tokens
+            .filter(evt::user_id.eq(user_id)),
+    )
+    .execute(conn)?;
+
+    diesel::delete(
+    password_reset_tokens::table
+        .filter(password_reset_tokens::user_id.eq(user_id)),
+)
+.execute(conn)?;
+
+// refresh_tokens
+diesel::delete(
+    refresh_tokens::table
+        .filter(refresh_tokens::user_id.eq(user_id)),
+)
+.execute(conn)?;
 
     Ok(())
 }
