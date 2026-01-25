@@ -52,6 +52,9 @@ pub struct User {
     pub gender: Option<Gender>,
     pub image_url: Option<String>,
     pub address: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub country: Option<String>,
     pub dob: Option<NaiveDate>,
     #[serde(skip_serializing)]
     pub password_hash: String,
@@ -84,13 +87,15 @@ pub struct UpdateUser<'a> {
     pub phone: Option<&'a str>,
     pub gender: Option<Gender>,
     pub address: Option<&'a str>,
+    pub city: Option<&'a str>,
+    pub state: Option<&'a str>,
+    pub country: Option<&'a str>,
     pub dob: Option<NaiveDate>,
     pub image_url: Option<&'a str>,
     pub password_hash: &'a str,
     pub role: Role,
     pub deleted_at: Option<DateTime<Utc>>,
 }
-
 
 #[derive(Debug, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = email_verification_tokens)]
@@ -103,7 +108,6 @@ pub struct EmailVerificationToken {
     pub used: bool,
     pub created_at: DateTime<Utc>,
 }
-
 
 #[derive(Debug, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = password_reset_tokens)]
@@ -125,7 +129,6 @@ pub struct NewPasswordResetToken<'a> {
     pub expires_at: DateTime<Utc>,
 }
 
-
 #[derive(Insertable)]
 #[diesel(table_name = email_verification_tokens)]
 pub struct NewEmailVerificationToken<'a> {
@@ -133,9 +136,6 @@ pub struct NewEmailVerificationToken<'a> {
     pub code: &'a str,
     pub expires_at: chrono::DateTime<chrono::Utc>,
 }
-
-
-
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
 #[diesel(belongs_to(User, foreign_key = user_id))]
@@ -172,7 +172,6 @@ pub struct MedicalInfo<'a> {
     pub emergency_contact_phone: Option<&'a str>,
     pub medical_notes: Option<&'a str>,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
 #[diesel(table_name = hospitals)]
@@ -224,7 +223,9 @@ pub struct BloodRequest {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations, ToSchema)]
+#[derive(
+    Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations, ToSchema,
+)]
 #[diesel(table_name = appointments)]
 #[diesel(belongs_to(BloodRequest))]
 #[diesel(belongs_to(Hospital))]
@@ -260,7 +261,6 @@ pub struct Specialty {
     pub created_at: DateTime<Utc>,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Specialty))]
@@ -285,7 +285,9 @@ pub struct Specialist {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations,
+)]
 #[diesel(belongs_to(Specialist))]
 #[diesel(table_name = specialist_availabilities)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -403,7 +405,9 @@ pub struct NewUserSettings {
     pub user_id: Uuid,
 }
 
-#[derive(Debug, Queryable, Selectable, Identifiable, Associations, Serialize, Deserialize, ToSchema)]
+#[derive(
+    Debug, Queryable, Selectable, Identifiable, Associations, Serialize, Deserialize, ToSchema,
+)]
 #[diesel(table_name = hospital_settings)]
 #[diesel(belongs_to(Hospital))]
 pub struct HospitalSettings {

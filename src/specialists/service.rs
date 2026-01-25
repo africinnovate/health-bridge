@@ -19,6 +19,33 @@ use crate::{
     utils::enums::Role,
 };
 
+#[derive(AsChangeset)]
+#[diesel(table_name = specialists)]
+pub struct SpecialistChangeset<'a> {
+    pub bio: Option<&'a str>,
+    pub years_of_experience: Option<i32>,
+    pub consultation_type: Option<ConsultationTypeEnum>,
+    pub session_duration_minutes: Option<i32>,
+    pub primary_phone: Option<&'a str>,
+    pub secondary_phone: Option<&'a str>,
+    pub languages_spoken: Option<&'a str>,
+    pub country: Option<&'a str>,
+    pub time_zone: Option<&'a str>,
+    pub license_url: Option<&'a str>,
+    pub suspended: Option<bool>,
+}
+
+#[derive(AsChangeset)]
+#[diesel(table_name = users)]
+pub struct UserChangeset<'a> {
+    pub first_name: Option<&'a str>,
+    pub last_name: Option<&'a str>,
+    pub address: Option<&'a str>,
+    pub city: Option<&'a str>,
+    pub state: Option<&'a str>,
+    pub country: Option<&'a str>,
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SpecialistResponse {
     pub id: Uuid,
@@ -241,17 +268,47 @@ pub fn update_specialist(
     user: &User,
     payload: UpdateSpecialistWithAvailability,
 ) -> Result<Specialist, AppError> {
+    // Convert payload to changeset
+    let specialist_changeset = SpecialistChangeset {
+        bio: payload.specialist.bio.as_deref(),
+        years_of_experience: payload.specialist.years_of_experience,
+        consultation_type: payload.specialist.consultation_type,
+        session_duration_minutes: payload.specialist.session_duration_minutes,
+        primary_phone: payload.specialist.primary_phone.as_deref(),
+        secondary_phone: payload.specialist.secondary_phone.as_deref(),
+        languages_spoken: payload.specialist.languages_spoken.as_deref(),
+        country: payload.specialist.country.as_deref(),
+        time_zone: payload.specialist.time_zone.as_deref(),
+        license_url: payload.specialist.license_url.as_deref(),
+        suspended: payload.specialist.suspended,
+    };
+
     // Update main specialist fields
     let updated = diesel::update(
         specialists::table
             .filter(specialists::id.eq(specialist_id))
             .filter(specialists::user_id.eq(user.id)),
     )
-    .set(&payload.specialist) // only the table columns
+    .set(&specialist_changeset)
     .returning(Specialist::as_select())
     .get_result::<Specialist>(conn)
     .optional()?
     .ok_or_else(|| AppError::NotFound("Specialist not found".into()))?;
+
+    // Convert payload to user changeset
+    let user_changeset = UserChangeset {
+        first_name: payload.specialist.first_name.as_deref(),
+        last_name: payload.specialist.last_name.as_deref(),
+        address: payload.specialist.address.as_deref(),
+        city: payload.specialist.city.as_deref(),
+        state: payload.specialist.state.as_deref(),
+        country: payload.specialist.country.as_deref(),
+    };
+
+    // Update user fields
+    diesel::update(users::table.filter(users::id.eq(user.id)))
+        .set(&user_changeset)
+        .execute(conn)?;
 
     // Handle availabilities separately
     if let Some(availabilities) = payload.availabilities {
@@ -315,9 +372,8 @@ pub fn upload_license(
     use crate::schema::specialists::dsl::*;
 
     diesel::update(specialists.filter(user_id.eq(user_id)))
-        .set((license_url.eq(url)))
+        .set(license_url.eq(url))
         .execute(conn)?;
 
     Ok(())
 }
-

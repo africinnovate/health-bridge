@@ -10,7 +10,8 @@ use uuid::Uuid;
 use crate::models::{Specialty, User};
 use crate::schema::specialists;
 use crate::specialists::service::{
-    self, CreateSpecialtyRequest, SpecialistAvailabilityResponse, SpecialistFilters, SpecialistResponse
+    self, CreateSpecialtyRequest, SpecialistAvailabilityResponse, SpecialistFilters,
+    SpecialistResponse,
 };
 use crate::utils::enums::DaysOfWeekEnum;
 use crate::utils::response::ApiResponse;
@@ -39,9 +40,14 @@ pub struct CreateAvailability {
     pub closes_at: chrono::NaiveTime,
 }
 
-#[derive(Debug, Deserialize, ToSchema, AsChangeset)]
-#[diesel(table_name = specialists)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateSpecialistRequest {
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub address: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub country: Option<String>,
     pub bio: Option<String>,
     pub years_of_experience: Option<i32>,
     pub consultation_type: Option<ConsultationTypeEnum>,
@@ -49,7 +55,6 @@ pub struct UpdateSpecialistRequest {
     pub primary_phone: Option<String>,
     pub secondary_phone: Option<String>,
     pub languages_spoken: Option<String>,
-    pub country: Option<String>,
     pub time_zone: Option<String>,
     pub license_url: Option<String>,
     pub suspended: Option<bool>,
