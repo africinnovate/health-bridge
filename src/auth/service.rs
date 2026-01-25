@@ -252,8 +252,9 @@ pub fn reset_user_password(
     conn: &mut PgConnection,
     user_id: Uuid,
     new_password: &str,
-) -> Result<(), diesel::result::Error> {
-    use crate::schema::users::dsl::*;
+) -> Result<(), AppError> {
+    use crate::schema::refresh_tokens;
+    use crate::schema::users;
     use diesel::prelude::*;
 
     let argon2 = Argon2::default();
@@ -261,12 +262,21 @@ pub fn reset_user_password(
 
     let hashed = argon2
         .hash_password(new_password.as_bytes(), &salt)
-        .map_err(|_| diesel::result::Error::RollbackTransaction)?
+        .map_err(|e| AppError::BadRequest(format!("Failed to hash password: {}", e)))?
         .to_string();
 
-    diesel::update(users.filter(id.eq(user_id)))
-        .set(password_hash.eq(hashed))
-        .execute(conn)?;
+    conn.transaction::<_, AppError, _>(|conn| {
+        diesel::update(users::table.filter(users::id.eq(user_id)))
+            .set(users::password_hash.eq(hashed))
+            .execute(conn)?;
+
+        // Invalidate all refresh tokens
+        diesel::update(refresh_tokens::table.filter(refresh_tokens::user_id.eq(user_id)))
+            .set(refresh_tokens::revoked.eq(true))
+            .execute(conn)?;
+
+        Ok(())
+    })?;
 
     Ok(())
 }
@@ -277,13 +287,13 @@ pub fn update_user_password(
     old_password: &str,
     new_password: &str,
 ) -> Result<(), AppError> {
-    use crate::schema::users::dsl::*;
+    use crate::schema::users;
     use diesel::prelude::*;
 
     // Fetch user
-    let user = users
-        .filter(id.eq(user_id))
-        .filter(deleted_at.is_null())
+    let user = users::table
+        .filter(users::id.eq(user_id))
+        .filter(users::deleted_at.is_null())
         .select(User::as_select())
         .first::<User>(conn)
         .map_err(|_| AppError::NotFound("User not found".into()))?;
@@ -307,9 +317,25 @@ pub fn update_user_password(
         .map_err(|e| AppError::BadRequest(format!("Failed to hash password: {}", e)))?
         .to_string();
 
-    diesel::update(users.filter(id.eq(user_id)))
-        .set(password_hash.eq(hashed))
-        .execute(conn)?;
+    use crate::schema::refresh_tokens;
+
+    conn.transaction::<_, AppError, _>(|conn| {
+        diesel::update(users::table.filter(users::id.eq(user_id)))
+            .set(users::password_hash.eq(hashed))
+            .execute(conn)?;
+
+        // Invalidate all refresh tokens
+        diesel::update(refresh_tokens::table.filter(refresh_tokens::user_id.eq(user_id)))
+            .set(refresh_tokens::revoked.eq(true))
+            .execute(conn)?;
+
+        // Invalidate all access tokens
+        diesel::update(access_tokens::table.filter(access_tokens::user_id.eq(user_id)))
+            .set(access_tokens::revoked.eq(true))
+            .execute(conn)?;
+
+        Ok(())
+    })?;
 
     Ok(())
 }
@@ -486,15 +512,15 @@ pub fn logout_user(conn: &mut PgConnection, refresh_token_value: &str) -> Result
 
 /// Logout user from all devices by revoking all their refresh tokens
 pub fn logout_all_devices(conn: &mut PgConnection, user_id: Uuid) -> Result<(), AppError> {
-    use crate::schema::refresh_tokens::dsl::*;
+    use crate::schema::refresh_tokens;
     use diesel::prelude::*;
 
     diesel::update(
-        refresh_tokens
-            .filter(user_id.eq(user_id))
-            .filter(revoked.eq(false)),
+        refresh_tokens::table
+            .filter(refresh_tokens::user_id.eq(user_id))
+            .filter(refresh_tokens::revoked.eq(false)),
     )
-    .set(revoked.eq(true))
+    .set(refresh_tokens::revoked.eq(true))
     .execute(conn)?;
 
     Ok(())
