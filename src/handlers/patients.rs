@@ -1,24 +1,19 @@
-use axum::{extract::State, Json};
 use axum::Extension;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use utoipa::ToSchema;
+use axum::{Json, extract::State};
 use chrono::NaiveDate;
-use tracing::{info};
+use serde::{Deserialize, Serialize};
+use tracing::info;
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 use crate::models::{MedicalInfo, Patient, User};
-use crate::schema::{users, patients};
-use diesel::prelude::*;
+use crate::schema::{patients, users};
 use crate::{
-    AppState,
+    AppState, common,
     error::AppError,
-    common,
-    utils::{
-        response::ApiResponse,
-        validation::validate_phone_length,
-        enums::Gender,
-    }
+    utils::{enums::Gender, response::ApiResponse, validation::validate_phone_length},
 };
+use diesel::prelude::*;
 
 #[derive(Deserialize, ToSchema)]
 pub struct UpdateProfileRequest {
@@ -135,7 +130,7 @@ pub struct DeleteAccountResponse {
     security(("bearer_auth" = []))
 )]
 pub async fn update_profile(
-    State(state): State<AppState>,
+    State(app_state): State<AppState>,
     Extension(current_user): Extension<User>,
     Json(payload): Json<UpdateProfileRequest>,
 ) -> Result<ApiResponse<ProfileResponse>, AppError> {
@@ -146,7 +141,7 @@ pub async fn update_profile(
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 
-    let mut conn = state.pool.get()?;
+    let mut conn = app_state.pool.get()?;
 
     let updated_user = diesel::update(users.filter(id.eq(current_user.id)))
         .set((

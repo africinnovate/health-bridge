@@ -1,27 +1,26 @@
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use tracing::{error, info};
-use utoipa::{ToSchema};
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 use crate::{
-    AppState, 
-    auth::service as auth, 
-    error::AppError, 
-    models::{User}, 
+    AppState,
+    auth::service as auth,
+    error::AppError,
+    models::User,
     utils::{
-        enums::Role, response::{ApiResponse, EmptyData}, validation::validate_email
-    }
+        enums::Role,
+        response::{ApiResponse, EmptyData},
+        validation::validate_email,
+    },
 };
-
 
 #[derive(Deserialize, ToSchema)]
 pub struct RegisterRequest {
     pub email: String,
     pub password: String,
     pub role: String,
-
-   
     // pub phone: Option<String>,
 }
 
@@ -92,7 +91,6 @@ impl From<User> for UserResponse {
     }
 }
 
-
 #[derive(Deserialize, ToSchema)]
 pub struct RefreshTokenRequest {
     pub refresh_token: String,
@@ -124,10 +122,9 @@ pub struct LogoutRequest {
     tag = "auth"
 )]
 pub async fn register(
-    State(state): State<AppState>,
+    State(app_state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<ApiResponse<AuthResponse>, AppError> {
-
     validate_email(&payload.email)?;
     // if let Some(phone_number) = &payload.phone {
     //     validate_phone_length(phone_number, 11, 11)?;
@@ -135,33 +132,26 @@ pub async fn register(
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 
-    let mut conn = state.pool.get()?;
+    let mut conn = app_state.pool.get()?;
 
     let existing_user = users
         .filter(email.eq(&payload.email))
         .first::<User>(&mut conn)
         .optional()?;
 
-    let other_role = payload
-    .role
-    .parse::<Role>()?;
+    let other_role = payload.role.parse::<Role>()?;
 
     if let Some(user) = existing_user {
         if user.deleted_at.is_none() {
-           return Err(AppError::UserAlreadyExists);
+            return Err(AppError::UserAlreadyExists);
         }
     }
 
-    let user = auth::create_user(
-        &mut conn,
-        &payload.email,
-        &payload.password,
-        other_role,
-    )?;
+    let user = auth::create_user(&mut conn, &payload.email, &payload.password, other_role)?;
 
     let code = auth::create_email_verification_code(&mut conn, user.id, 4)?;
 
-    let mail = state.mail_service.clone();
+    let mail = app_state.mail_service.clone();
     let other_email = user.email.clone();
 
     tokio::spawn(async move {
@@ -204,20 +194,19 @@ pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<ApiResponse<AuthResponse>, AppError> {
-
     validate_email(&payload.email)?;
     let mut conn = state.pool.get()?;
 
-    let user = auth::authenticate_user(
-        &mut conn,
-        &payload.email,
-        &payload.password,
-    )
-    .map_err(|_| AppError::Unauthorized("Invalid credentials".to_string()))?;
+    let user = auth::authenticate_user(&mut conn, &payload.email, &payload.password)
+        .map_err(|_| AppError::Unauthorized("Invalid credentials".to_string()))?;
 
     let refresh_token = auth::create_refresh_token(&mut conn, user.id)?;
 
-    let token = auth::make_jwt(user.id, &state.cfg.jwt_secret, state.cfg.jwt_expires_in_seconds)?;
+    let token = auth::make_jwt(
+        user.id,
+        &state.cfg.jwt_secret,
+        state.cfg.jwt_expires_in_seconds,
+    )?;
 
     Ok(ApiResponse::success_with_message(
         "Login successful",
@@ -245,16 +234,15 @@ pub async fn login(
 )]
 
 pub async fn forgot_password(
-    State(state): State<AppState>,
+    State(app_state): State<AppState>,
     Json(payload): Json<ForgotPasswordRequest>,
 ) -> Result<ApiResponse<EmptyData>, AppError> {
-
     validate_email(&payload.email)?;
-    
+
     use crate::schema::users::dsl::*;
     use diesel::prelude::*;
 
-    let mut conn = state.pool.get()?;
+    let mut conn = app_state.pool.get()?;
 
     let user = users
         .filter(email.eq(&payload.email))
@@ -264,13 +252,13 @@ pub async fn forgot_password(
     if let Some(user) = user {
         // Generate reset token
         let reset_token = auth::create_password_reset_token(&mut conn, user.id)?;
-        
+
         // Send email asynchronously
-        let mail_service = state.mail_service.clone();
+        let mail_service = app_state.mail_service.clone();
         let user_email = user.email.clone();
         let user_name = format!("{} {}", user.first_name, user.last_name);
-        let frontend_url = state.cfg.frontend_url.clone();
-        
+        let frontend_url = app_state.cfg.frontend_url.clone();
+
         tokio::spawn(async move {
             if let Err(e) = mail_service
                 .send_password_reset_email(&user_email, &user_name, &reset_token, &frontend_url)
@@ -279,7 +267,7 @@ pub async fn forgot_password(
                 error!("Failed to send password reset email: {:?}", e);
             }
         });
-        
+
         info!("Password reset token generated for user: {}", user.email);
     }
 
@@ -360,7 +348,7 @@ pub async fn verify_token(
 }
 
 /// Verify email verification code
-/// 
+///
 /// Validates the email verification code sent to the user's email
 
 #[utoipa::path(
@@ -382,11 +370,7 @@ pub async fn verify_email(
 
     let mut conn = state.pool.get()?;
 
-    auth::verify_email_code(
-        &mut conn,
-        &payload.email,
-        &payload.code,
-    )?;
+    auth::verify_email_code(&mut conn, &payload.email, &payload.code)?;
 
     Ok(ApiResponse::message_only(
         StatusCode::OK,
@@ -417,11 +401,8 @@ pub async fn resend_verification_code(
     validate_email(&payload.email)?;
 
     let mut conn = state.pool.get()?;
-    
-    let code = auth::resend_email_verification_code(
-        &mut conn,
-        &payload.email,
-    )?;
+
+    let code = auth::resend_email_verification_code(&mut conn, &payload.email)?;
 
     let mail_service = state.mail_service.clone();
     let email = payload.email.clone();
@@ -444,7 +425,6 @@ pub async fn resend_verification_code(
     ))
 }
 
-
 /// Delete user account
 ///
 /// Permanently deletes the authenticated user's account
@@ -463,11 +443,10 @@ pub async fn delete_account(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> Result<ApiResponse<EmptyData>, AppError> {
-   
     let mut conn = state.pool.get()?;
     info!("Deleting account for user: {}", &user.id);
     auth::soft_delete_account(&mut conn, &user.id)?;
-    
+
     let mail_service = state.mail_service.clone();
     let user_email = user.email.clone();
     let user_name = format!("{} {}", user.first_name, user.last_name);
@@ -491,12 +470,7 @@ pub async fn delete_account(
         );
 
         if let Err(e) = mail_service
-            .send_notification(
-                &user_email,
-                subject,
-                &html_body,
-                Some(&text_body),
-            )
+            .send_notification(&user_email, subject, &html_body, Some(&text_body))
             .await
         {
             error!("Failed to send account deletion email: {:?}", e);
@@ -508,7 +482,6 @@ pub async fn delete_account(
         "Account deleted successfully",
     ))
 }
-
 
 /// Refresh access token
 ///
@@ -567,7 +540,6 @@ pub async fn logout(
     let mut conn = state.pool.get()?;
 
     auth::logout_user(&mut conn, &payload.refresh_token)?;
-
 
     Ok(ApiResponse::message_only(
         StatusCode::OK,
