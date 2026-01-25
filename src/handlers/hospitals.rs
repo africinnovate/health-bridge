@@ -393,3 +393,50 @@ pub async fn upload_accreditation_doc(
         url,
     ))
 }
+
+/// Get all hospitals
+#[utoipa::path(
+    get,
+    path = "/api/hospitals",
+    responses(
+        (status = 200, body = ApiResponse<Vec<Hospital>>),
+        (status = 500)
+    ),
+    tag = "hospitals"
+)]
+pub async fn get_hospitals(
+    State(state): State<AppState>,
+) -> Result<ApiResponse<Vec<Hospital>>, AppError> {
+    let mut conn = state.pool.get()?;
+    let hospitals = hospitals::service::get_hospitals(&mut conn)?;
+    Ok(ApiResponse::success_with_message(
+        "Hospitals retrieved successfully",
+        hospitals,
+    ))
+}
+
+/// Get hospital by ID
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/{hospital_id}",
+    params(
+        ("hospital_id" = Uuid, Path, description = "Hospital ID")
+    ),
+    responses(
+        (status = 200, body = ApiResponse<Hospital>),
+        (status = 404),
+        (status = 500)
+    ),
+    tag = "hospitals"
+)]
+pub async fn get_hospital_by_id(
+    State(state): State<AppState>,
+    Path(hospital_id): Path<Uuid>,
+) -> Result<ApiResponse<Hospital>, AppError> {
+    let mut conn = state.pool.get()?;
+    let hospital = hospitals::service::get_hospital_by_id(&mut conn, hospital_id)?;
+    Ok(ApiResponse::success_with_message(
+        "Hospital retrieved successfully",
+        hospital,
+    ))
+}

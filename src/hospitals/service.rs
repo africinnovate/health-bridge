@@ -175,8 +175,14 @@ pub fn update_accreditation_doc(
 ) -> Result<Hospital, AppError> {
     use crate::schema::hospitals::dsl::*;
 
-    info!("Updating hospital accreditation document URL for hospital {}", hospital_id_);
-    info!("Updating hospital accreditation document URL for user {}", user.id);
+    info!(
+        "Updating hospital accreditation document URL for hospital {}",
+        hospital_id_
+    );
+    info!(
+        "Updating hospital accreditation document URL for user {}",
+        user.id
+    );
 
     let updated = diesel::update(
         hospitals
@@ -193,5 +199,32 @@ pub fn update_accreditation_doc(
         None => Err(AppError::NotFound(
             "Hospital not found or unauthorized".into(),
         )),
+    }
+}
+
+/// Get all hospitals
+pub fn get_hospitals(conn: &mut PgConnection) -> Result<Vec<Hospital>, AppError> {
+    hospitals
+        .filter(deleted_at.is_null())
+        .select(Hospital::as_select())
+        .load(conn)
+        .map_err(AppError::from)
+}
+
+/// Get hospital by ID
+pub fn get_hospital_by_id(
+    conn: &mut PgConnection,
+    hospital_id: Uuid,
+) -> Result<Hospital, AppError> {
+    let result = hospitals
+        .filter(id.eq(hospital_id))
+        .filter(deleted_at.is_null())
+        .select(Hospital::as_select())
+        .first(conn)
+        .optional()?;
+
+    match result {
+        Some(hospital) => Ok(hospital),
+        None => Err(AppError::NotFound("Hospital not found".into())),
     }
 }

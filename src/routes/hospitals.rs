@@ -4,7 +4,13 @@ use axum::{
     routing::{delete, get, patch, post, put},
 };
 
-pub fn router() -> Router<AppState> {
+pub fn public_router() -> Router<AppState> {
+    Router::new()
+        .route("/", get(hospitals::get_hospitals))
+        .route("/{hospital_id}", get(hospitals::get_hospital_by_id))
+}
+
+pub fn protected_router() -> Router<AppState> {
     Router::new()
         .route("/{hospital_id}", delete(hospitals::delete_hospital))
         .route("/create", post(hospitals::create_hospital))

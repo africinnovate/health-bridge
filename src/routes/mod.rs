@@ -36,10 +36,13 @@ pub fn create_router() -> Router<AppState> {
         );
 
     let protected_hospitals = Router::new()
-        .nest("/hospitals", hospitals::router())
+        .nest("/hospitals", hospitals::protected_router())
         .route_layer(
             middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
         );
+
+    let public_hospitals = Router::new()
+    .nest("/hospitals", hospitals::public_router());
 
     let protected_appointments = Router::new()
         .nest("/appointments", appointments::router())
@@ -53,26 +56,26 @@ pub fn create_router() -> Router<AppState> {
             middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
         );
 
-        let protected_notifications = Router::new()
-        .nest("/notifications", notifications::router())
-        .route_layer(
-            middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
-        );
+    let protected_notifications = Router::new()
+    .nest("/notifications", notifications::router())
+    .route_layer(
+        middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
+    );
 
-        let protected_specialists = Router::new()
-        .nest("/specialists", specialists::protected_router())
-        .route_layer(
-            middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
-        );
+    let protected_specialists = Router::new()
+    .nest("/specialists", specialists::protected_router())
+    .route_layer(
+        middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
+    );
 
-        let public_specialists = Router::new()
-        .nest("/specialists", specialists::public_router());
+    let public_specialists = Router::new()
+    .nest("/specialists", specialists::public_router());
 
-        let protected_admin = Router::new()
-        .nest("/admin", admin::router())
-        .route_layer(
-            middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
-        );
+    let protected_admin = Router::new()
+    .nest("/admin", admin::router())
+    .route_layer(
+        middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
+    );
 
     Router::new()
         .merge(public_auth)
@@ -81,6 +84,7 @@ pub fn create_router() -> Router<AppState> {
         .merge(protected_specialists)
         .merge(protected_patients)
         .merge(protected_hospitals)
+        .merge(public_hospitals)
         .merge(protected_appointments)
         .merge(protected_notifications)
         .merge(protected_user_settings)
