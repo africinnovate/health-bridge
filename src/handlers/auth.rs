@@ -351,6 +351,8 @@ pub async fn update_password(
         &payload.new_password,
     )?;
 
+    auth::logout_all_devices(&mut conn, user.id)?;
+
     info!("Password updated for user: {}", user.id);
 
     Ok(ApiResponse::message_only(

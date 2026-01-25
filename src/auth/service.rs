@@ -329,10 +329,7 @@ pub fn update_user_password(
             .set(refresh_tokens::revoked.eq(true))
             .execute(conn)?;
 
-        // Invalidate all access tokens
-        diesel::update(access_tokens::table.filter(access_tokens::user_id.eq(user_id)))
-            .set(access_tokens::revoked.eq(true))
-            .execute(conn)?;
+        // User should be logged out
 
         Ok(())
     })?;
