@@ -1,5 +1,11 @@
-use axum::{Router, routing::{get, post}};
-use crate::{AppState, handlers::{auth, socials}};
+use crate::{
+    AppState,
+    handlers::{auth, socials},
+};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 
 pub fn public_router() -> Router<AppState> {
     Router::new()
@@ -9,17 +15,18 @@ pub fn public_router() -> Router<AppState> {
         .route("/reset-password", post(auth::reset_password))
         .route("/verify-token", post(auth::verify_token))
         .route("/verify-email", post(auth::verify_email))
-        .route("/resend-verification-code", post(auth::resend_verification_code))
+        .route(
+            "/resend-verification-code",
+            post(auth::resend_verification_code),
+        )
         .route("/social-login", post(socials::social_login))
         .route("/refresh-token", post(auth::refresh_token))
         .route("/logout", post(auth::logout))
         .route("/logout-all", post(auth::logout_all_devices))
-        
-    }
+}
 
 pub fn protected_router() -> Router<AppState> {
     Router::new()
         .route("/delete-account", post(auth::delete_account))
-        
-
+        .route("/update-password", post(auth::update_password))
 }

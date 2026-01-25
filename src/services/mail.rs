@@ -1,5 +1,5 @@
 use anyhow::Result;
-use resend_rs::{types::CreateEmailBaseOptions, Resend};
+use resend_rs::{Resend, types::CreateEmailBaseOptions};
 use tracing::{error, info};
 
 #[derive(Clone)]
@@ -18,11 +18,8 @@ impl MailService {
         &self,
         to_email: &str,
         user_name: &str,
-        reset_token: &str,
-        frontend_url: &str,
+        reset_code: &str,
     ) -> Result<()> {
-        let reset_link = format!("{}/reset-password?token={}", frontend_url, reset_token);
-        
         let subject = "Reset Your Password - HealthBridge";
         let html_body = format!(
             r#"
@@ -34,13 +31,15 @@ impl MailService {
                     .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
                     .header {{ background-color: #4F46E5; color: white; padding: 20px; text-align: center; }}
                     .content {{ padding: 30px; background-color: #f9fafb; }}
-                    .button {{ 
-                        display: inline-block; 
-                        padding: 12px 24px; 
-                        background-color: #4F46E5; 
-                        color: white; 
-                        text-decoration: none; 
-                        border-radius: 6px; 
+                    .code-box {{
+                        background-color: #f3f4f6;
+                        padding: 20px;
+                        text-align: center;
+                        font-family: monospace;
+                        font-size: 32px;
+                        letter-spacing: 5px;
+                        color: #4F46E5;
+                        border-radius: 8px;
                         margin: 20px 0;
                     }}
                     .footer {{ padding: 20px; text-align: center; color: #6b7280; font-size: 12px; }}
@@ -54,13 +53,9 @@ impl MailService {
                     <div class="content">
                         <p>Hi {},</p>
                         <p>We received a request to reset your password for your HealthBridge account.</p>
-                        <p>Click the button below to reset your password:</p>
-                        <p style="text-align: center;">
-                            <a href="{}" class="button">Reset Password</a>
-                        </p>
-                        <p>Or copy and paste this link into your browser:</p>
-                        <p style="word-break: break-all; color: #4F46E5;">{}</p>
-                        <p><strong>This link will expire in 1 hour.</strong></p>
+                        <p>Use the following code to reset your password:</p>
+                        <div class="code-box">{}</div>
+                        <p><strong>This code will expire in 1 hour.</strong></p>
                         <p>If you didn't request a password reset, you can safely ignore this email.</p>
                     </div>
                     <div class="footer">
@@ -71,28 +66,24 @@ impl MailService {
             </body>
             </html>
             "#,
-            user_name, reset_link, reset_link
+            user_name, reset_code
         );
 
         let text_body = format!(
             "Hi {},\n\n\
             We received a request to reset your password for your HealthBridge account.\n\n\
-            Click the link below to reset your password:\n\
+            Use the following code to reset your password:\n\n\
             {}\n\n\
-            This link will expire in 1 hour.\n\n\
+            This code will expire in 1 hour.\n\n\
             If you didn't request a password reset, you can safely ignore this email.\n\n\
             Best regards,\n\
             The HealthBridge Team",
-            user_name, reset_link
+            user_name, reset_code
         );
 
-        let email = CreateEmailBaseOptions::new(
-            &self.from_email,
-            vec![to_email],
-            subject,
-        )
-        .with_html(&html_body)
-        .with_text(&text_body);
+        let email = CreateEmailBaseOptions::new(&self.from_email, vec![to_email], subject)
+            .with_html(&html_body)
+            .with_text(&text_body);
 
         match self.client.emails.send(email).await {
             Ok(_) => {
@@ -113,12 +104,8 @@ impl MailService {
         html_body: &str,
         text_body: Option<&str>,
     ) -> Result<()> {
-        let mut email = CreateEmailBaseOptions::new(
-            &self.from_email,
-            vec![to_email],
-            subject,
-        )
-        .with_html(html_body);
+        let mut email = CreateEmailBaseOptions::new(&self.from_email, vec![to_email], subject)
+            .with_html(html_body);
 
         if let Some(text) = text_body {
             email = email.with_text(text);

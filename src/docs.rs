@@ -9,6 +9,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         auth::login,
         auth::forgot_password,
         auth::reset_password,
+        auth::update_password,
         auth::verify_token,
         auth::verify_email,
         auth::resend_verification_code,

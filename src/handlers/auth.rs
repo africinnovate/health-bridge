@@ -48,7 +48,13 @@ pub struct ResendVerificationRequest {
 
 #[derive(Deserialize, ToSchema)]
 pub struct ResetPasswordRequest {
-    pub token: String,
+    pub code: String,
+    pub new_password: String,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct UpdatePasswordRequest {
+    pub old_password: String,
     pub new_password: String,
 }
 
@@ -251,24 +257,23 @@ pub async fn forgot_password(
 
     if let Some(user) = user {
         // Generate reset token
-        let reset_token = auth::create_password_reset_token(&mut conn, user.id)?;
+        let reset_code = auth::create_password_reset_token(&mut conn, user.id)?;
 
         // Send email asynchronously
         let mail_service = app_state.mail_service.clone();
         let user_email = user.email.clone();
         let user_name = format!("{} {}", user.first_name, user.last_name);
-        let frontend_url = app_state.cfg.frontend_url.clone();
 
         tokio::spawn(async move {
             if let Err(e) = mail_service
-                .send_password_reset_email(&user_email, &user_name, &reset_token, &frontend_url)
+                .send_password_reset_email(&user_email, &user_name, &reset_code)
                 .await
             {
                 error!("Failed to send password reset email: {:?}", e);
             }
         });
 
-        info!("Password reset token generated for user: {}", user.email);
+        info!("Password reset code generated for user: {}", user.email);
     }
 
     // Always return success to prevent email enumeration
@@ -280,7 +285,7 @@ pub async fn forgot_password(
 
 /// Reset password
 ///
-/// Endpoint to reset password
+/// Endpoint to reset password for users who have requested a password reset
 #[utoipa::path(
     post,
     path = "/api/auth/reset-password",
@@ -300,20 +305,57 @@ pub async fn reset_password(
     let mut conn = state.pool.get()?;
 
     // Verify the token and get user_id
-    let user_id = auth::verify_reset_token(&mut conn, &payload.token)
-        .map_err(|_| AppError::BadRequest("Invalid or expired token".to_string()))?;
+    let user_id = auth::verify_reset_token(&mut conn, &payload.code)
+        .map_err(|_| AppError::BadRequest("Invalid or expired code".to_string()))?;
 
     // Reset the password
     auth::reset_user_password(&mut conn, user_id, &payload.new_password)?;
 
     // Mark token as used
-    auth::mark_token_as_used(&mut conn, &payload.token)?;
+    auth::mark_token_as_used(&mut conn, &payload.code)?;
 
     info!("Password successfully reset for user: {}", user_id);
 
     Ok(ApiResponse::message_only(
         StatusCode::OK,
         "Password has been reset successfully.",
+    ))
+}
+
+/// Update password
+///
+/// Updates the password for the authenticated user
+#[utoipa::path(
+    post,
+    path = "/api/auth/update-password",
+    request_body = UpdatePasswordRequest,
+    responses(
+        (status = 200, description = "Password updated successfully", body = ApiResponse<EmptyData>),
+        (status = 401, description = "Invalid old password"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "auth",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_password(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<UpdatePasswordRequest>,
+) -> Result<ApiResponse<EmptyData>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    auth::update_user_password(
+        &mut conn,
+        user.id,
+        &payload.old_password,
+        &payload.new_password,
+    )?;
+
+    info!("Password updated for user: {}", user.id);
+
+    Ok(ApiResponse::message_only(
+        StatusCode::OK,
+        "Password has been updated successfully.",
     ))
 }
 
