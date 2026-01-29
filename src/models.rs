@@ -187,6 +187,7 @@ pub struct Hospital {
     pub primary_phone: String,
     pub emergency_phone: Option<String>,
     pub email: Option<String>,
+    pub email_verified: bool,
     pub license_number: String,
     pub license_status: bool,
     pub accreditation_doc_url: String,

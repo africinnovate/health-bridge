@@ -13,6 +13,7 @@ CREATE TABLE hospitals (
     primary_phone VARCHAR NOT NULL,
     emergency_phone VARCHAR,
     email VARCHAR,
+    email_verified BOOLEAN NOT NULL DEFAULT false,
 
     license_number VARCHAR NOT NULL,
     license_status BOOLEAN NOT NULL DEFAULT false,

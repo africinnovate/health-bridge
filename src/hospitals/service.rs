@@ -206,6 +206,7 @@ pub fn update_accreditation_doc(
 pub fn get_hospitals(conn: &mut PgConnection) -> Result<Vec<Hospital>, AppError> {
     hospitals
         .filter(deleted_at.is_null())
+        .filter(email_verified.eq(true))
         .select(Hospital::as_select())
         .load(conn)
         .map_err(AppError::from)
@@ -219,6 +220,7 @@ pub fn get_hospital_by_id(
     let result = hospitals
         .filter(id.eq(hospital_id))
         .filter(deleted_at.is_null())
+        .filter(email_verified.eq(true))
         .select(Hospital::as_select())
         .first(conn)
         .optional()?;

@@ -159,6 +159,7 @@ diesel::table! {
         primary_phone -> Varchar,
         emergency_phone -> Nullable<Varchar>,
         email -> Nullable<Varchar>,
+        email_verified -> Bool,
         license_number -> Varchar,
         accreditation_doc_url -> Text,
         license_status -> Bool,
