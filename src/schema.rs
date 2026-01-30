@@ -1,5 +1,3 @@
-use crate::schema::users::deleted_at;
-
 pub mod sql_types {
     use diesel::query_builder::QueryId;
     use diesel::sql_types::SqlType;
