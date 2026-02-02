@@ -1,44 +1,21 @@
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use utoipa::ToSchema;
-use chrono::{DateTime, Utc, NaiveDate};
-use diesel::prelude::*;
 use crate::{
     schema::{
-        appointments, 
-        blood_requests,
-        email_verification_tokens,
-        hospitals,
-        password_reset_tokens,
-        patients,
-        specialist_availabilities,
-        specialists,
-        specialties,
-        users,
-        admin_audit_logs,
-        notifications,
-        social_accounts,
-        user_settings,
-        hospital_settings,
-        refresh_tokens,
+        admin_audit_logs, appointments, blood_requests, email_verification_tokens,
+        hospital_blood_inventories, hospital_settings, hospitals, notifications,
+        password_reset_tokens, patients, refresh_tokens, social_accounts,
+        specialist_availabilities, specialists, specialties, user_settings, users,
     },
     utils::enums::{
-        ActionTypeEnum, 
-        AppointmentStatusEnum, 
-        AppointmentTypeEnum, 
-        BloodTypeEnum, 
-        CancelledByEnum, 
-        ConsultationTypeEnum, 
-        DaysOfWeekEnum, 
-        Gender, 
-        HospitalTypeEnum, 
-        RequestStatusTypeEnum, 
-        Role, 
-        TimelineTypeEnum, 
-        UrgencyTypeEnum,
-        NotificationCategoryEnum,
-    }
+        ActionTypeEnum, AppointmentStatusEnum, AppointmentTypeEnum, BloodTypeEnum, CancelledByEnum,
+        ConsultationTypeEnum, DaysOfWeekEnum, Gender, HospitalTypeEnum, NotificationCategoryEnum,
+        RequestStatusTypeEnum, Role, TimelineTypeEnum, UrgencyTypeEnum,
+    },
 };
+use chrono::{DateTime, NaiveDate, Utc};
+use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
 #[diesel(table_name = users)]
@@ -196,6 +173,30 @@ pub struct Hospital {
     pub donating_operating_hours: Option<String>,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations, ToSchema,
+)]
+#[diesel(table_name = hospital_blood_inventories)]
+#[diesel(belongs_to(Hospital))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct HospitalBloodInventory {
+    pub id: Uuid,
+    pub hospital_id: Uuid,
+    pub blood_type: BloodTypeEnum,
+    pub units_available: i32,
+    pub bank_capacity: i32,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Insertable)]
+#[diesel(table_name = hospital_blood_inventories)]
+pub struct NewHospitalBloodInventory {
+    pub hospital_id: Uuid,
+    pub blood_type: BloodTypeEnum,
+    pub units_available: i32,
+    pub bank_capacity: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]

@@ -9,9 +9,27 @@ use crate::{
     handlers::hospitals::{CreateHospitalRequest, UpdateHospitalRequest},
     models::{Hospital, User},
     schema::hospitals::dsl::*,
-    utils::enums::Role,
+    utils::enums::{HospitalTypeEnum, Role},
     utils::validation::{validate_email, validate_phone_length},
 };
+
+#[derive(AsChangeset)]
+#[diesel(table_name = crate::schema::hospitals)]
+struct UpdateHospitalChangeset {
+    name: Option<String>,
+    hospital_type: Option<HospitalTypeEnum>,
+    address: Option<String>,
+    city: Option<String>,
+    country: Option<String>,
+    primary_phone: Option<String>,
+    emergency_phone: Option<String>,
+    email: Option<String>,
+    accreditation_doc_url: Option<String>,
+    has_blood_bank: Option<bool>,
+    accepting_donors: Option<bool>,
+    donating_operating_hours: Option<String>,
+    license_status: Option<bool>,
+}
 
 /// Create hospital profile (Hospital users only)
 pub fn create_hospital(
@@ -110,20 +128,60 @@ pub fn update_hospital(
         validate_phone_length(emergency, 11, 15)?;
     }
 
-    let updated = diesel::update(
-        hospitals
-            .filter(id.eq(hospital_id))
-            .filter(user_id.eq(user.id)),
-    )
-    .set(payload)
-    .returning(Hospital::as_select())
-    .get_result::<Hospital>(conn)
-    .optional()?;
+    let changeset = UpdateHospitalChangeset {
+        name: payload.name,
+        hospital_type: payload.hospital_type,
+        address: payload.address,
+        city: payload.city,
+        country: payload.country,
+        primary_phone: payload.primary_phone,
+        emergency_phone: payload.emergency_phone,
+        email: payload.email,
+        accreditation_doc_url: payload.accreditation_doc_url,
+        has_blood_bank: payload.has_blood_bank,
+        accepting_donors: payload.accepting_donors,
+        donating_operating_hours: payload.donating_operating_hours,
+        license_status: payload.license_status,
+    };
 
-    match updated {
-        Some(hospital) => Ok(hospital),
-        None => Err(AppError::NotFound("Hospital not found".into())),
-    }
+    conn.transaction::<Hospital, AppError, _>(|conn| {
+        let updated = diesel::update(
+            hospitals
+                .filter(id.eq(hospital_id))
+                .filter(user_id.eq(user.id)),
+        )
+        .set(changeset)
+        .returning(Hospital::as_select())
+        .get_result::<Hospital>(conn)
+        .optional()?;
+
+        let hospital_record = match updated {
+            Some(h) => h,
+            None => return Err(AppError::NotFound("Hospital not found".into())),
+        };
+
+        if let Some(inventory) = payload.blood_inventory {
+            use crate::schema::hospital_blood_inventories::dsl::*;
+            for item in inventory {
+                diesel::insert_into(hospital_blood_inventories)
+                    .values((
+                        hospital_id.eq(hospital_record.id),
+                        blood_type.eq(item.blood_type),
+                        units_available.eq(item.units_available.unwrap_or(0)),
+                        bank_capacity.eq(item.bank_capacity.unwrap_or(0)),
+                    ))
+                    .on_conflict((hospital_id, blood_type))
+                    .do_update()
+                    .set((
+                        units_available.eq(item.units_available.unwrap_or(0)),
+                        bank_capacity.eq(item.bank_capacity.unwrap_or(0)),
+                    ))
+                    .execute(conn)?;
+            }
+        }
+
+        Ok(hospital_record)
+    })
 }
 
 pub fn delete_hospital(
@@ -229,4 +287,15 @@ pub fn get_hospital_by_id(
         Some(hospital) => Ok(hospital),
         None => Err(AppError::NotFound("Hospital not found".into())),
     }
+}
+
+pub fn get_hospital_inventory(
+    conn: &mut PgConnection,
+    h_id: Uuid,
+) -> Result<Vec<crate::models::HospitalBloodInventory>, AppError> {
+    use crate::schema::hospital_blood_inventories::dsl::*;
+    hospital_blood_inventories
+        .filter(hospital_id.eq(h_id))
+        .load::<crate::models::HospitalBloodInventory>(conn)
+        .map_err(AppError::from)
 }

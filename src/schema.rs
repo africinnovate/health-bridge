@@ -197,6 +197,21 @@ diesel::table! {
     }
 }
 
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::BloodType;
+
+    hospital_blood_inventories (id) {
+        id -> Uuid,
+        hospital_id -> Uuid,
+        blood_type -> BloodType,
+        units_available -> Int4,
+        bank_capacity -> Int4,
+        updated_at -> Timestamptz,
+    }
+}
+
 diesel::table! {
     use diesel::sql_types::*;
     use diesel::sql_types::Uuid as DieselUuid;
@@ -397,6 +412,7 @@ diesel::joinable!(specialists -> users (user_id));
 diesel::joinable!(specialists -> specialties (specialty_id));
 diesel::joinable!(specialist_availabilities -> specialists (specialist_id));
 diesel::joinable!(specialists -> hospitals (hospital_id));
+diesel::joinable!(hospital_blood_inventories -> hospitals (hospital_id));
 diesel::joinable!(appointments -> users (specialist_id));
 diesel::joinable!(appointments -> hospitals (hospital_id));
 diesel::joinable!(appointments -> blood_requests (blood_request_id));
@@ -423,5 +439,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     social_accounts,
     user_settings,
     hospital_settings,
+    hospital_blood_inventories,
     refresh_tokens,
 );

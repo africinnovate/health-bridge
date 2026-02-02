@@ -20,7 +20,7 @@ use crate::{
     },
     models::{BloodRequest, Hospital, HospitalSettings, User},
     utils::{
-        enums::{HospitalTypeEnum, RequestStatusTypeEnum},
+        enums::{BloodTypeEnum, HospitalTypeEnum, RequestStatusTypeEnum},
         response::{ApiResponse, EmptyData},
     },
 };
@@ -43,10 +43,15 @@ pub struct CreateHospitalRequest {
     pub donating_operating_hours: Option<String>,
 }
 
-/// Update hospital profile (partial)
-#[derive(Debug, Deserialize, AsChangeset, ToSchema)]
-#[diesel(table_name = crate::schema::hospitals)]
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct BloodInventoryUpdate {
+    pub blood_type: BloodTypeEnum,
+    pub units_available: Option<i32>,
+    pub bank_capacity: Option<i32>,
+}
 
+/// Update hospital profile (partial)
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateHospitalRequest {
     pub name: Option<String>,
     pub hospital_type: Option<HospitalTypeEnum>,
@@ -61,6 +66,7 @@ pub struct UpdateHospitalRequest {
     pub accepting_donors: Option<bool>,
     pub donating_operating_hours: Option<String>,
     pub license_status: Option<bool>, // ADMIN ONLY
+    pub blood_inventory: Option<Vec<BloodInventoryUpdate>>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -81,6 +87,7 @@ pub struct HospitalResponse {
     pub accepting_donors: bool,
     pub donating_operating_hours: Option<String>,
     pub created_at: DateTime<Utc>,
+    pub blood_inventory: Vec<crate::models::HospitalBloodInventory>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -115,15 +122,35 @@ pub async fn create_hospital(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
     Json(payload): Json<CreateHospitalRequest>,
-) -> Result<ApiResponse<Hospital>, AppError> {
+) -> Result<ApiResponse<HospitalResponse>, AppError> {
     let mut conn = state.pool.get()?;
 
     let hospital =
         hospitals::service::create_hospital(&mut conn, &user, payload, &state.mail_service)?;
 
+    let response = HospitalResponse {
+        id: hospital.id,
+        name: hospital.name,
+        hospital_type: hospital.hospital_type,
+        address: hospital.address,
+        city: hospital.city,
+        country: hospital.country,
+        primary_phone: hospital.primary_phone,
+        emergency_phone: hospital.emergency_phone,
+        email: hospital.email,
+        license_number: hospital.license_number,
+        accreditation_doc_url: hospital.accreditation_doc_url,
+        license_status: hospital.license_status,
+        has_blood_bank: hospital.has_blood_bank,
+        accepting_donors: hospital.accepting_donors,
+        donating_operating_hours: hospital.donating_operating_hours,
+        created_at: hospital.created_at,
+        blood_inventory: vec![], // New hospital has no inventory yet
+    };
+
     Ok(ApiResponse::success_with_message(
         "Hospital profile created successfully",
-        hospital,
+        response,
     ))
 }
 
@@ -146,14 +173,35 @@ pub async fn update_hospital(
     Path(hospital_id): Path<Uuid>,
     Extension(user): Extension<User>,
     Json(payload): Json<UpdateHospitalRequest>,
-) -> Result<ApiResponse<Hospital>, AppError> {
+) -> Result<ApiResponse<HospitalResponse>, AppError> {
     let mut conn = state.pool.get()?;
 
     let hospital = hospitals::service::update_hospital(&mut conn, hospital_id, &user, payload)?;
+    let inventory = hospitals::service::get_hospital_inventory(&mut conn, hospital.id)?;
+
+    let response = HospitalResponse {
+        id: hospital.id,
+        name: hospital.name,
+        hospital_type: hospital.hospital_type,
+        address: hospital.address,
+        city: hospital.city,
+        country: hospital.country,
+        primary_phone: hospital.primary_phone,
+        emergency_phone: hospital.emergency_phone,
+        email: hospital.email,
+        license_number: hospital.license_number,
+        accreditation_doc_url: hospital.accreditation_doc_url,
+        license_status: hospital.license_status,
+        has_blood_bank: hospital.has_blood_bank,
+        accepting_donors: hospital.accepting_donors,
+        donating_operating_hours: hospital.donating_operating_hours,
+        created_at: hospital.created_at,
+        blood_inventory: inventory,
+    };
 
     Ok(ApiResponse::success_with_message(
         "Hospital profile updated successfully",
-        hospital,
+        response,
     ))
 }
 /// Create blood request
@@ -423,7 +471,7 @@ pub async fn get_hospitals(
         ("hospital_id" = Uuid, Path, description = "Hospital ID")
     ),
     responses(
-        (status = 200, body = ApiResponse<Hospital>),
+        (status = 200, body = ApiResponse<HospitalResponse>),
         (status = 404),
         (status = 500)
     ),
@@ -432,11 +480,33 @@ pub async fn get_hospitals(
 pub async fn get_hospital_by_id(
     State(state): State<AppState>,
     Path(hospital_id): Path<Uuid>,
-) -> Result<ApiResponse<Hospital>, AppError> {
+) -> Result<ApiResponse<HospitalResponse>, AppError> {
     let mut conn = state.pool.get()?;
     let hospital = hospitals::service::get_hospital_by_id(&mut conn, hospital_id)?;
+    let inventory = hospitals::service::get_hospital_inventory(&mut conn, hospital.id)?;
+
+    let response = HospitalResponse {
+        id: hospital.id,
+        name: hospital.name,
+        hospital_type: hospital.hospital_type,
+        address: hospital.address,
+        city: hospital.city,
+        country: hospital.country,
+        primary_phone: hospital.primary_phone,
+        emergency_phone: hospital.emergency_phone,
+        email: hospital.email,
+        license_number: hospital.license_number,
+        accreditation_doc_url: hospital.accreditation_doc_url,
+        license_status: hospital.license_status,
+        has_blood_bank: hospital.has_blood_bank,
+        accepting_donors: hospital.accepting_donors,
+        donating_operating_hours: hospital.donating_operating_hours,
+        created_at: hospital.created_at,
+        blood_inventory: inventory,
+    };
+
     Ok(ApiResponse::success_with_message(
         "Hospital retrieved successfully",
-        hospital,
+        response,
     ))
 }
