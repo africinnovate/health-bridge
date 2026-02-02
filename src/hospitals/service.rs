@@ -220,7 +220,7 @@ pub fn get_hospital_by_id(
     let result = hospitals
         .filter(id.eq(hospital_id))
         .filter(deleted_at.is_null())
-        .filter(email_verified.eq(true))
+        // .filter(email_verified.eq(true))
         .select(Hospital::as_select())
         .first(conn)
         .optional()?;
