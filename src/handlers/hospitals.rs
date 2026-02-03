@@ -41,6 +41,7 @@ pub struct CreateHospitalRequest {
     pub has_blood_bank: bool,
     pub accepting_donors: bool,
     pub donating_operating_hours: Option<String>,
+    pub blood_inventory: Option<Vec<BloodInventoryUpdate>>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -145,7 +146,7 @@ pub async fn create_hospital(
         accepting_donors: hospital.accepting_donors,
         donating_operating_hours: hospital.donating_operating_hours,
         created_at: hospital.created_at,
-        blood_inventory: vec![], // New hospital has no inventory yet
+        blood_inventory: hospitals::service::get_hospital_inventory(&mut conn, hospital.id)?,
     };
 
     Ok(ApiResponse::success_with_message(
@@ -447,19 +448,44 @@ pub async fn upload_accreditation_doc(
     get,
     path = "/api/hospitals",
     responses(
-        (status = 200, body = ApiResponse<Vec<Hospital>>),
+        (status = 200, body = ApiResponse<Vec<HospitalResponse>>),
         (status = 500)
     ),
     tag = "hospitals"
 )]
 pub async fn get_hospitals(
     State(state): State<AppState>,
-) -> Result<ApiResponse<Vec<Hospital>>, AppError> {
+) -> Result<ApiResponse<Vec<HospitalResponse>>, AppError> {
     let mut conn = state.pool.get()?;
     let hospitals = hospitals::service::get_hospitals(&mut conn)?;
+
+    let mut response = Vec::new();
+    for hospital in hospitals {
+        let inventory = hospitals::service::get_hospital_inventory(&mut conn, hospital.id)?;
+        response.push(HospitalResponse {
+            id: hospital.id,
+            name: hospital.name,
+            hospital_type: hospital.hospital_type,
+            address: hospital.address,
+            city: hospital.city,
+            country: hospital.country,
+            primary_phone: hospital.primary_phone,
+            emergency_phone: hospital.emergency_phone,
+            email: hospital.email,
+            license_number: hospital.license_number,
+            accreditation_doc_url: hospital.accreditation_doc_url,
+            license_status: hospital.license_status,
+            has_blood_bank: hospital.has_blood_bank,
+            accepting_donors: hospital.accepting_donors,
+            donating_operating_hours: hospital.donating_operating_hours,
+            created_at: hospital.created_at,
+            blood_inventory: inventory,
+        });
+    }
+
     Ok(ApiResponse::success_with_message(
         "Hospitals retrieved successfully",
-        hospitals,
+        response,
     ))
 }
 

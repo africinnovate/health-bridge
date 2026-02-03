@@ -52,26 +52,44 @@ pub fn create_hospital(
         validate_phone_length(emergency, 11, 15)?;
     }
 
-    let hospital: Hospital = diesel::insert_into(hospitals)
-        .values((
-            user_id.eq(user.id),
-            name.eq(payload.name),
-            hospital_type.eq(payload.hospital_type),
-            address.eq(payload.address),
-            city.eq(payload.city),
-            country.eq(payload.country),
-            primary_phone.eq(payload.primary_phone),
-            emergency_phone.eq(payload.emergency_phone),
-            email.eq(payload.email),
-            license_number.eq(payload.license_number),
-            accreditation_doc_url.eq(payload.accreditation_doc_url),
-            has_blood_bank.eq(payload.has_blood_bank),
-            accepting_donors.eq(payload.accepting_donors),
-            donating_operating_hours.eq(payload.donating_operating_hours),
-        ))
-        .returning(Hospital::as_select())
-        .get_result(conn)
-        .map_err(AppError::from)?;
+    let hospital: Hospital = conn.transaction::<Hospital, AppError, _>(|conn| {
+        let hospital: Hospital = diesel::insert_into(hospitals)
+            .values((
+                user_id.eq(user.id),
+                name.eq(payload.name),
+                hospital_type.eq(payload.hospital_type),
+                address.eq(payload.address),
+                city.eq(payload.city),
+                country.eq(payload.country),
+                primary_phone.eq(payload.primary_phone),
+                emergency_phone.eq(payload.emergency_phone),
+                email.eq(&payload.email),
+                license_number.eq(payload.license_number),
+                accreditation_doc_url.eq(payload.accreditation_doc_url),
+                has_blood_bank.eq(payload.has_blood_bank),
+                accepting_donors.eq(payload.accepting_donors),
+                donating_operating_hours.eq(payload.donating_operating_hours),
+            ))
+            .returning(Hospital::as_select())
+            .get_result(conn)
+            .map_err(AppError::from)?;
+
+        if let Some(inventory) = payload.blood_inventory {
+            use crate::schema::hospital_blood_inventories::dsl::*;
+            for item in inventory {
+                diesel::insert_into(hospital_blood_inventories)
+                    .values((
+                        hospital_id.eq(hospital.id),
+                        blood_type.eq(item.blood_type),
+                        units_available.eq(item.units_available.unwrap_or(0)),
+                        bank_capacity.eq(item.bank_capacity.unwrap_or(0)),
+                    ))
+                    .execute(conn)?;
+            }
+        }
+
+        Ok(hospital)
+    })?;
 
     if let Some(ref hospital_email) = hospital.email {
         let mail_service = mail_service.clone();
