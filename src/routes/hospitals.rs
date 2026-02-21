@@ -23,6 +23,14 @@ pub fn protected_router() -> Router<AppState> {
             put(hospitals::update_blood_request),
         )
         .route(
+            "/blood-request/donor-stats/{donor_id}",
+            get(hospitals::get_donor_stats),
+        )
+        .route(
+            "/blood-request/donor-history/{donor_id}",
+            get(hospitals::get_donor_history),
+        )
+        .route(
             "/settings/{hospital_id}",
             get(hospitals::get_hospital_settings),
         )
@@ -33,5 +41,12 @@ pub fn protected_router() -> Router<AppState> {
         .route(
             "/upload-accreditation/{hospital_id}",
             post(hospitals::upload_accreditation_doc),
+        )
+        .route("/donors", get(hospitals::get_donors))
+        .route("/donors/{donor_id}", patch(hospitals::update_donor))
+        .route("/dashboard/stats", get(hospitals::get_dashboard_stats))
+        .route(
+            "/dashboard/recent-activity",
+            get(hospitals::get_recent_activity),
         )
 }

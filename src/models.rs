@@ -37,6 +37,8 @@ pub struct User {
     pub password_hash: String,
     pub role: Role,
     pub email_verified: bool,
+    pub note: Option<String>,
+    pub eligible_to_donate: bool,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
 }
@@ -71,6 +73,8 @@ pub struct UpdateUser<'a> {
     pub image_url: Option<&'a str>,
     pub password_hash: &'a str,
     pub role: Role,
+    pub note: Option<Option<&'a str>>,
+    pub eligible_to_donate: Option<bool>,
     pub deleted_at: Option<DateTime<Utc>>,
 }
 

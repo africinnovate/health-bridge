@@ -1,26 +1,24 @@
-use diesel::prelude::*;
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
-use utoipa::{ToSchema};
+use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
+use tracing::{error, info};
+use utoipa::ToSchema;
 use uuid::Uuid;
-use tracing::{info, error};
 
 use crate::{
     error::AppError,
     models::{Appointment, BloodRequest, Hospital, User},
     schema::{appointments, blood_requests},
     utils::enums::{AppointmentStatusEnum, AppointmentTypeEnum, CancelledByEnum, Role},
-
 };
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AppointmentResponse {
     pub appointment: Appointment,
-    pub user: User,        
-    pub hospital: Hospital,        
+    pub user: User,
+    pub hospital: Hospital,
     pub blood_request: BloodRequest,
 }
-
 
 #[derive(Debug, Deserialize, Insertable, ToSchema)]
 #[diesel(table_name = appointments)]
@@ -35,8 +33,8 @@ pub struct CreateAppointment {
 pub struct AppointmentQuery {
     pub appointment_type: Option<AppointmentTypeEnum>,
     pub status: Option<AppointmentStatusEnum>,
+    pub timeline: Option<String>,
 }
-
 
 pub fn create_appointment(
     conn: &mut PgConnection,
@@ -44,14 +42,15 @@ pub fn create_appointment(
     payload: CreateAppointment,
 ) -> Result<Appointment, AppError> {
     if user.role == Role::Hospital {
-        return Err(AppError::Unauthorized("Hospital staff cannot create appointments".into()));
+        return Err(AppError::Unauthorized(
+            "Hospital staff cannot create appointments".into(),
+        ));
     }
 
     let request = blood_requests::table
         .filter(blood_requests::id.eq(payload.blood_request_id))
         .first::<BloodRequest>(conn)
         .map_err(|_| AppError::NotFound("Blood request not found".into()))?;
-
 
     diesel::insert_into(appointments::table)
         .values((
@@ -68,14 +67,15 @@ pub fn create_appointment(
         .map_err(AppError::from)
 }
 
-
 pub fn confirm_appointment(
     conn: &mut PgConnection,
     appointment_id: Uuid,
     user: &User,
 ) -> Result<Appointment, AppError> {
     if user.role != Role::Hospital {
-        return Err(AppError::Unauthorized("Only hospitals can confirm appointments".into()));
+        return Err(AppError::Unauthorized(
+            "Only hospitals can confirm appointments".into(),
+        ));
     }
 
     assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
@@ -87,7 +87,6 @@ pub fn confirm_appointment(
         .map_err(AppError::from)
 }
 
-
 pub fn reschedule_appointment(
     conn: &mut PgConnection,
     appointment_id: Uuid,
@@ -95,7 +94,9 @@ pub fn reschedule_appointment(
     new_time: DateTime<Utc>,
 ) -> Result<Appointment, AppError> {
     if user.role != Role::Hospital {
-        return Err(AppError::Unauthorized("Only hospitals can reschedule appointments".into()));
+        return Err(AppError::Unauthorized(
+            "Only hospitals can reschedule appointments".into(),
+        ));
     }
 
     assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
@@ -116,10 +117,8 @@ pub fn get_appointments(
     filters: AppointmentQuery,
 ) -> Result<Vec<AppointmentResponse>, AppError> {
     use crate::schema::{
-        appointments::dsl::*,
+        appointments::dsl::*, blood_requests::dsl as br_dsl, hospitals::dsl as hospitals_dsl,
         users::dsl as users_dsl,
-        blood_requests::dsl as br_dsl,
-        hospitals::dsl as hospitals_dsl,
     };
 
     let mut query = appointments
@@ -154,6 +153,58 @@ pub fn get_appointments(
         query = query.filter(status.eq(s));
     }
 
+    if let Some(tl) = filters.timeline {
+        let now = chrono::Utc::now();
+        match tl.as_str() {
+            "today" => {
+                let start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
+                let end = now.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
+                query = query
+                    .filter(scheduled_time.ge(start))
+                    .filter(scheduled_time.le(end));
+            }
+            "this_week" => {
+                use chrono::Datelike;
+                let days_from_mon = now.weekday().num_days_from_monday();
+                let start = (now - chrono::Duration::days(days_from_mon as i64))
+                    .date_naive()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_utc();
+                let end = start + chrono::Duration::days(7);
+                query = query
+                    .filter(scheduled_time.ge(start))
+                    .filter(scheduled_time.lt(end));
+            }
+            "this_month" => {
+                use chrono::Datelike;
+                let start = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_utc();
+                let mut next_month = now.month() + 1;
+                let mut year = now.year();
+                if next_month > 12 {
+                    next_month = 1;
+                    year += 1;
+                }
+                let end = chrono::NaiveDate::from_ymd_opt(year, next_month, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_utc();
+                query = query
+                    .filter(scheduled_time.ge(start))
+                    .filter(scheduled_time.lt(end));
+            }
+            "upcoming" => {
+                query = query.filter(scheduled_time.ge(now));
+            }
+            _ => {}
+        }
+    }
+
     let rows = query
         .select((
             Appointment::as_select(),
@@ -166,15 +217,16 @@ pub fn get_appointments(
 
     Ok(rows
         .into_iter()
-        .map(|(appointment, user, hospital, blood_request)| AppointmentResponse {
-            appointment,
-            user,
-            hospital,
-            blood_request,
-        })
+        .map(
+            |(appointment, user, hospital, blood_request)| AppointmentResponse {
+                appointment,
+                user,
+                hospital,
+                blood_request,
+            },
+        )
         .collect())
 }
-
 
 pub fn cancel_appointment(
     conn: &mut PgConnection,
@@ -218,7 +270,9 @@ pub fn complete_appointment(
     user: &User,
 ) -> Result<Appointment, AppError> {
     if user.role != Role::Hospital {
-        return Err(AppError::Unauthorized("Only hospitals can complete appointments".into()));
+        return Err(AppError::Unauthorized(
+            "Only hospitals can complete appointments".into(),
+        ));
     }
 
     assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
@@ -229,8 +283,6 @@ pub fn complete_appointment(
         .get_result(conn)
         .map_err(AppError::from)
 }
-
-
 
 fn assert_hospital_owns_appointment(
     conn: &mut PgConnection,

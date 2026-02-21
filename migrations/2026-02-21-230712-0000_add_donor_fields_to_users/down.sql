@@ -1,0 +1,2 @@
+ALTER TABLE users DROP COLUMN IF EXISTS eligible_to_donate;
+ALTER TABLE users DROP COLUMN IF EXISTS note;

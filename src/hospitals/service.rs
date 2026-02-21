@@ -330,3 +330,297 @@ pub fn get_hospital_inventory(
         .load::<crate::models::HospitalBloodInventory>(conn)
         .map_err(AppError::from)
 }
+
+#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
+pub struct DonorQuery {
+    pub eligible_to_donate: Option<bool>,
+    pub blood_type: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct DonorDetail {
+    pub user_id: Uuid,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub phone: Option<String>,
+    pub gender: Option<crate::utils::enums::Gender>,
+    pub image_url: Option<String>,
+    pub eligible_to_donate: bool,
+    pub note: Option<String>,
+    pub blood_type: Option<String>,
+}
+
+pub fn get_donors(
+    conn: &mut PgConnection,
+    filters: DonorQuery,
+) -> Result<Vec<DonorDetail>, AppError> {
+    use crate::schema::{patients::dsl as p, users::dsl as u};
+    use crate::utils::enums::Role;
+
+    // We only want users with Role::Donor or Role::Patient
+    let mut query = u::users
+        .left_join(p::patients.on(p::user_id.eq(u::id)))
+        .filter(u::role.eq(Role::Donor).or(u::role.eq(Role::Patient)))
+        .filter(u::deleted_at.is_null())
+        .into_boxed();
+
+    if let Some(eligible) = filters.eligible_to_donate {
+        query = query.filter(u::eligible_to_donate.eq(eligible));
+    }
+
+    if let Some(bt) = filters.blood_type {
+        query = query.filter(p::blood_type.eq(bt));
+    }
+
+    let results = query
+        .select((
+            u::id,
+            u::first_name,
+            u::last_name,
+            u::email,
+            u::phone,
+            u::gender,
+            u::image_url,
+            u::eligible_to_donate,
+            u::note,
+            p::blood_type.nullable(),
+        ))
+        .order(u::created_at.desc())
+        .load::<(
+            Uuid,
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<crate::utils::enums::Gender>,
+            Option<String>,
+            bool,
+            Option<String>,
+            Option<String>,
+        )>(conn)?;
+
+    Ok(results
+        .into_iter()
+        .map(
+            |(uid, fname, lname, umail, uphone, ugender, uimg, ueligible, unote, ublood)| {
+                DonorDetail {
+                    user_id: uid,
+                    first_name: fname,
+                    last_name: lname,
+                    email: umail,
+                    phone: uphone,
+                    gender: ugender,
+                    image_url: uimg,
+                    eligible_to_donate: ueligible,
+                    note: unote,
+                    blood_type: ublood,
+                }
+            },
+        )
+        .collect())
+}
+
+#[derive(Debug, serde::Deserialize, utoipa::ToSchema, AsChangeset)]
+#[diesel(table_name = crate::schema::users)]
+pub struct UpdateDonorRequest {
+    pub eligible_to_donate: Option<bool>,
+    pub note: Option<Option<String>>,
+}
+
+pub fn update_donor(
+    conn: &mut PgConnection,
+    donor_id: Uuid,
+    payload: UpdateDonorRequest,
+) -> Result<DonorDetail, AppError> {
+    use crate::schema::{patients::dsl as p, users::dsl as u};
+
+    let updated_user = diesel::update(u::users.filter(u::id.eq(donor_id)))
+        .set(&payload)
+        .returning(User::as_select())
+        .get_result::<User>(conn)
+        .optional()?
+        .ok_or_else(|| AppError::NotFound("Donor not found".into()))?;
+
+    let blood_type: Option<String> = p::patients
+        .filter(p::user_id.eq(donor_id))
+        .select(p::blood_type)
+        .first::<Option<String>>(conn)
+        .optional()?
+        .flatten();
+
+    Ok(DonorDetail {
+        user_id: updated_user.id,
+        first_name: updated_user.first_name,
+        last_name: updated_user.last_name,
+        email: updated_user.email,
+        phone: updated_user.phone,
+        gender: updated_user.gender,
+        image_url: updated_user.image_url,
+        eligible_to_donate: updated_user.eligible_to_donate,
+        note: updated_user.note,
+        blood_type,
+    })
+}
+
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct HospitalDashboardStats {
+    pub active_blood_requests: i64,
+    pub urgent_requests_nearby: i64,
+    pub appointments_count: i64,
+}
+
+pub fn get_dashboard_stats(
+    conn: &mut PgConnection,
+    hospital_user_id: Uuid,
+) -> Result<HospitalDashboardStats, AppError> {
+    use crate::schema::{
+        appointments::dsl as appt, blood_requests::dsl as br, hospitals::dsl as h,
+    };
+    use crate::utils::enums::{AppointmentStatusEnum, RequestStatusTypeEnum, UrgencyTypeEnum};
+
+    // First find the hospital ID associated with this user
+    let hospital_id = h::hospitals
+        .filter(h::user_id.eq(hospital_user_id))
+        .select(h::id)
+        .first::<Uuid>(conn)
+        .optional()?;
+
+    let (active_requests, appts_count) = if let Some(h_id) = hospital_id {
+        let req_count = br::blood_requests
+            .filter(br::hospital_id.eq(h_id))
+            .filter(br::request_status.ne(RequestStatusTypeEnum::Completed))
+            .filter(br::request_status.ne(RequestStatusTypeEnum::Cancelled))
+            .count()
+            .get_result::<i64>(conn)?;
+
+        let now = chrono::Utc::now();
+        let appts = appt::appointments
+            .filter(appt::hospital_id.eq(h_id))
+            .filter(appt::scheduled_time.gt(now))
+            .filter(appt::status.ne(AppointmentStatusEnum::Cancelled))
+            .filter(appt::status.ne(AppointmentStatusEnum::Completed))
+            .count()
+            .get_result::<i64>(conn)?;
+
+        (req_count, appts)
+    } else {
+        (0, 0)
+    };
+
+    let urgent_requests = br::blood_requests
+        .filter(br::urgency.eq(UrgencyTypeEnum::Urgent))
+        .filter(br::request_status.ne(RequestStatusTypeEnum::Completed))
+        .filter(br::request_status.ne(RequestStatusTypeEnum::Cancelled))
+        .count()
+        .get_result::<i64>(conn)?;
+
+    Ok(HospitalDashboardStats {
+        active_blood_requests: active_requests,
+        urgent_requests_nearby: urgent_requests,
+        appointments_count: appts_count,
+    })
+}
+
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct RecentActivityItem {
+    pub id: Uuid,
+    pub activity_type: String,
+    pub description: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+pub fn get_recent_activity(
+    conn: &mut PgConnection,
+    hospital_user_id: Uuid,
+) -> Result<Vec<RecentActivityItem>, AppError> {
+    use crate::schema::{
+        appointments::dsl as appt, blood_requests::dsl as br,
+        hospital_blood_inventories::dsl as inv, hospitals::dsl as h,
+    };
+    use crate::utils::enums::{AppointmentStatusEnum, RequestStatusTypeEnum};
+
+    // First find the hospital ID associated with this user
+    let hospital_id = h::hospitals
+        .filter(h::user_id.eq(hospital_user_id))
+        .select(h::id)
+        .first::<Uuid>(conn)
+        .optional()?;
+
+    let h_id = match hospital_id {
+        Some(hid) => hid,
+        None => return Ok(vec![]),
+    };
+
+    let mut activities = Vec::new();
+
+    // 1. Blood requests fulfilled or cancelled recently (last 30 days)
+    let thirty_days_ago = chrono::Utc::now() - chrono::Duration::days(30);
+
+    let recent_requests = br::blood_requests
+        .filter(br::hospital_id.eq(h_id))
+        .filter(br::created_at.gt(thirty_days_ago))
+        .load::<crate::models::BloodRequest>(conn)?;
+
+    for req in recent_requests {
+        if req.request_status == Some(RequestStatusTypeEnum::Completed) {
+            activities.push(RecentActivityItem {
+                id: req.id,
+                activity_type: "BloodRequest".to_string(),
+                description: format!("Blood request {} was completed.", req.ref_id),
+                timestamp: req.donated_at.unwrap_or(req.created_at),
+            });
+        } else if req.request_status == Some(RequestStatusTypeEnum::Cancelled) {
+            activities.push(RecentActivityItem {
+                id: req.id,
+                activity_type: "BloodRequest".to_string(),
+                description: format!("Blood request {} was cancelled.", req.ref_id),
+                timestamp: req.cancelled_at.unwrap_or(req.created_at),
+            });
+        }
+    }
+
+    // 2. Upcoming or recently created appointments
+    let recent_appts = appt::appointments
+        .filter(appt::hospital_id.eq(h_id))
+        .filter(appt::created_at.gt(thirty_days_ago))
+        .load::<crate::models::Appointment>(conn)?;
+
+    for appt in recent_appts {
+        activities.push(RecentActivityItem {
+            id: appt.id,
+            activity_type: "Appointment".to_string(),
+            description: format!("New appointment scheduled with status {:?}.", appt.status),
+            timestamp: appt.created_at,
+        });
+    }
+
+    // 3. Inventory warnings (low stock)
+    let inventory = inv::hospital_blood_inventories
+        .filter(inv::hospital_id.eq(h_id))
+        .load::<crate::models::HospitalBloodInventory>(conn)?;
+
+    for item in inventory {
+        // Warning if less than 20% capacity or less than 5 units total
+        let low_stock_threshold = std::cmp::max(5, (item.bank_capacity as f32 * 0.2) as i32);
+        if item.units_available <= low_stock_threshold {
+            activities.push(RecentActivityItem {
+                id: item.id,
+                activity_type: "InventoryWarning".to_string(),
+                description: format!(
+                    "Low stock warning for blood type {:?}: {} units available.",
+                    item.blood_type, item.units_available
+                ),
+                timestamp: item.updated_at,
+            });
+        }
+    }
+
+    // Sort by timestamp descending
+    activities.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+    // Take top 20
+    activities.truncate(20);
+
+    Ok(activities)
+}

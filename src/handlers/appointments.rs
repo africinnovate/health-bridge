@@ -1,19 +1,24 @@
 use axum::{
-    Extension, Json, extract::{Path, Query, State}
+    Extension, Json,
+    extract::{Path, Query, State},
 };
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize};
+use serde::Deserialize;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 use crate::{
-    AppState, 
-    error::AppError, 
+    AppState,
+    error::AppError,
     hospitals::{
-        self, appointments::{AppointmentQuery, AppointmentResponse, CreateAppointment}, 
-        }, 
-        models::{Appointment, User}, 
-        utils::{enums::{AppointmentStatusEnum, AppointmentTypeEnum}, response::ApiResponse},
+        self,
+        appointments::{AppointmentQuery, AppointmentResponse, CreateAppointment},
+    },
+    models::{Appointment, User},
+    utils::{
+        enums::{AppointmentStatusEnum, AppointmentTypeEnum},
+        response::ApiResponse,
+    },
 };
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -47,11 +52,7 @@ pub async fn create_appointment(
 ) -> Result<ApiResponse<Appointment>, AppError> {
     let mut conn = state.pool.get()?;
 
-    let appointment = hospitals::appointments::create_appointment(
-        &mut conn,
-        &user,
-        payload,
-    )?;
+    let appointment = hospitals::appointments::create_appointment(&mut conn, &user, payload)?;
 
     Ok(ApiResponse::created(
         "Appointment created successfully",
@@ -64,7 +65,8 @@ pub async fn create_appointment(
     path = "/api/appointments",
     params(
         ("appointment_type" = Option<AppointmentTypeEnum>, Query),
-        ("status" = Option<AppointmentStatusEnum>, Query)
+        ("status" = Option<AppointmentStatusEnum>, Query),
+        ("timeline" = Option<String>, Query, description = "Filter by timeframe (today, this_week, this_month, upcoming)")
     ),
     responses(
         (status = 200, body = ApiResponse<Vec<Appointment>>),
@@ -83,10 +85,8 @@ pub async fn get_appointments(
     Ok(ApiResponse::success(results))
 }
 
-
-
 /// Confirm appointment
-/// 
+///
 /// Used by Hospital staff to confirm appointment
 #[utoipa::path(
     put,

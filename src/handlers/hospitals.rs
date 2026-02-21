@@ -13,7 +13,11 @@ use crate::{
     hospitals::{
         self,
         blood_requests::{
-            BloodRequestQuery, BloodRequestResponse, CreateBloodRequest, UpdateBloodRequest,
+            BloodRequestQuery, BloodRequestResponse, CreateBloodRequest, DonationHistoryItem,
+            DonorStats, UpdateBloodRequest,
+        },
+        service::{
+            DonorDetail, DonorQuery, HospitalDashboardStats, RecentActivityItem, UpdateDonorRequest,
         },
         settings,
     },
@@ -297,6 +301,66 @@ pub async fn update_blood_request(
     ))
 }
 
+/// Get donor donation stats
+///
+/// Returns the total number of completed donations, total units donated in litres,
+/// and the donor's blood type for the specified user.
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/blood-request/donor-stats/{donor_id}",
+    params(
+        ("donor_id" = Uuid, Path, description = "User ID of the donor")
+    ),
+    responses(
+        (status = 200, body = ApiResponse<DonorStats>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_donor_stats(
+    State(state): State<AppState>,
+    Path(donor_id): Path<Uuid>,
+) -> Result<ApiResponse<DonorStats>, AppError> {
+    let mut conn = state.pool.get()?;
+    let stats = hospitals::blood_requests::get_donor_stats(&mut conn, donor_id)?;
+    Ok(ApiResponse::success_with_message(
+        "Donor stats retrieved successfully",
+        stats,
+    ))
+}
+
+/// Get donor donation history
+///
+/// Returns all blood donation records for the specified donor, including
+/// units, status, reference ID, donated_at and cancelled_at timestamps.
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/blood-request/donor-history/{donor_id}",
+    params(
+        ("donor_id" = Uuid, Path, description = "User ID of the donor")
+    ),
+    responses(
+        (status = 200, body = ApiResponse<Vec<DonationHistoryItem>>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_donor_history(
+    State(state): State<AppState>,
+    Path(donor_id): Path<Uuid>,
+) -> Result<ApiResponse<Vec<DonationHistoryItem>>, AppError> {
+    let mut conn = state.pool.get()?;
+    let history = hospitals::blood_requests::get_donor_history(&mut conn, donor_id)?;
+    Ok(ApiResponse::success_with_message(
+        "Donor history retrieved successfully",
+        history,
+    ))
+}
+
 /// Get hospital settings
 ///
 /// Retrieves settings for the specified hospital.
@@ -349,6 +413,118 @@ pub async fn update_hospital_settings(
     Ok(ApiResponse::success_with_message(
         "Hospital settings updated successfully",
         settings,
+    ))
+}
+
+/// Get donor list
+///
+/// Retrieves a list of users (donors) with their medical profile info.
+/// Can be filtered by `eligible_to_donate` and `blood_type`.
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/donors",
+    params(
+        ("eligible_to_donate" = Option<bool>, Query),
+        ("blood_type" = Option<String>, Query),
+    ),
+    responses(
+        (status = 200, body = ApiResponse<Vec<DonorDetail>>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_donors(
+    State(state): State<AppState>,
+    Query(filters): Query<DonorQuery>,
+) -> Result<ApiResponse<Vec<DonorDetail>>, AppError> {
+    let mut conn = state.pool.get()?;
+    let donors = hospitals::service::get_donors(&mut conn, filters)?;
+    Ok(ApiResponse::success_with_message(
+        "Donors retrieved successfully",
+        donors,
+    ))
+}
+
+/// Update a donor's status
+///
+/// Update note or `eligible_to_donate` on a user profile.
+#[utoipa::path(
+    patch,
+    path = "/api/hospitals/donors/{donor_id}",
+    request_body = UpdateDonorRequest,
+    responses(
+        (status = 200, body = ApiResponse<DonorDetail>),
+        (status = 401),
+        (status = 404),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_donor(
+    State(state): State<AppState>,
+    Path(donor_id): Path<Uuid>,
+    Json(payload): Json<UpdateDonorRequest>,
+) -> Result<ApiResponse<DonorDetail>, AppError> {
+    let mut conn = state.pool.get()?;
+    let donor = hospitals::service::update_donor(&mut conn, donor_id, payload)?;
+    Ok(ApiResponse::success_with_message(
+        "Donor updated successfully",
+        donor,
+    ))
+}
+
+/// Get hospital dashboard stats
+///
+/// Returns active blood requests, urgent requests nearby, and upcoming appointments.
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/dashboard/stats",
+    responses(
+        (status = 200, body = ApiResponse<HospitalDashboardStats>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_dashboard_stats(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<HospitalDashboardStats>, AppError> {
+    let mut conn = state.pool.get()?;
+    let stats = hospitals::service::get_dashboard_stats(&mut conn, user.id)?;
+    Ok(ApiResponse::success_with_message(
+        "Dashboard stats retrieved successfully",
+        stats,
+    ))
+}
+
+/// Get hospital recent activity
+///
+/// Returns recent blood request updates, appointments, and inventory warnings.
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/dashboard/recent-activity",
+    responses(
+        (status = 200, body = ApiResponse<Vec<RecentActivityItem>>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_recent_activity(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<Vec<RecentActivityItem>>, AppError> {
+    let mut conn = state.pool.get()?;
+    let activities = hospitals::service::get_recent_activity(&mut conn, user.id)?;
+    Ok(ApiResponse::success_with_message(
+        "Recent activity retrieved successfully",
+        activities,
     ))
 }
 

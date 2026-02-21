@@ -1,31 +1,22 @@
+use crate::error::AppError;
+use crate::schema::sql_types::{
+    ActionType, AppointmentStatusType, AppointmentTypeType, BloodRequestStatusType, BloodType,
+    CancelledByType, ConsultationType, DaysOfWeekType, GenderType, HospitalType,
+    NotificationCategoryType, RoleType, TimelineType, UrgencyType,
+};
+use diesel::FromSqlRow;
 use diesel::deserialize::{self, FromSql};
 use diesel::expression::AsExpression;
 use diesel::pg::{Pg, PgValue};
 use diesel::serialize::{self, IsNull, Output, ToSql};
-use diesel::FromSqlRow;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::str::FromStr;
 use utoipa::ToSchema;
-use crate::schema::sql_types::{
-    GenderType, 
-    RoleType, 
-    TimelineType,
-    BloodType,
-    UrgencyType,
-    BloodRequestStatusType,
-    HospitalType,
-    AppointmentTypeType,
-    AppointmentStatusType,
-    CancelledByType,
-    ConsultationType,
-    DaysOfWeekType,
-    ActionType,
-    NotificationCategoryType
-};
-use crate::error::AppError;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = GenderType)]
 #[serde(rename_all = "lowercase")]
 pub enum Gender {
@@ -33,7 +24,9 @@ pub enum Gender {
     Female,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = RoleType)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
@@ -44,7 +37,9 @@ pub enum Role {
     Admin,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = ActionType)]
 #[serde(rename_all = "snake_case")]
 pub enum ActionTypeEnum {
@@ -56,7 +51,9 @@ pub enum ActionTypeEnum {
     HospitalRevoked,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = NotificationCategoryType)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationCategoryEnum {
@@ -66,8 +63,9 @@ pub enum NotificationCategoryEnum {
     System,
 }
 
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = AppointmentTypeType)]
 #[serde(rename_all = "lowercase")]
 pub enum AppointmentTypeEnum {
@@ -75,7 +73,9 @@ pub enum AppointmentTypeEnum {
     Patient,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = AppointmentStatusType)]
 #[serde(rename_all = "lowercase")]
 pub enum AppointmentStatusEnum {
@@ -86,7 +86,9 @@ pub enum AppointmentStatusEnum {
     Completed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = CancelledByType)]
 #[serde(rename_all = "lowercase")]
 pub enum CancelledByEnum {
@@ -94,7 +96,6 @@ pub enum CancelledByEnum {
     Donor,
     Patient,
 }
-
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = ConsultationType)]
@@ -104,7 +105,6 @@ pub enum ConsultationTypeEnum {
     VoiceCall,
     InPerson,
 }
-
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
 #[diesel(sql_type = DaysOfWeekType)]
@@ -130,7 +130,9 @@ pub enum HospitalTypeEnum {
     Diagnostic,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = BloodType)]
 #[serde(rename_all = "lowercase")]
 pub enum BloodTypeEnum {
@@ -144,7 +146,9 @@ pub enum BloodTypeEnum {
     ONegative,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = UrgencyType)]
 #[serde(rename_all = "lowercase")]
 pub enum UrgencyTypeEnum {
@@ -152,7 +156,9 @@ pub enum UrgencyTypeEnum {
     Urgent,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = TimelineType)]
 #[serde(rename_all = "snake_case")]
 pub enum TimelineTypeEnum {
@@ -163,7 +169,9 @@ pub enum TimelineTypeEnum {
     RequestFulfilled,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
 #[diesel(sql_type = BloodRequestStatusType)]
 #[serde(rename_all = "lowercase")]
 pub enum RequestStatusTypeEnum {
@@ -391,8 +399,6 @@ impl FromSql<HospitalType, Pg> for HospitalTypeEnum {
     }
 }
 
-
-
 impl ToSql<RoleType, Pg> for Role {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         match *self {
@@ -485,7 +491,6 @@ impl FromSql<BloodType, Pg> for BloodTypeEnum {
     }
 }
 
-
 impl FromStr for UrgencyTypeEnum {
     type Err = String;
 
@@ -518,7 +523,6 @@ impl FromSql<UrgencyType, Pg> for UrgencyTypeEnum {
         }
     }
 }
-
 
 impl FromStr for TimelineTypeEnum {
     type Err = String;
@@ -556,16 +560,13 @@ impl FromSql<TimelineType, Pg> for TimelineTypeEnum {
         match bytes.as_bytes() {
             b"request_created" => Ok(TimelineTypeEnum::RequestCreated),
             b"visible_to_donors" => Ok(TimelineTypeEnum::VisibleToDonors),
-            b"donation_appointment_scheduled" => {
-                Ok(TimelineTypeEnum::DonationAppointmentScheduled)
-            }
+            b"donation_appointment_scheduled" => Ok(TimelineTypeEnum::DonationAppointmentScheduled),
             b"donation_completed" => Ok(TimelineTypeEnum::DonationCompleted),
             b"request_fulfilled" => Ok(TimelineTypeEnum::RequestFulfilled),
             _ => Err("Unrecognized enum variant for TimelineType".into()),
         }
     }
 }
-
 
 impl FromStr for RequestStatusTypeEnum {
     type Err = String;
@@ -605,7 +606,6 @@ impl FromSql<BloodRequestStatusType, Pg> for RequestStatusTypeEnum {
         }
     }
 }
-
 
 impl std::fmt::Display for Gender {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

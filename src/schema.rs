@@ -88,6 +88,8 @@ diesel::table! {
         password_hash -> Text,
         role -> RoleType,
         email_verified -> Bool,
+        note -> Nullable<Text>,
+        eligible_to_donate -> Bool,
         created_at -> Timestamptz,
         deleted_at -> Nullable<Timestamptz>,
     }
