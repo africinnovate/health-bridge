@@ -153,6 +153,7 @@ diesel::table! {
         hospital_type -> Nullable<HospitalType>,
         address -> Text,
         city -> Text,
+        state -> Text,
         country -> Text,
         primary_phone -> Varchar,
         emergency_phone -> Nullable<Varchar>,
@@ -196,7 +197,6 @@ diesel::table! {
         created_at -> Timestamptz,
     }
 }
-
 
 diesel::table! {
     use diesel::sql_types::*;

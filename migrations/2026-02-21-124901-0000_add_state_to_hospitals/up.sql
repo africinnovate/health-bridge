@@ -1,0 +1,1 @@
+ALTER TABLE hospitals ADD COLUMN state TEXT NOT NULL DEFAULT '';

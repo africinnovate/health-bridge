@@ -160,6 +160,7 @@ pub struct Hospital {
     pub hospital_type: Option<HospitalTypeEnum>,
     pub address: String,
     pub city: String,
+    pub state: String,
     pub country: String,
     pub primary_phone: String,
     pub emergency_phone: Option<String>,
