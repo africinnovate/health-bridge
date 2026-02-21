@@ -22,6 +22,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         patients::delete_account,
         patients::update_medical_info,
         hospitals::get_hospitals,
+        hospitals::get_user_hospitals,
         hospitals::get_hospital_by_id,
         hospitals::create_hospital,
         hospitals::update_hospital,

@@ -291,6 +291,16 @@ pub fn get_hospitals(conn: &mut PgConnection) -> Result<Vec<Hospital>, AppError>
         .map_err(AppError::from)
 }
 
+/// Get user's hospitals
+pub fn get_user_hospitals(conn: &mut PgConnection, uid: Uuid) -> Result<Vec<Hospital>, AppError> {
+    hospitals
+        .filter(user_id.eq(uid))
+        .filter(deleted_at.is_null())
+        .select(Hospital::as_select())
+        .load(conn)
+        .map_err(AppError::from)
+}
+
 /// Get hospital by ID
 pub fn get_hospital_by_id(
     conn: &mut PgConnection,

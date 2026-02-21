@@ -495,6 +495,56 @@ pub async fn get_hospitals(
     ))
 }
 
+/// Get user's hospitals
+#[utoipa::path(
+    get,
+    path = "/api/hospitals/me",
+    responses(
+        (status = 200, body = ApiResponse<Vec<HospitalResponse>>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_user_hospitals(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<Vec<HospitalResponse>>, AppError> {
+    let mut conn = state.pool.get()?;
+    let my_hospitals = hospitals::service::get_user_hospitals(&mut conn, user.id)?;
+
+    let mut response = Vec::new();
+    for hospital in my_hospitals {
+        let inventory = hospitals::service::get_hospital_inventory(&mut conn, hospital.id)?;
+        response.push(HospitalResponse {
+            id: hospital.id,
+            name: hospital.name,
+            hospital_type: hospital.hospital_type,
+            address: hospital.address,
+            city: hospital.city,
+            state: hospital.state,
+            country: hospital.country,
+            primary_phone: hospital.primary_phone,
+            emergency_phone: hospital.emergency_phone,
+            email: hospital.email,
+            license_number: hospital.license_number,
+            accreditation_doc_url: hospital.accreditation_doc_url,
+            license_status: hospital.license_status,
+            has_blood_bank: hospital.has_blood_bank,
+            accepting_donors: hospital.accepting_donors,
+            donating_operating_hours: hospital.donating_operating_hours,
+            created_at: hospital.created_at,
+            blood_inventory: inventory,
+        });
+    }
+
+    Ok(ApiResponse::success_with_message(
+        "User hospitals retrieved successfully",
+        response,
+    ))
+}
+
 /// Get hospital by ID
 #[utoipa::path(
     get,
