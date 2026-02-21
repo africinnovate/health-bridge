@@ -3,7 +3,6 @@ use axum::{
     extract::{Path, Query, State},
 };
 use chrono::{DateTime, Utc};
-use diesel::AsChangeset;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -18,7 +17,7 @@ use crate::{
         },
         settings,
     },
-    models::{BloodRequest, Hospital, HospitalSettings, User},
+    models::{BloodRequest, HospitalSettings, User},
     utils::{
         enums::{BloodTypeEnum, HospitalTypeEnum, RequestStatusTypeEnum},
         response::{ApiResponse, EmptyData},
