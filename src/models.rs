@@ -39,6 +39,7 @@ pub struct User {
     pub email_verified: bool,
     pub note: Option<String>,
     pub eligible_to_donate: bool,
+    pub consultation_preference: Option<ConsultationTypeEnum>,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
 }
@@ -56,6 +57,7 @@ pub struct NewUser<'a> {
     pub dob: Option<NaiveDate>,
     pub password_hash: &'a str,
     pub role: Role,
+    pub consultation_preference: Option<ConsultationTypeEnum>,
 }
 
 #[derive(AsChangeset)]
@@ -75,6 +77,7 @@ pub struct UpdateUser<'a> {
     pub role: Role,
     pub note: Option<Option<&'a str>>,
     pub eligible_to_donate: Option<bool>,
+    pub consultation_preference: Option<ConsultationTypeEnum>,
     pub deleted_at: Option<DateTime<Utc>>,
 }
 

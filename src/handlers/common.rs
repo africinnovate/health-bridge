@@ -79,6 +79,36 @@ pub struct UpdateUserSettingsRequest {
     pub allow_marketing_notifications: Option<bool>,
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct UpdatePreferenceRequest {
+    pub preference: crate::utils::enums::ConsultationTypeEnum,
+}
+
+/// Update consultation preference
+///
+/// Updates the consultation preference for the authenticated user.
+#[utoipa::path(
+    put,
+    path = "/api/user-settings/preference",
+    request_body = UpdatePreferenceRequest,
+    responses(
+        (status = 200, body = ApiResponse<User>)
+    ),
+    tag = "settings",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_consultation_preference(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<UpdatePreferenceRequest>,
+) -> Result<ApiResponse<User>, AppError> {
+    let mut conn = state.pool.get()?;
+    let updated_user =
+        services::update_consultation_preference(&mut conn, user.id, payload.preference)?;
+
+    Ok(ApiResponse::success(updated_user))
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 pub struct UserSettingsResponse {
     pub appointment_reminders: bool,

@@ -15,6 +15,7 @@ pub fn protected_router() -> Router<AppState> {
         .route("/{hospital_id}", delete(hospitals::delete_hospital))
         .route("/create", post(hospitals::create_hospital))
         .route("/me", get(hospitals::get_user_hospitals))
+        .route("/nearby", get(hospitals::get_nearby_hospitals))
         .route("/update/{hospital_id}", put(hospitals::update_hospital))
         .route("/blood-request", get(hospitals::get_blood_requests))
         .route("/blood-request", post(hospitals::create_blood_request))

@@ -103,6 +103,17 @@ pub fn update_user_image(
         .map_err(AppError::from)
 }
 
+pub fn update_consultation_preference(
+    conn: &mut PgConnection,
+    user_id_: Uuid,
+    preference: crate::utils::enums::ConsultationTypeEnum,
+) -> Result<User, AppError> {
+    diesel::update(users_dsl::users.filter(users_dsl::id.eq(user_id_)))
+        .set(users_dsl::consultation_preference.eq(Some(preference)))
+        .get_result::<User>(conn)
+        .map_err(AppError::from)
+}
+
 pub fn upsert_medical_info(
     conn: &mut PgConnection,
     user_id_: Uuid,

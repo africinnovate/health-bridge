@@ -70,7 +70,7 @@ pub mod sql_types {
 diesel::table! {
     use diesel::sql_types::*;
     use diesel::sql_types::Uuid as DieselUuid;
-    use crate::schema::sql_types::{GenderType, RoleType};
+    use crate::schema::sql_types::{GenderType, RoleType, ConsultationType};
 
     users (id) {
         id -> DieselUuid,
@@ -90,6 +90,7 @@ diesel::table! {
         email_verified -> Bool,
         note -> Nullable<Text>,
         eligible_to_donate -> Bool,
+        consultation_preference -> Nullable<ConsultationType>,
         created_at -> Timestamptz,
         deleted_at -> Nullable<Timestamptz>,
     }

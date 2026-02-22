@@ -1,0 +1,182 @@
+    Blocking waiting for file lock on build directory
+warning: unused import: `tracing::info`
+ --> src/handlers/specialists.rs:6:5
+  |
+6 | use tracing::info;
+  |     ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `crate::schema::specialists`
+  --> src/handlers/specialists.rs:11:5
+   |
+11 | use crate::schema::specialists;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `tracing::info`
+ --> src/handlers/patients.rs:5:5
+  |
+5 | use tracing::info;
+  |     ^^^^^^^^^^^^^
+
+warning: unused import: `AppointmentStatusEnum`
+   --> src/hospitals/service.rs:622:31
+    |
+622 |     use crate::utils::enums::{AppointmentStatusEnum, RequestStatusTypeEnum};
+    |                               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `error` and `info`
+ --> src/hospitals/appointments.rs:4:15
+  |
+4 | use tracing::{error, info};
+  |               ^^^^^  ^^^^
+
+warning: unused imports: `error` and `info`
+ --> src/hospitals/blood_requests.rs:6:15
+  |
+6 | use tracing::{error, info};
+  |               ^^^^^  ^^^^
+
+warning: unused imports: `State` and `StatusCode`
+ --> src/middleware/auth.rs:2:35
+  |
+2 |     Extension, extract::{Request, State}, http::{StatusCode, header}, middleware::Next, response::Response
+  |                                   ^^^^^          ^^^^^^^^^^
+
+warning: unused import: `info`
+ --> src/middleware/auth.rs:8:15
+  |
+8 | use tracing::{info};
+  |               ^^^^
+
+warning: unused import: `get`
+ --> src/routes/auth.rs:7:15
+  |
+7 |     routing::{get, post},
+  |               ^^^
+
+warning: unused import: `delete`
+ --> src/routes/appointments.rs:1:41
+  |
+1 | use axum::{Router, routing::{get, post, delete, put}};
+  |                                         ^^^^^^
+
+warning: unused import: `delete`
+ --> src/routes/admin.rs:4:15
+  |
+4 |     routing::{delete, get, patch},
+  |               ^^^^^^
+
+warning: unused import: `tracing::info`
+ --> src/specialists/service.rs:5:5
+  |
+5 | use tracing::info;
+  |     ^^^^^^^^^^^^^
+
+warning: unused import: `crate::services::mail::MailService`
+  --> src/specialists/service.rs:11:5
+   |
+11 | use crate::services::mail::MailService;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `diesel::prelude`
+ --> src/handlers/specialists.rs:4:5
+  |
+4 | use diesel::prelude::*;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `diesel::associations::HasTable`
+ --> src/hospitals/blood_requests.rs:3:5
+  |
+3 | use diesel::associations::HasTable;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `token`
+   --> src/auth/service.rs:224:5
+    |
+224 |     token: &str,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_token`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `token`
+   --> src/auth/service.rs:240:5
+    |
+240 |     token: &str,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_token`
+
+warning: unused variable: `hospital_id`
+   --> src/hospitals/appointments.rs:290:5
+    |
+290 |     hospital_id: Uuid,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_hospital_id`
+
+warning: unused variable: `user_id`
+   --> src/specialists/service.rs:368:5
+    |
+368 |     user_id: Uuid,
+    |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_user_id`
+
+warning: unused variable: `user`
+   --> src/specialists/service.rs:369:5
+    |
+369 |     user: &User,
+    |     ^^^^ help: if this is intentional, prefix it with an underscore: `_user`
+
+warning: struct `PatientMeta` is never constructed
+  --> src/admin/dtos.rs:32:12
+   |
+32 | pub struct PatientMeta {
+   |            ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: struct `SpecialistMeta` is never constructed
+  --> src/admin/dtos.rs:37:12
+   |
+37 | pub struct SpecialistMeta {
+   |            ^^^^^^^^^^^^^^
+
+warning: struct `HospitalMeta` is never constructed
+  --> src/admin/dtos.rs:44:12
+   |
+44 | pub struct HospitalMeta {
+   |            ^^^^^^^^^^^^
+
+warning: struct `PaginatedResponse` is never constructed
+  --> src/admin/dtos.rs:51:12
+   |
+51 | pub struct PaginatedResponse<T> {
+   |            ^^^^^^^^^^^^^^^^^
+
+warning: struct `AdminUserFilters` is never constructed
+  --> src/admin/dtos.rs:59:12
+   |
+59 | pub struct AdminUserFilters {
+   |            ^^^^^^^^^^^^^^^^
+
+warning: function `create_notification` is never used
+  --> src/common/notifications.rs:51:8
+   |
+51 | pub fn create_notification(
+   |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `notify_user` is never used
+   --> src/common/notifications.rs:246:8
+    |
+246 | pub fn notify_user(
+    |        ^^^^^^^^^^^
+
+warning: field `frontend_url` is never read
+  --> src/config.rs:17:9
+   |
+10 | pub struct Config {
+   |            ------ field in this struct
+...
+17 |     pub frontend_url: String,
+   |         ^^^^^^^^^^^^
+   |
+   = note: `Config` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `health-bridge` (bin "health-bridge") generated 28 warnings (run `cargo fix --bin "health-bridge"` to apply 13 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 23.87s

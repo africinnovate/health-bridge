@@ -79,6 +79,7 @@ pub fn create_user(
         image_url: None,
         password_hash: &hashed_password,
         role: user_role,
+        consultation_preference: None,
     };
 
     let user = diesel::insert_into(users)

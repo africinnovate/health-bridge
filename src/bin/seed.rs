@@ -1,25 +1,19 @@
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+};
 use diesel::prelude::*;
 use uuid::Uuid;
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2,
-};
 
-use health_bridge::{
-    models::{MedicalInfo, NewUser}, 
-    utils::enums::ConsultationTypeEnum,
-};
 use health_bridge::schema::{
-    users, 
-    patients, 
-    hospitals,
-    specialties,
-    specialists,
-    specialist_availabilities,
-    appointments,
-    blood_requests
+    appointments, blood_requests, hospitals, patients, specialist_availabilities, specialists,
+    specialties, users,
 };
 use health_bridge::utils::enums::{Gender, Role};
+use health_bridge::{
+    models::{MedicalInfo, NewUser},
+    utils::enums::ConsultationTypeEnum,
+};
 
 fn hash_password(password: &str) -> Result<String, Box<dyn std::error::Error>> {
     let salt = SaltString::generate(&mut OsRng);
@@ -33,11 +27,9 @@ fn hash_password(password: &str) -> Result<String, Box<dyn std::error::Error>> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
-    
-    let mut conn = PgConnection::establish(&database_url)
-        .expect("Error connecting to database");
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let mut conn = PgConnection::establish(&database_url).expect("Error connecting to database");
 
     println!("Starting database seeding...");
 
@@ -51,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     diesel::sql_query("DELETE FROM email_verification_tokens").execute(&mut conn)?;
     diesel::sql_query("DELETE FROM password_reset_tokens").execute(&mut conn)?;
     diesel::sql_query("DELETE FROM users").execute(&mut conn)?;
-    
+
     println!("✓ Cleared existing data");
 
     let password_hash = hash_password("password")?;
@@ -68,6 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dob: Some(chrono::NaiveDate::from_ymd_opt(1990, 5, 15).unwrap()),
         password_hash: &password_hash,
         role: Role::Patient,
+        consultation_preference: None,
     };
 
     diesel::insert_into(users::table)
@@ -115,6 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dob: Some(chrono::NaiveDate::from_ymd_opt(1988, 8, 20).unwrap()),
         password_hash: &password_hash,
         role: Role::Donor,
+        consultation_preference: None,
     };
 
     diesel::insert_into(users::table)
@@ -162,6 +156,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dob: None,
         password_hash: &password_hash,
         role: Role::Hospital,
+        consultation_preference: None,
     };
 
     diesel::insert_into(users::table)
@@ -191,6 +186,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dob: Some(chrono::NaiveDate::from_ymd_opt(1985, 3, 10).unwrap()),
         password_hash: &password_hash,
         role: Role::Admin,
+        consultation_preference: None,
     };
 
     diesel::insert_into(users::table)
@@ -220,6 +216,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         dob: Some(chrono::NaiveDate::from_ymd_opt(1982, 11, 25).unwrap()),
         password_hash: &password_hash,
         role: Role::Specialist,
+        consultation_preference: None,
     };
 
     diesel::insert_into(users::table)
@@ -239,7 +236,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 6. Create Hospital Record
     let hospital_id = Uuid::new_v4();
-    
+
     #[derive(Insertable)]
     #[diesel(table_name = hospitals)]
     struct NewHospital<'a> {
@@ -309,77 +306,77 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("✓ Created Specialty");
 
-   // 8. Link Specialist to Hospital
-#[derive(Insertable)]
-#[diesel(table_name = specialists)]
-struct NewSpecialist {
-    user_id: Uuid,
-    hospital_id: Option<Uuid>,
-    specialty_id: Uuid,
-    bio: Option<&'static str>,
-    years_of_experience: Option<i32>,
-    consultation_type: ConsultationTypeEnum,
-    session_duration_minutes: Option<i32>,
-    primary_phone: Option<&'static str>,
-    languages_spoken: Option<&'static str>,
-}
+    // 8. Link Specialist to Hospital
+    #[derive(Insertable)]
+    #[diesel(table_name = specialists)]
+    struct NewSpecialist {
+        user_id: Uuid,
+        hospital_id: Option<Uuid>,
+        specialty_id: Uuid,
+        bio: Option<&'static str>,
+        years_of_experience: Option<i32>,
+        consultation_type: ConsultationTypeEnum,
+        session_duration_minutes: Option<i32>,
+        primary_phone: Option<&'static str>,
+        languages_spoken: Option<&'static str>,
+    }
 
-let new_specialist = NewSpecialist {
-    user_id: specialist_user_id,
-    hospital_id: Some(hospital_id),
-    specialty_id,
-    bio: Some("Board-certified hematologist with 15 years of experience."),
-    years_of_experience: Some(15),
-    consultation_type: ConsultationTypeEnum::InPerson,
-    session_duration_minutes: Some(30),
-    primary_phone: Some("+2348012345677"),
-    languages_spoken: Some("English"),
-};
+    let new_specialist = NewSpecialist {
+        user_id: specialist_user_id,
+        hospital_id: Some(hospital_id),
+        specialty_id,
+        bio: Some("Board-certified hematologist with 15 years of experience."),
+        years_of_experience: Some(15),
+        consultation_type: ConsultationTypeEnum::InPerson,
+        session_duration_minutes: Some(30),
+        primary_phone: Some("+2348012345677"),
+        languages_spoken: Some("English"),
+    };
 
-diesel::insert_into(specialists::table)
-    .values(&new_specialist)
-    .execute(&mut conn)?;
+    diesel::insert_into(specialists::table)
+        .values(&new_specialist)
+        .execute(&mut conn)?;
 
-// Get the specialist ID that was just created
-let specialist_id: Uuid = specialists::table
-    .filter(specialists::user_id.eq(specialist_user_id))
-    .select(specialists::id)
-    .first(&mut conn)?;
+    // Get the specialist ID that was just created
+    let specialist_id: Uuid = specialists::table
+        .filter(specialists::user_id.eq(specialist_user_id))
+        .select(specialists::id)
+        .first(&mut conn)?;
 
-println!("✓ Linked Specialist to Hospital");
+    println!("✓ Linked Specialist to Hospital");
 
-// 9. Create Specialist Availability
-use health_bridge::utils::enums::DaysOfWeekEnum;
+    // 9. Create Specialist Availability
+    use health_bridge::utils::enums::DaysOfWeekEnum;
 
-#[derive(Insertable)]
-#[diesel(table_name = specialist_availabilities)]
-struct NewSpecialistAvailability {
-    specialist_id: Uuid,
-    day_of_week: DaysOfWeekEnum,
-    opens_at: chrono::NaiveTime,
-    closes_at: chrono::NaiveTime,
-}
+    #[derive(Insertable)]
+    #[diesel(table_name = specialist_availabilities)]
+    struct NewSpecialistAvailability {
+        specialist_id: Uuid,
+        day_of_week: DaysOfWeekEnum,
+        opens_at: chrono::NaiveTime,
+        closes_at: chrono::NaiveTime,
+    }
 
-let availabilities = vec![
-    NewSpecialistAvailability {
-        specialist_id,  // ✅ Use the specialist's ID, not user_id
-        day_of_week: DaysOfWeekEnum::Monday,
-        opens_at: chrono::NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
-        closes_at: chrono::NaiveTime::from_hms_opt(17, 0, 0).unwrap(),
-    },
-    NewSpecialistAvailability {
-        specialist_id,  // ✅ Use the specialist's ID, not user_id
-        day_of_week: DaysOfWeekEnum::Wednesday,
-        opens_at: chrono::NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-        closes_at: chrono::NaiveTime::from_hms_opt(16, 0, 0).unwrap(),
-    },
-];
+    let availabilities = vec![
+        NewSpecialistAvailability {
+            specialist_id, // ✅ Use the specialist's ID, not user_id
+            day_of_week: DaysOfWeekEnum::Monday,
+            opens_at: chrono::NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+            closes_at: chrono::NaiveTime::from_hms_opt(17, 0, 0).unwrap(),
+        },
+        NewSpecialistAvailability {
+            specialist_id, // ✅ Use the specialist's ID, not user_id
+            day_of_week: DaysOfWeekEnum::Wednesday,
+            opens_at: chrono::NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            closes_at: chrono::NaiveTime::from_hms_opt(16, 0, 0).unwrap(),
+        },
+    ];
 
-diesel::insert_into(specialist_availabilities::table)
-    .values(&availabilities)
-    .execute(&mut conn)?;
+    diesel::insert_into(specialist_availabilities::table)
+        .values(&availabilities)
+        .execute(&mut conn)?;
 
-println!("✓ Created Specialist Availability");
+    println!("✓ Created Specialist Availability");
 
     // 10. Create Blood Requests
     #[derive(Insertable)]
@@ -415,7 +412,9 @@ println!("✓ Created Specialist Availability");
         units: Some(2),
         blood_type: Some(health_bridge::utils::enums::BloodTypeEnum::OPositive),
         urgency: Some(health_bridge::utils::enums::UrgencyTypeEnum::Standard),
-        timeline_status: Some(health_bridge::utils::enums::TimelineTypeEnum::DonationAppointmentScheduled),
+        timeline_status: Some(
+            health_bridge::utils::enums::TimelineTypeEnum::DonationAppointmentScheduled,
+        ),
         request_status: Some(health_bridge::utils::enums::RequestStatusTypeEnum::Confirmed),
         request_reason: Some("Surgery preparation"),
         note: Some("Patient scheduled for surgery next week"),

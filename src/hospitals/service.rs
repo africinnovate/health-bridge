@@ -320,6 +320,34 @@ pub fn get_hospital_by_id(
     }
 }
 
+/// Get nearby hospitals based on user's city or state
+pub fn get_nearby_hospitals(
+    conn: &mut PgConnection,
+    user: &User,
+) -> Result<Vec<Hospital>, AppError> {
+    let user_city = user.city.as_deref().unwrap_or("");
+    let user_state = user.state.as_deref().unwrap_or("");
+
+    if user_city.is_empty() && user_state.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let mut query = hospitals.filter(deleted_at.is_null()).into_boxed();
+
+    if !user_city.is_empty() && !user_state.is_empty() {
+        query = query.filter(city.eq(user_city).or(state.eq(user_state)));
+    } else if !user_city.is_empty() {
+        query = query.filter(city.eq(user_city));
+    } else {
+        query = query.filter(state.eq(user_state));
+    }
+
+    query
+        .select(Hospital::as_select())
+        .load(conn)
+        .map_err(AppError::from)
+}
+
 pub fn get_hospital_inventory(
     conn: &mut PgConnection,
     h_id: Uuid,
@@ -353,13 +381,6 @@ pub fn update_blood_inventory(
             "Hospital not found or unauthorized".into(),
         ));
     }
-
-    let mut update_query = diesel::update(
-        hospital_blood_inventories
-            .filter(hospital_id.eq(h_id))
-            .filter(blood_type.eq(b_type.clone())),
-    )
-    .into_boxed();
 
     // Perform the update
     let result = diesel::update(

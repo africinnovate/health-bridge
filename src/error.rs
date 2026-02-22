@@ -2,7 +2,6 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use reqwest::Error as ReqwestError;
 
 use tracing::error;
 
@@ -22,26 +21,16 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
-            AppError::UserAlreadyExists => (
-                StatusCode::CONFLICT,
-                "User already exists".to_string(),
-            ),
-            AppError::Unauthorized(msg) => (
-                StatusCode::UNAUTHORIZED,
-                msg,
-            ),
-            AppError::NotFound(msg) => (
-                StatusCode::NOT_FOUND,
-                msg,
-            ),
+            AppError::UserAlreadyExists => {
+                (StatusCode::CONFLICT, "User already exists".to_string())
+            }
+            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             AppError::DbError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),
             ),
-            AppError::BadRequest(msg) => (
-                StatusCode::BAD_REQUEST,
-                msg,
-            ),
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::InternalServerError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),

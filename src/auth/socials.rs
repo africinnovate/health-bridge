@@ -1,9 +1,9 @@
-use diesel::prelude::*;
 use diesel::pg::PgConnection;
+use diesel::prelude::*;
 
 use crate::config::SocialAuthConfig;
 use crate::error::AppError;
-use crate::handlers::socials::{SocialProfile, GoogleTokenInfo};
+use crate::handlers::socials::{GoogleTokenInfo, SocialProfile};
 use crate::models::{NewSocialAccount, NewUser, SocialAccount, User};
 use crate::utils::enums::Role;
 
@@ -12,7 +12,7 @@ pub fn login_or_register_social_user(
     profile: SocialProfile,
     provider: &str,
 ) -> Result<User, AppError> {
-    use crate::schema::{users, social_accounts};
+    use crate::schema::{social_accounts, users};
 
     // 1. Check if social account exists
     if let Ok(account) = social_accounts::table
@@ -51,6 +51,7 @@ pub fn login_or_register_social_user(
                 image_url: None,
                 password_hash: "", // IMPORTANT: no password
                 role: Role::Patient,
+                consultation_preference: None,
             };
 
             diesel::insert_into(users::table)
@@ -87,15 +88,11 @@ pub async fn verify_social_token(
     }
 }
 
-
 pub async fn verify_google_token(
     token: &str,
     cfg: &SocialAuthConfig,
 ) -> Result<SocialProfile, AppError> {
-    let url = format!(
-        "https://oauth2.googleapis.com/tokeninfo?id_token={}",
-        token
-    );
+    let url = format!("https://oauth2.googleapis.com/tokeninfo?id_token={}", token);
 
     let res = reqwest::get(&url).await?.json::<GoogleTokenInfo>().await?;
 
