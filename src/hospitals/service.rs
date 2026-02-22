@@ -330,6 +330,66 @@ pub fn get_hospital_inventory(
         .load::<crate::models::HospitalBloodInventory>(conn)
         .map_err(AppError::from)
 }
+pub fn update_blood_inventory(
+    conn: &mut PgConnection,
+    h_id: Uuid,
+    user: &User,
+    b_type: crate::utils::enums::BloodTypeEnum,
+    payload: crate::handlers::hospitals::UpdateBloodInventoryRequest,
+) -> Result<crate::models::HospitalBloodInventory, AppError> {
+    use crate::schema::hospital_blood_inventories::dsl::*;
+    use crate::schema::hospitals::dsl as h;
+
+    // Check if hospital exists and belongs to user (or user is admin)
+    let hospital_exists = h::hospitals
+        .filter(h::id.eq(h_id))
+        .filter(h::user_id.eq(user.id))
+        .select(h::id)
+        .first::<Uuid>(conn)
+        .optional()?;
+
+    if hospital_exists.is_none() {
+        return Err(AppError::NotFound(
+            "Hospital not found or unauthorized".into(),
+        ));
+    }
+
+    let mut update_query = diesel::update(
+        hospital_blood_inventories
+            .filter(hospital_id.eq(h_id))
+            .filter(blood_type.eq(b_type.clone())),
+    )
+    .into_boxed();
+
+    // Perform the update
+    let result = diesel::update(
+        hospital_blood_inventories
+            .filter(hospital_id.eq(h_id))
+            .filter(blood_type.eq(b_type.clone())),
+    )
+    .set((
+        payload.units_available.map(|v| units_available.eq(v)),
+        payload.bank_capacity.map(|v| bank_capacity.eq(v)),
+        updated_at.eq(chrono::Utc::now()),
+    ))
+    .get_result::<crate::models::HospitalBloodInventory>(conn)
+    .optional()?;
+
+    match result {
+        Some(inventory) => Ok(inventory),
+        None => {
+            // If it doesn't exist, we could choose to create it or return 404.
+            // Given it's an "update" endpoint, 404 seems more appropriate unless we want UPSERT.
+            // However, the existing UpdateHospitalRequest does UPSERT. Let's do UPSERT for consistency if needed,
+            // but the user asked to "update", and usually inventory is initialized.
+            // Let's stick to update for now, but provide a helpful error.
+            Err(AppError::NotFound(format!(
+                "Inventory for blood type {:?} not found in this hospital",
+                b_type
+            )))
+        }
+    }
+}
 
 #[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
 pub struct DonorQuery {

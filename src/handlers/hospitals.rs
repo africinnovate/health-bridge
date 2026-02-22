@@ -112,6 +112,12 @@ pub struct UpdateHospitalSettingsRequest {
     pub push_notifications: Option<bool>,
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct UpdateBloodInventoryRequest {
+    pub units_available: Option<i32>,
+    pub bank_capacity: Option<i32>,
+}
+
 /// Create hospital
 #[utoipa::path(
     post,
@@ -620,6 +626,40 @@ pub async fn upload_accreditation_doc(
     Ok(ApiResponse::success_with_message(
         "Accreditation document uploaded successfully",
         url,
+    ))
+}
+/// Update blood inventory for a specific blood type
+#[utoipa::path(
+    patch,
+    path = "/api/hospitals/inventory/{hospital_id}/{blood_type}",
+    request_body = UpdateBloodInventoryRequest,
+    responses(
+        (status = 200, body = ApiResponse<crate::models::HospitalBloodInventory>),
+        (status = 401),
+        (status = 404),
+        (status = 500)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_blood_inventory(
+    State(state): State<AppState>,
+    Path((hospital_id, blood_type)): Path<(Uuid, BloodTypeEnum)>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<UpdateBloodInventoryRequest>,
+) -> Result<ApiResponse<crate::models::HospitalBloodInventory>, AppError> {
+    let mut conn = state.pool.get()?;
+    let inventory = hospitals::service::update_blood_inventory(
+        &mut conn,
+        hospital_id,
+        &user,
+        blood_type,
+        payload,
+    )?;
+
+    Ok(ApiResponse::success_with_message(
+        "Blood inventory updated successfully",
+        inventory,
     ))
 }
 

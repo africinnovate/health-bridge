@@ -49,4 +49,8 @@ pub fn protected_router() -> Router<AppState> {
             "/dashboard/recent-activity",
             get(hospitals::get_recent_activity),
         )
+        .route(
+            "/inventory/{hospital_id}/{blood_type}",
+            patch(hospitals::update_blood_inventory),
+        )
 }

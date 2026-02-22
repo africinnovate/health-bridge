@@ -39,6 +39,7 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         hospitals::get_donor_history,
         hospitals::get_dashboard_stats,
         hospitals::get_recent_activity,
+        hospitals::update_blood_inventory,
         specialists::create_specialist,
         specialists::get_specialist,
         specialists::get_specialists,
