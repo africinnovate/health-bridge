@@ -79,6 +79,31 @@ pub struct UpdateUserSettingsRequest {
     pub allow_marketing_notifications: Option<bool>,
 }
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ConsultationPreferenceResponse {
+    pub preference: Option<crate::utils::enums::ConsultationTypeEnum>,
+}
+
+/// Get consultation preference
+///
+/// Retrieves the consultation preference for the authenticated user.
+#[utoipa::path(
+    get,
+    path = "/api/user-settings/preference",
+    responses(
+        (status = 200, body = ApiResponse<ConsultationPreferenceResponse>)
+    ),
+    tag = "settings",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_consultation_preference(
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<ConsultationPreferenceResponse>, AppError> {
+    Ok(ApiResponse::success(ConsultationPreferenceResponse {
+        preference: user.consultation_preference,
+    }))
+}
+
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdatePreferenceRequest {
     pub preference: crate::utils::enums::ConsultationTypeEnum,

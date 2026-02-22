@@ -1,6 +1,8 @@
+use crate::handlers::{
+    admin, appointments, auth, common, hospitals, notifications, patients, socials, specialists,
+};
 use utoipa::OpenApi;
-use utoipa::openapi::security::{SecurityScheme, HttpAuthScheme, HttpBuilder};
-use crate::handlers::{auth, hospitals, patients, appointments, specialists, admin, notifications, socials, common};
+use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -61,13 +63,14 @@ use crate::handlers::{auth, hospitals, patients, appointments, specialists, admi
         common::get_user_settings,
         common::update_user_settings,
         common::upload_image,
+        common::get_consultation_preference,
         common::update_consultation_preference,
         admin::admin_dashboard,
         admin::get_users,
         admin::update_specialist_status,
         admin::update_hospital_status,
     ),
-    
+
     components(),
 
     modifiers(&SecurityAddon),
@@ -107,7 +110,7 @@ impl utoipa::Modify for SecurityAddon {
                     HttpBuilder::new()
                         .scheme(HttpAuthScheme::Bearer)
                         .bearer_format("JWT")
-                        .build()
+                        .build(),
                 ),
             )
         }
