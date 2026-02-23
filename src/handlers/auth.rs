@@ -10,7 +10,7 @@ use crate::{
     error::AppError,
     models::User,
     utils::{
-        enums::Role,
+        enums::{ConsultationTypeEnum, Role},
         response::{ApiResponse, EmptyData},
         validation::validate_email,
     },
@@ -77,6 +77,7 @@ pub struct UserResponse {
     pub last_name: String,
     pub email: String,
     pub role: String,
+    pub consultation_preference: Option<ConsultationTypeEnum>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -93,6 +94,7 @@ impl From<User> for UserResponse {
             last_name: user.last_name,
             email: user.email,
             role: user.role.to_string(),
+            consultation_preference: user.consultation_preference,
         }
     }
 }

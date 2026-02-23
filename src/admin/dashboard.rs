@@ -1,32 +1,30 @@
-use diesel::prelude::*;
-use chrono::{DateTime, Utc};
 use chrono::Datelike;
-
+use chrono::{DateTime, Utc};
+use diesel::prelude::*;
 
 use crate::admin::dtos::{
-    AdminActivity, AdminDashboardResponse, AdminUserResponse, PaginationMeta, StatCard, UserFilters, UserListResponse
+    AdminActivity, AdminDashboardResponse, AdminUserResponse, PaginationMeta, StatCard,
+    UserFilters, UserListResponse,
 };
 use crate::models::User;
 use crate::{
-    error::AppError, 
-    schema::{
-        blood_requests, hospitals, specialists, users
-    }
+    error::AppError,
+    schema::{blood_requests, hospitals, specialists, users},
 };
-
-
 
 ///
 /// Admin dashboard read-model
 ///
-pub fn get_admin_dashboard(
-    conn: &mut PgConnection,
-) -> Result<AdminDashboardResponse, AppError> {
-
+pub fn get_admin_dashboard(conn: &mut PgConnection) -> Result<AdminDashboardResponse, AppError> {
     use diesel::dsl::*;
 
     let nw = chrono::Utc::now();
-    let start_of_month = nw.date_naive().with_day(1).unwrap().and_hms_opt(0,0,0).unwrap();
+    let start_of_month = nw
+        .date_naive()
+        .with_day(1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap();
 
     // ======================
     // Counts
@@ -185,23 +183,23 @@ pub fn get_users_paginated(
     if let Some(search_term) = filters.search {
         let search_pattern = format!("%{}%", search_term);
         count_query = count_query.filter(
-            first_name.ilike(search_pattern.clone())
+            first_name
+                .ilike(search_pattern.clone())
                 .or(last_name.ilike(search_pattern.clone()))
                 .or(email.ilike(search_pattern.clone()))
-                .or(phone.ilike(search_pattern.clone()))
+                .or(phone.ilike(search_pattern.clone())),
         );
         data_query = data_query.filter(
-            first_name.ilike(search_pattern.clone())
+            first_name
+                .ilike(search_pattern.clone())
                 .or(last_name.ilike(search_pattern.clone()))
                 .or(email.ilike(search_pattern.clone()))
-                .or(phone.ilike(search_pattern.clone()))
+                .or(phone.ilike(search_pattern.clone())),
         );
     }
 
     // Get total count before pagination
-    let total_items = count_query
-        .count()
-        .get_result::<i64>(conn)?;
+    let total_items = count_query.count().get_result::<i64>(conn)?;
 
     // Calculate pagination
     let total_pages = (total_items as f64 / filters.page_size as f64).ceil() as i64;
@@ -238,6 +236,7 @@ pub fn get_users_paginated(
                 dob: user.dob,
                 role: user.role,
                 email_verified: user.email_verified,
+                consultation_preference: user.consultation_preference,
                 created_at: user.created_at,
                 country: Some("Nigeria".to_string()), // You might want to add this to User model
                 status,
@@ -255,4 +254,3 @@ pub fn get_users_paginated(
         },
     })
 }
-

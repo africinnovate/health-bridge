@@ -430,6 +430,7 @@ pub struct DonorDetail {
     pub eligible_to_donate: bool,
     pub note: Option<String>,
     pub blood_type: Option<String>,
+    pub consultation_preference: Option<crate::utils::enums::ConsultationTypeEnum>,
 }
 
 pub fn get_donors(
@@ -466,6 +467,7 @@ pub fn get_donors(
             u::eligible_to_donate,
             u::note,
             p::blood_type.nullable(),
+            u::consultation_preference,
         ))
         .order(u::created_at.desc())
         .load::<(
@@ -479,12 +481,13 @@ pub fn get_donors(
             bool,
             Option<String>,
             Option<String>,
+            Option<crate::utils::enums::ConsultationTypeEnum>,
         )>(conn)?;
 
     Ok(results
         .into_iter()
         .map(
-            |(uid, fname, lname, umail, uphone, ugender, uimg, ueligible, unote, ublood)| {
+            |(uid, fname, lname, umail, uphone, ugender, uimg, ueligible, unote, ublood, upref)| {
                 DonorDetail {
                     user_id: uid,
                     first_name: fname,
@@ -496,6 +499,7 @@ pub fn get_donors(
                     eligible_to_donate: ueligible,
                     note: unote,
                     blood_type: ublood,
+                    consultation_preference: upref,
                 }
             },
         )
@@ -541,6 +545,7 @@ pub fn update_donor(
         eligible_to_donate: updated_user.eligible_to_donate,
         note: updated_user.note,
         blood_type,
+        consultation_preference: updated_user.consultation_preference,
     })
 }
 

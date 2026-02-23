@@ -142,6 +142,7 @@ pub async fn get_specialists(
             gender: user.gender,
             image_url: user.image_url,
             email_verified: user.email_verified,
+            consultation_preference: user.consultation_preference,
 
             hospital_id: specialist.hospital_id,
             specialty_id: specialist.specialty_id,

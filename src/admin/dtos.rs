@@ -1,11 +1,10 @@
+use crate::utils::enums::{ConsultationTypeEnum, Gender, NotificationCategoryEnum, Role};
+use chrono::NaiveDate;
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use utoipa::IntoParams;
 use utoipa::ToSchema;
 use uuid::Uuid;
-use chrono::NaiveDate;
-use crate::utils::enums::{Gender, Role, NotificationCategoryEnum};
-use utoipa::IntoParams;
-
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct StatCard {
@@ -14,7 +13,6 @@ pub struct StatCard {
     pub sub_label: String,
     pub sub_value: Option<String>,
 }
-
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AdminActivity {
@@ -66,14 +64,14 @@ pub struct AdminUserFilters {
 pub struct UserFilters {
     /// Filter by user role (patient, specialist, hospital, admin)
     pub role: Option<Role>,
-    
+
     /// Search by name, email, or phone
     pub search: Option<String>,
-    
+
     /// Page number (starts from 1)
     #[serde(default = "default_page")]
     pub page: i64,
-    
+
     /// Number of items per page (default: 10, max: 100)
     #[serde(default = "default_page_size")]
     pub page_size: i64,
@@ -100,8 +98,9 @@ pub struct AdminUserResponse {
     pub image_url: Option<String>,
     pub role: Role,
     pub email_verified: bool,
+    pub consultation_preference: Option<ConsultationTypeEnum>,
     pub created_at: DateTime<Utc>,
-    
+
     // For patients specifically - could be null for other roles
     pub country: Option<String>,
     pub status: String,
@@ -143,17 +142,17 @@ pub struct HospitalActionRequest {
 pub struct NotificationFilters {
     /// Filter by category (admin only)
     pub category: Option<NotificationCategoryEnum>,
-    
+
     /// Filter by read status
     pub is_read: Option<bool>,
-    
+
     /// Search in title or message
     pub search: Option<String>,
-    
+
     /// Page number (starts from 1)
     #[serde(default = "default_page")]
     pub page: i64,
-    
+
     /// Number of items per page (default: 10, max: 100)
     #[serde(default = "default_page_size")]
     pub page_size: i64,

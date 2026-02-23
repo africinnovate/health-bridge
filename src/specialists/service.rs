@@ -59,6 +59,7 @@ pub struct SpecialistResponse {
     pub gender: Option<Gender>,
     pub image_url: Option<String>,
     pub email_verified: bool,
+    pub consultation_preference: Option<ConsultationTypeEnum>,
 
     // specialist fields
     pub hospital_id: Option<Uuid>,
@@ -131,6 +132,7 @@ pub fn get_specialist_with_user(
         gender: user.gender,
         image_url: user.image_url,
         email_verified: user.email_verified,
+        consultation_preference: user.consultation_preference,
 
         hospital_id: specialist.hospital_id,
         specialty_id: specialist.specialty_id,

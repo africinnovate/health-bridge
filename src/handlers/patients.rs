@@ -11,7 +11,11 @@ use crate::schema::{patients, users};
 use crate::{
     AppState, common,
     error::AppError,
-    utils::{enums::Gender, response::ApiResponse, validation::validate_phone_length},
+    utils::{
+        enums::{ConsultationTypeEnum, Gender},
+        response::ApiResponse,
+        validation::validate_phone_length,
+    },
 };
 use diesel::prelude::*;
 
@@ -39,6 +43,7 @@ pub struct ProfileResponse {
     pub image_url: Option<String>,
     pub role: String,
     pub email_verified: bool,
+    pub consultation_preference: Option<ConsultationTypeEnum>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -64,6 +69,7 @@ pub struct PatientProfileResponse {
     pub email_verified: bool,
     pub address: Option<String>,
     pub image_url: Option<String>,
+    pub consultation_preference: Option<ConsultationTypeEnum>,
 
     // Patient / medical fields
     pub blood_type: Option<String>,
@@ -106,6 +112,7 @@ impl From<User> for ProfileResponse {
             dob: user.dob,
             role: user.role.to_string(),
             email_verified: user.email_verified,
+            consultation_preference: user.consultation_preference,
         }
     }
 }
@@ -220,6 +227,7 @@ pub async fn get_profile(
         image_url: user.image_url,
         role: user.role.to_string(),
         email_verified: user.email_verified,
+        consultation_preference: user.consultation_preference,
 
         blood_type: patient.as_ref().and_then(|p| p.blood_type.clone()),
         chronic_illnesses: patient.as_ref().and_then(|p| p.chronic_illnesses.clone()),
