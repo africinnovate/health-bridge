@@ -142,8 +142,10 @@ pub fn get_appointments(
         Role::Specialist => {
             query = query.filter(specialist_id.eq(user_ctx.id));
         }
+        Role::Donor | Role::Patient => {
+            query = query.filter(user_id.eq(user_ctx.id));
+        }
         Role::Admin => {}
-        _ => return Err(AppError::Unauthorized("Access denied".into())),
     }
 
     // 🔍 Filters
