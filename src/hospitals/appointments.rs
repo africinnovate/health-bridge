@@ -93,13 +93,15 @@ pub fn reschedule_appointment(
     user: &User,
     new_time: DateTime<Utc>,
 ) -> Result<Appointment, AppError> {
-    if user.role != Role::Hospital {
-        return Err(AppError::Unauthorized(
-            "Only hospitals can reschedule appointments".into(),
-        ));
+    match user.role {
+        Role::Hospital => {
+            assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
+        }
+        Role::Donor | Role::Patient => {
+            assert_user_owns_appointment(conn, appointment_id, user.id)?;
+        }
+        _ => return Err(AppError::Unauthorized("Invalid role".into())),
     }
-
-    assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
 
     diesel::update(appointments::table.find(appointment_id))
         .set((

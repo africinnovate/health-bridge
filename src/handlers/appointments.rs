@@ -110,7 +110,7 @@ pub async fn confirm_appointment(
     Ok(ApiResponse::success(appt))
 }
 
-/// Reschedule an appointment. Used by Hospital staff
+/// Reschedule an appointment
 #[utoipa::path(
     put,
     path = "/api/appointments/reschedule/{appointment_id}",
