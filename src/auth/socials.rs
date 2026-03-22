@@ -11,6 +11,7 @@ pub fn login_or_register_social_user(
     conn: &mut PgConnection,
     profile: SocialProfile,
     provider: &str,
+    role: Option<Role>,
 ) -> Result<User, AppError> {
     use crate::schema::{social_accounts, users};
 
@@ -50,7 +51,7 @@ pub fn login_or_register_social_user(
                 dob: None,
                 image_url: None,
                 password_hash: "", // IMPORTANT: no password
-                role: Role::Patient,
+                role: role.unwrap_or(Role::Patient),
                 consultation_preference: None,
             };
 
