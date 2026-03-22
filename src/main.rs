@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let cors = CorsLayer::new()
-        .allow_origin(Any) // For development, we can allow any origin. For production, specify origins.
+        .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
