@@ -19,6 +19,7 @@ mod utils;
 use axum::{Router, http::StatusCode, routing::get};
 use std::net::SocketAddr;
 use tracing_subscriber;
+use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -50,6 +51,11 @@ async fn main() -> anyhow::Result<()> {
         cloudinary_service,
     };
 
+    let cors = CorsLayer::new()
+        .allow_origin(Any) // For development, we can allow any origin. For production, specify origins.
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .nest("/api", routes::create_router())
@@ -58,6 +64,7 @@ async fn main() -> anyhow::Result<()> {
             get(|| async { (StatusCode::OK, "The health is healthing! ...") }),
         )
         .layer(axum::Extension(state.clone()))
+        .layer(cors)
         .with_state(state);
 
     let addr: SocketAddr = cfg.bind_addr.parse()?;

@@ -7,7 +7,7 @@ use crate::{
     auth::{socials, service as auth}, 
     error::AppError, 
     handlers::auth::AuthResponse, 
-    utils::response::ApiResponse,
+    utils::{response::ApiResponse, enums::Role},
 };
 
 #[derive(Deserialize)]
@@ -23,6 +23,7 @@ pub struct GoogleTokenInfo {
 pub struct SocialLoginRequest {
     pub provider: String,
     pub access_token: String,
+    pub role: Option<Role>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -62,6 +63,7 @@ pub async fn social_login(
         &mut conn,
         profile,
         &payload.provider,
+        payload.role,
     )?;
 
     let refresh_token = auth::create_refresh_token(&mut conn, user.id)?;
