@@ -46,7 +46,7 @@ pub struct ProfileResponse {
     pub consultation_preference: Option<ConsultationTypeEnum>,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct PhysicianInfo {
     pub id: Uuid,
     pub fullname: String,
@@ -54,7 +54,7 @@ pub struct PhysicianInfo {
     pub phone: Option<String>,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct PatientProfileResponse {
     pub id: Uuid,
 
@@ -244,12 +244,19 @@ pub async fn get_profile(
     Extension(current_user): Extension<User>,
 ) -> Result<ApiResponse<PatientProfileResponse>, AppError> {
     let mut conn = state.pool.get()?;
+    let response = fetch_patient_profile(&mut conn, current_user.id)?;
+    Ok(ApiResponse::success(response))
+}
 
+pub fn fetch_patient_profile(
+    conn: &mut PgConnection,
+    user_id_val: Uuid,
+) -> Result<PatientProfileResponse, AppError> {
     let (user, patient) = users::table
         .left_join(patients::table.on(patients::user_id.eq(users::id)))
-        .filter(users::id.eq(current_user.id))
+        .filter(users::id.eq(user_id_val))
         .select((User::as_select(), Option::<Patient>::as_select()))
-        .first::<(User, Option<Patient>)>(&mut conn)?;
+        .first::<(User, Option<Patient>)>(conn)?;
 
     // Fetch physician details if primary_physician is set
     let physician_info = if let Some(ref p) = patient {
@@ -257,7 +264,7 @@ pub async fn get_profile(
             users::table
                 .filter(users::id.eq(physician_id))
                 .select(User::as_select())
-                .first::<User>(&mut conn)
+                .first::<User>(conn)
                 .ok()
                 .map(|physician| PhysicianInfo {
                     id: physician.id,
@@ -302,7 +309,7 @@ pub async fn get_profile(
         medical_notes: patient.as_ref().and_then(|p| p.medical_notes.clone()),
     };
 
-    Ok(ApiResponse::success(response))
+    Ok(response)
 }
 
 /// Delete user account

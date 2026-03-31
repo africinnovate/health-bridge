@@ -2,15 +2,17 @@ use chrono::Datelike;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 
+use crate::schema::{blood_requests, hospitals, specialists, users, appointments, specialties};
 use crate::admin::dtos::{
     AdminActivity, AdminDashboardResponse, AdminUserResponse, PaginationMeta, StatCard,
-    UserFilters, UserListResponse,
+    UserFilters, UserListResponse, AdminPatientProfileResponse, AppointmentHistoryItem,
+    DonationHistoryItem,
 };
+use crate::handlers::patients::fetch_patient_profile;
+use crate::utils::enums::RequestStatusTypeEnum;
 use crate::models::User;
-use crate::{
-    error::AppError,
-    schema::{blood_requests, hospitals, specialists, users},
-};
+use uuid::Uuid;
+use crate::error::AppError;
 
 ///
 /// Admin dashboard read-model
@@ -252,5 +254,78 @@ pub fn get_users_paginated(
             total_items,
             total_pages,
         },
+    })
+}
+
+pub fn get_admin_patient_profile(
+    conn: &mut PgConnection,
+    user_idd: Uuid,
+) -> Result<AdminPatientProfileResponse, AppError> {
+    // 1. Fetch base profile
+    let profile = fetch_patient_profile(conn, user_idd)?;
+
+    // 2. Fetch appointment history
+    // join appointments with specialists -> users (for name) and specialties (for specialty)
+    let appointments_history = appointments::table
+        .inner_join(specialists::table.on(appointments::specialist_id.eq(specialists::id)))
+        .inner_join(users::table.on(specialists::user_id.eq(users::id)))
+        .inner_join(specialties::table.on(specialists::specialty_id.eq(specialties::id)))
+        .filter(appointments::user_id.eq(user_idd))
+        .order(appointments::scheduled_time.desc())
+        .limit(5)
+        .select((
+            users::first_name,
+            users::last_name,
+            specialties::name,
+            appointments::scheduled_time,
+            appointments::status,
+        ))
+        .load::<(String, String, String, DateTime<Utc>, crate::utils::enums::AppointmentStatusEnum)>(conn)?
+        .into_iter()
+        .map(|(fname, lname, sname, time, status)| AppointmentHistoryItem {
+            specialist_name: format!("Dr. {} {}", fname, lname),
+            specialty: sname,
+            scheduled_time: time,
+            status,
+        })
+        .collect();
+
+    // 3. Fetch donation history
+    // join blood_requests with hospitals (for hospital name)
+    let donations_history = blood_requests::table
+        .inner_join(hospitals::table.on(blood_requests::hospital_id.eq(hospitals::id)))
+        .filter(blood_requests::donor_id.eq(user_idd))
+        .order(blood_requests::created_at.desc())
+        .limit(5)
+        .select((
+            hospitals::name,
+            blood_requests::created_at,
+            blood_requests::request_status,
+            blood_requests::blood_type,
+            blood_requests::units,
+        ))
+        .load::<(
+            String,
+            DateTime<Utc>,
+            Option<RequestStatusTypeEnum>,
+            Option<crate::utils::enums::BloodTypeEnum>,
+            Option<i32>,
+        )>(conn)?
+        .into_iter()
+        .map(|(hname, time, status, btype, units)| {
+            DonationHistoryItem {
+                hospital_name: hname,
+                created_at: time,
+                status: status.unwrap_or(RequestStatusTypeEnum::Confirmed), // Use Confirmed as default
+                blood_type: btype,
+                units,
+            }
+        })
+        .collect();
+
+    Ok(AdminPatientProfileResponse {
+        profile,
+        appointments: appointments_history,
+        donations: donations_history,
     })
 }

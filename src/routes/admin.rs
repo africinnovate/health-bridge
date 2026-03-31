@@ -8,6 +8,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/dashboard", get(admin::admin_dashboard))
         .route("/users", get(admin::get_users))
+        .route("/users/{id}", get(admin::get_user_profile))
         .route(
             "/specialists/{id}/status",
             patch(admin::update_specialist_status),

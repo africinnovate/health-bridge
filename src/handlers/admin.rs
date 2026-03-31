@@ -11,7 +11,7 @@ use crate::{
         dashboard,
         dtos::{
             AdminDashboardResponse, HospitalActionRequest, SpecialistActionRequest, UserFilters,
-            UserListResponse,
+            UserListResponse, AdminPatientProfileResponse,
         },
     },
     error::AppError,
@@ -216,4 +216,38 @@ pub async fn update_hospital_status(
         &format!("Hospital {} successfully", action),
         response,
     ))
+}
+
+/// Get a specific user's full profile (Admin only)
+///
+/// Retrieves a comprehensive patient profile, including medical and history details
+#[utoipa::path(
+    get,
+    path = "/api/admin/users/{id}",
+    responses(
+        (status = 200, body = ApiResponse<AdminPatientProfileResponse>),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden - Admin only"),
+        (status = 404, description = "User not found"),
+        (status = 500)
+    ),
+    tag = "admin",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_user_profile(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(user_id): Path<Uuid>,
+) -> Result<ApiResponse<AdminPatientProfileResponse>, AppError> {
+    // Ensure user is admin
+    if !matches!(user.role, crate::utils::enums::Role::Admin) {
+        return Err(AppError::Unauthorized(
+            "Only administrators can perform this action".into(),
+        ));
+    }
+
+    let mut conn = state.pool.get()?;
+    let profile = dashboard::get_admin_patient_profile(&mut conn, user_id)?;
+
+    Ok(ApiResponse::success(profile))
 }

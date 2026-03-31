@@ -1,4 +1,7 @@
-use crate::utils::enums::{ConsultationTypeEnum, Gender, NotificationCategoryEnum, Role};
+use crate::utils::enums::{
+    AppointmentStatusEnum, ConsultationTypeEnum, Gender, NotificationCategoryEnum,
+    RequestStatusTypeEnum, Role, BloodTypeEnum
+};
 use chrono::NaiveDate;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -156,4 +159,28 @@ pub struct NotificationFilters {
     /// Number of items per page (default: 10, max: 100)
     #[serde(default = "default_page_size")]
     pub page_size: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AppointmentHistoryItem {
+    pub specialist_name: String,
+    pub specialty: String,
+    pub scheduled_time: DateTime<Utc>,
+    pub status: AppointmentStatusEnum,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DonationHistoryItem {
+    pub hospital_name: String,
+    pub created_at: DateTime<Utc>,
+    pub status: RequestStatusTypeEnum,
+    pub blood_type: Option<BloodTypeEnum>,
+    pub units: Option<i32>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AdminPatientProfileResponse {
+    pub profile: crate::handlers::patients::PatientProfileResponse,
+    pub appointments: Vec<AppointmentHistoryItem>,
+    pub donations: Vec<DonationHistoryItem>,
 }
