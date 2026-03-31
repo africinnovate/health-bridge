@@ -107,6 +107,9 @@ pub struct AdminUserResponse {
     // For patients specifically - could be null for other roles
     pub country: Option<String>,
     pub status: String,
+    pub verified: Option<bool>,
+    pub suspended: Option<bool>,
+    pub license_status: Option<bool>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -183,4 +186,51 @@ pub struct AdminPatientProfileResponse {
     pub profile: crate::handlers::patients::PatientProfileResponse,
     pub appointments: Vec<AppointmentHistoryItem>,
     pub donations: Vec<DonationHistoryItem>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AdminSpecialistProfileResponse {
+    pub profile: crate::handlers::patients::ProfileResponse,
+    pub specialty: String,
+    pub bio: Option<String>,
+    pub experience: Option<i32>,
+    pub country: Option<String>,
+    pub consultation_types: ConsultationTypeEnum,
+    pub verified: bool,
+    pub license_url: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct HospitalBloodInventorySummary {
+    pub blood_type: BloodTypeEnum,
+    pub units: i32,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AdminHospitalProfileResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub hospital_type: Option<crate::utils::enums::HospitalTypeEnum>,
+    pub address: String,
+    pub city: String,
+    pub state: String,
+    pub country: String,
+    pub primary_phone: String,
+    pub email: Option<String>,
+    pub license_status: bool,
+    pub contact_person: crate::handlers::patients::ProfileResponse,
+    pub has_blood_bank: bool,
+    pub blood_inventory: Vec<HospitalBloodInventorySummary>,
+    pub total_requests: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(tag = "role", content = "data")]
+pub enum AdminUserProfileResponse {
+    #[serde(rename = "patient")]
+    Patient(AdminPatientProfileResponse),
+    #[serde(rename = "specialist")]
+    Specialist(AdminSpecialistProfileResponse),
+    #[serde(rename = "hospital")]
+    Hospital(AdminHospitalProfileResponse),
 }

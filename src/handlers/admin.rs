@@ -11,7 +11,7 @@ use crate::{
         dashboard,
         dtos::{
             AdminDashboardResponse, HospitalActionRequest, SpecialistActionRequest, UserFilters,
-            UserListResponse, AdminPatientProfileResponse,
+            UserListResponse, AdminPatientProfileResponse, AdminUserProfileResponse,
         },
     },
     error::AppError,
@@ -220,12 +220,12 @@ pub async fn update_hospital_status(
 
 /// Get a specific user's full profile (Admin only)
 ///
-/// Retrieves a comprehensive patient profile, including medical and history details
+/// Retrieves a comprehensive profile based on user role (patient, specialist, hospital)
 #[utoipa::path(
     get,
     path = "/api/admin/users/{id}",
     responses(
-        (status = 200, body = ApiResponse<AdminPatientProfileResponse>),
+        (status = 200, body = ApiResponse<AdminUserProfileResponse>),
         (status = 401, description = "Unauthorized"),
         (status = 403, description = "Forbidden - Admin only"),
         (status = 404, description = "User not found"),
@@ -236,18 +236,45 @@ pub async fn update_hospital_status(
 )]
 pub async fn get_user_profile(
     State(state): State<AppState>,
-    Extension(user): Extension<User>,
+    Extension(current_admin): Extension<User>,
     Path(user_id): Path<Uuid>,
-) -> Result<ApiResponse<AdminPatientProfileResponse>, AppError> {
+) -> Result<ApiResponse<AdminUserProfileResponse>, AppError> {
+    use crate::schema::users;
+    use diesel::prelude::*;
+
     // Ensure user is admin
-    if !matches!(user.role, crate::utils::enums::Role::Admin) {
+    if !matches!(current_admin.role, crate::utils::enums::Role::Admin) {
         return Err(AppError::Unauthorized(
             "Only administrators can perform this action".into(),
         ));
     }
 
     let mut conn = state.pool.get()?;
-    let profile = dashboard::get_admin_patient_profile(&mut conn, user_id)?;
+    
+    // Fetch user to check role
+    let target_user = users::table
+        .find(user_id)
+        .select(User::as_select())
+        .first::<User>(&mut conn)
+        .map_err(|_| AppError::NotFound("User not found".into()))?;
 
-    Ok(ApiResponse::success(profile))
+    let response = match target_user.role {
+        Role::Patient | Role::Donor => {
+            let profile = dashboard::get_admin_patient_profile(&mut conn, user_id)?;
+            AdminUserProfileResponse::Patient(profile)
+        }
+        Role::Specialist => {
+            let profile = dashboard::get_admin_specialist_profile(&mut conn, user_id)?;
+            AdminUserProfileResponse::Specialist(profile)
+        }
+        Role::Hospital => {
+            let profile = dashboard::get_admin_hospital_profile(&mut conn, user_id)?;
+            AdminUserProfileResponse::Hospital(profile)
+        }
+        Role::Admin => {
+            return Err(AppError::BadRequest("Cannot view admin profiles".into()));
+        }
+    };
+
+    Ok(ApiResponse::success(response))
 }

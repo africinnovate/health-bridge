@@ -30,7 +30,7 @@ pub struct UpdateProfileRequest {
     pub image_url: Option<String>,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Debug, ToSchema)]
 pub struct ProfileResponse {
     pub id: Uuid,
     pub first_name: String,

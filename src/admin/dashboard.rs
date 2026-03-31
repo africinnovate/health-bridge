@@ -2,11 +2,15 @@ use chrono::Datelike;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 
-use crate::schema::{blood_requests, hospitals, specialists, users, appointments, specialties};
+use crate::schema::{
+    appointments, blood_requests, hospital_blood_inventories, hospitals, specialists, specialties,
+    users,
+};
 use crate::admin::dtos::{
-    AdminActivity, AdminDashboardResponse, AdminUserResponse, PaginationMeta, StatCard,
-    UserFilters, UserListResponse, AdminPatientProfileResponse, AppointmentHistoryItem,
-    DonationHistoryItem,
+    AdminActivity, AdminDashboardResponse, AdminHospitalProfileResponse,
+    AdminPatientProfileResponse, AdminSpecialistProfileResponse, AdminUserResponse,
+    AppointmentHistoryItem, DonationHistoryItem, PaginationMeta, StatCard, UserFilters,
+    UserListResponse,
 };
 use crate::handlers::patients::fetch_patient_profile;
 use crate::utils::enums::RequestStatusTypeEnum;
@@ -215,16 +219,45 @@ pub fn get_users_paginated(
         .select(User::as_select())
         .load::<User>(conn)?;
 
+    // Fetch role-specific details to populate extra fields
+    let user_ids: Vec<Uuid> = user_list.iter().map(|u| u.id).collect();
+
+    let specialists_map: std::collections::HashMap<Uuid, (bool, bool)> = specialists::table
+        .filter(specialists::user_id.eq_any(&user_ids))
+        .select((specialists::user_id, specialists::verified, specialists::suspended))
+        .load::<(Uuid, bool, bool)>(conn)?
+        .into_iter()
+        .map(|(uid, v, s)| (uid, (v, s)))
+        .collect();
+
+    let hospitals_map: std::collections::HashMap<Uuid, bool> = hospitals::table
+        .filter(hospitals::user_id.eq_any(&user_ids))
+        .select((hospitals::user_id, hospitals::license_status))
+        .load::<(Uuid, bool)>(conn)?
+        .into_iter()
+        .collect();
+
     // Transform to response format
     let data = user_list
         .into_iter()
         .map(|user| {
-            // Determine status based on email verification
-            let status = if user.email_verified {
+            // Determine status based on role-specific data
+            let mut status = if user.email_verified {
                 "Active".to_string()
             } else {
                 "Pending".to_string()
             };
+
+            let spec = specialists_map.get(&user.id);
+            let hosp = hospitals_map.get(&user.id);
+
+            // Override status for specialists and hospitals if pending verification
+            if let Some((v, _)) = spec {
+                if !*v { status = "Pending".to_string(); }
+            }
+            if let Some(ls) = hosp {
+                if !*ls { status = "Pending".to_string(); }
+            }
 
             AdminUserResponse {
                 id: user.id,
@@ -240,8 +273,11 @@ pub fn get_users_paginated(
                 email_verified: user.email_verified,
                 consultation_preference: user.consultation_preference,
                 created_at: user.created_at,
-                country: Some("Nigeria".to_string()), // You might want to add this to User model
+                country: Some("Nigeria".to_string()),
                 status,
+                verified: spec.map(|(v, _)| *v),
+                suspended: spec.map(|(_, s)| *s),
+                license_status: hosp.copied(),
             }
         })
         .collect();
@@ -327,5 +363,80 @@ pub fn get_admin_patient_profile(
         profile,
         appointments: appointments_history,
         donations: donations_history,
+    })
+}
+
+pub fn get_admin_specialist_profile(
+    conn: &mut PgConnection,
+    user_id_val: Uuid,
+) -> Result<AdminSpecialistProfileResponse, AppError> {
+    use crate::models::Specialist;
+
+    let (user, specialist, specialty_name) = users::table
+        .inner_join(specialists::table.on(specialists::user_id.eq(users::id)))
+        .inner_join(specialties::table.on(specialists::specialty_id.eq(specialties::id)))
+        .filter(users::id.eq(user_id_val))
+        .select((User::as_select(), Specialist::as_select(), specialties::name))
+        .first::<(User, Specialist, String)>(conn)?;
+
+    Ok(AdminSpecialistProfileResponse {
+        profile: crate::handlers::patients::ProfileResponse::from(user),
+        specialty: specialty_name,
+        bio: specialist.bio,
+        experience: specialist.years_of_experience,
+        country: specialist.country,
+        consultation_types: specialist.consultation_type,
+        verified: specialist.verified,
+        license_url: specialist.license_url,
+    })
+}
+
+pub fn get_admin_hospital_profile(
+    conn: &mut PgConnection,
+    user_id_val: Uuid,
+) -> Result<AdminHospitalProfileResponse, AppError> {
+    use crate::admin::dtos::HospitalBloodInventorySummary;
+    use crate::models::Hospital;
+
+    let (user, hospital) = users::table
+        .inner_join(hospitals::table.on(hospitals::user_id.eq(users::id)))
+        .filter(users::id.eq(user_id_val))
+        .select((User::as_select(), Hospital::as_select()))
+        .first::<(User, Hospital)>(conn)?;
+
+    let blood_inventory = hospital_blood_inventories::table
+        .filter(hospital_blood_inventories::hospital_id.eq(hospital.id))
+        .select((
+            hospital_blood_inventories::blood_type,
+            hospital_blood_inventories::units_available,
+        ))
+        .load::<(crate::utils::enums::BloodTypeEnum, i32)>(conn)?
+        .into_iter()
+        .map(|(bt, units)| HospitalBloodInventorySummary {
+            blood_type: bt,
+            units,
+        })
+        .collect();
+
+    let total_requests = blood_requests::table
+        .filter(blood_requests::hospital_id.eq(hospital.id))
+        .count()
+        .get_result::<i64>(conn)?;
+
+    Ok(AdminHospitalProfileResponse {
+        id: hospital.id,
+        name: hospital.name,
+        hospital_type: hospital.hospital_type,
+        address: hospital.address,
+        city: hospital.city,
+        state: hospital.state,
+        country: hospital.country,
+        primary_phone: hospital.primary_phone,
+        email: hospital.email,
+        license_status: hospital.license_status,
+        contact_person: crate::handlers::patients::ProfileResponse::from(user),
+        has_blood_bank: hospital.has_blood_bank,
+        blood_inventory,
+        total_requests,
     })
 }
