@@ -12,7 +12,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-/// Upload user profile image
+/// Upload user profile image.
 ///
 /// The field name must be 'image' and the content type must be 'multipart/form-data'.
 #[utoipa::path(
