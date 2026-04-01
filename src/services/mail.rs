@@ -20,7 +20,7 @@ impl MailService {
         user_name: &str,
         reset_code: &str,
     ) -> Result<()> {
-        let subject = "Reset Your Password - RubiMedi Health";
+        let subject = "Reset Your Password - RubiMedik";
         let html_body = format!(
             r#"
             <!DOCTYPE html>
@@ -52,14 +52,14 @@ impl MailService {
                     </div>
                     <div class="content">
                         <p>Hi {},</p>
-                        <p>We received a request to reset your password for your RubiMedi Health account.</p>
+                        <p>We received a request to reset your password for your RubiMedik account.</p>
                         <p>Use the following code to reset your password:</p>
                         <div class="code-box">{}</div>
                         <p><strong>This code will expire in 1 hour.</strong></p>
                         <p>If you didn't request a password reset, you can safely ignore this email.</p>
                     </div>
                     <div class="footer">
-                        <p>© 2026 RubiMedi Health. All rights reserved.</p>
+                        <p>© 2026 RubiMedik. All rights reserved.</p>
                         <p>This is an automated message, please do not reply.</p>
                     </div>
                 </div>
@@ -71,13 +71,13 @@ impl MailService {
 
         let text_body = format!(
             "Hi {},\n\n\
-            We received a request to reset your password for your RubiMedi Health account.\n\n\
+            We received a request to reset your password for your RubiMedik account.\n\n\
             Use the following code to reset your password:\n\n\
             {}\n\n\
             This code will expire in 1 hour.\n\n\
             If you didn't request a password reset, you can safely ignore this email.\n\n\
             Best regards,\n\
-            The RubiMedi Health Team",
+            The RubiMedik Team",
             user_name, reset_code
         );
 

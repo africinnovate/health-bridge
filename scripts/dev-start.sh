@@ -12,7 +12,7 @@ fi
 # Load environment variables
 export $(cat "$ENV_FILE" | grep -v '^#' | xargs)
 
-echo "🚀 Starting RubiMedi Health in development mode..."
+echo "🚀 Starting RubiMedik in development mode..."
 echo "📊 Using database: $DATABASE_HOST"
 echo "📡 Hot reload enabled - changes to src/ will trigger rebuild"
 echo "🌐 Server will be available at http://localhost:8080"

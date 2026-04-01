@@ -1,4 +1,4 @@
-# RubiMedi Health
+# RubiMedik
 
 Electronic Medical Records (EMR) system built with Rust and PostgreSQL.
 

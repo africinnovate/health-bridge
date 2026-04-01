@@ -85,9 +85,9 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         (name = "admin", description = "Admin management endpoints"),
     ),
     info(
-        title = "RubiMedi Health API",
+        title = "RubiMedik API",
         version = "1.0.0",
-        description = "RubiMedi Health REST API",
+        description = "RubiMedik REST API",
         contact(
             name = "API Support",
             email = "[EMAIL_ADDRESS]"
