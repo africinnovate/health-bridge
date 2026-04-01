@@ -165,7 +165,7 @@ pub async fn register(
     tokio::spawn(async move {
         let _ = mail.send_notification(
             &other_email,
-            "Verify your HealthBridge account",
+            "Verify your RubiMedi Health account",
             &format!(
                 "<p>Your verification code is:</p><h2>{}</h2><p>This code expires in 10 minutes.</p>",
                 code
@@ -456,7 +456,7 @@ pub async fn resend_verification_code(
     tokio::spawn(async move {
         let _ = mail_service.send_notification(
             &email,
-            "Verify your HealthBridge account",
+            "Verify your RubiMedi Health account",
             &format!(
                 "<p>Your new verification code is:</p><h2>{}</h2><p>This code expires in 10 minutes.</p>",
                 code
@@ -499,19 +499,19 @@ pub async fn delete_account(
 
     // Send email asynchronously
     tokio::spawn(async move {
-        let subject = "Your HealthBridge account has been deleted";
+        let subject = "Your RubiMedi Health account has been deleted";
         let html_body = format!(
             r#"
             <p>Hi {},</p>
-            <p>Your HealthBridge account has been successfully deleted.</p>
+            <p>Your RubiMedi Health account has been successfully deleted.</p>
             <p>If this action was not initiated by you, please contact our support team immediately.</p>
-            <p>— HealthBridge Team</p>
+            <p>— RubiMedi Health Team</p>
             "#,
             user_name
         );
 
         let text_body = format!(
-            "Hi {},\n\nYour HealthBridge account has been successfully deleted.\nIf this wasn’t you, please contact support.\n\n— HealthBridge Team",
+            "Hi {},\n\nYour RubiMedi Health account has been successfully deleted.\nIf this wasn’t you, please contact support.\n\n— RubiMedi Health Team",
             user_name
         );
 

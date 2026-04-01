@@ -1,4 +1,4 @@
-# Health Bridge
+# RubiMedi Health
 
 Electronic Medical Records (EMR) system built with Rust and PostgreSQL.
 
@@ -114,7 +114,7 @@ sudo -u postgres psql
 
 In PostgreSQL shell:
 ```sql
-CREATE USER justin WITH PASSWORD 'cejowisz';
+CREATE USER justin WITH PASSWORD 'password';
 CREATE DATABASE emr_db OWNER justin;
 GRANT ALL PRIVILEGES ON DATABASE emr_db TO justin;
 \c emr_db
@@ -176,7 +176,7 @@ tail -f nohup.out
 #### First-Time Setup
 ```bash
 # 1. Get server credentials from team lead
-# Server IP: 192.168.1.138 (or healthbridge.africinnovate.com)
+# Server IP: (or healthbridge.africinnovate.com)
 # Database: emr_db
 # User: justin
 # Password: [provided separately]
@@ -184,9 +184,9 @@ tail -f nohup.out
 # 2. Create staging environment file
 cat > .env.staging << 'EOF'
 # Remote Database Configuration
-DATABASE_URL=postgres://justin:PASSWORD@192.168.1.138:5432/emr_db
-DATABASE_HOST=192.168.1.138
-POSTGRES_USER=justin
+DATABASE_URL=postgres://justin:PASSWORD@:5432/emr_db
+DATABASE_HOST=
+POSTGRES_USER=
 POSTGRES_PASSWORD=PASSWORD
 POSTGRES_DB=emr_db
 
@@ -217,10 +217,10 @@ psql -h 192.168.1.138 -U justin -d emr_db -c "SELECT current_database();"
 
 **For Local Network Access:**
 - Connected to same network as server
-- Server IP: 192.168.1.138
+- Server IP: 
 
 **For External Access:**
-- Use domain: healthbridge.africinnovate.com
+- Use domain: 
 - VPN connection (if required)
 
 #### Important Notes
@@ -294,8 +294,6 @@ docker-compose exec db psql -U postgres -d emr_db
 # Local PostgreSQL
 psql -h localhost -U justin -d emr_db
 
-# Remote PostgreSQL
-psql -h 192.168.1.138 -U justin -d emr_db
 ```
 
 ---
@@ -391,7 +389,7 @@ sudo systemctl status health-bridge
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `DATABASE_URL` | Full PostgreSQL connection string | `postgres://user:pass@host:5432/db` |
-| `DATABASE_HOST` | PostgreSQL hostname or IP | `localhost` or `192.168.1.138` |
+| `DATABASE_HOST` | PostgreSQL hostname or IP | `localhost` |
 | `POSTGRES_USER` | Database username | `justin` |
 | `POSTGRES_PASSWORD` | Database password | `cejowisz` |
 | `POSTGRES_DB` | Database name | `emr_db` |
@@ -473,23 +471,7 @@ docker-compose up
 chmod +x scripts/*.sh
 ```
 
-### Remote Database Issues
 
-#### Cannot Connect to Staging Database
-
-**From local network:**
-```bash
-# Test connection
-ping 192.168.1.138
-telnet 192.168.1.138 5432
-```
-
-**From external network:**
-```bash
-# Use domain instead
-# Update .env.staging:
-DATABASE_HOST=healthbridge.africinnovate.com
-```
 
 #### Slow Query Performance
 

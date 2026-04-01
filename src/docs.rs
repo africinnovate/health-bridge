@@ -85,12 +85,12 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         (name = "admin", description = "Admin management endpoints"),
     ),
     info(
-        title = "Health Bridge API",
+        title = "RubiMedi Health API",
         version = "1.0.0",
-        description = "Health Bridge REST API",
+        description = "RubiMedi Health REST API",
         contact(
             name = "API Support",
-            email = "support@healthbridge.com"
+            email = "[EMAIL_ADDRESS]"
         ),
         license(
             name = "MIT",
