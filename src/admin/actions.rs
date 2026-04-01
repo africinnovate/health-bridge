@@ -31,18 +31,20 @@ pub struct HospitalActionResponse {
 
 pub fn update_specialist_status_with_audit(
     conn: &mut PgConnection,
-    specialist_id: Uuid,
+    target_user_id: Uuid,
     admin: &User,
     payload: SpecialistActionRequest,
 ) -> Result<SpecialistActionResponse, AppError> {
     use crate::schema::specialists::dsl::*;
 
-    // First check if specialist exists and get current state
+    // First check if specialist exists by user_id
     let existing_specialist = specialists
-        .find(specialist_id)
+        .filter(user_id.eq(target_user_id))
         .select(Specialist::as_select())
         .first::<Specialist>(conn)
-        .map_err(|_| AppError::NotFound("Specialist not found".into()))?;
+        .map_err(|_| AppError::NotFound("Specialist not found for this user".into()))?;
+
+    let specialist_id = existing_specialist.id;
 
     let mut action_descriptions = Vec::new();
 
@@ -121,18 +123,20 @@ pub fn update_specialist_status_with_audit(
 
 pub fn update_hospital_status_with_audit(
     conn: &mut PgConnection,
-    hospital_id: Uuid,
+    target_user_id: Uuid,
     admin: &User,
     payload: HospitalActionRequest,
 ) -> Result<HospitalActionResponse, AppError> {
     use crate::schema::hospitals::dsl::*;
 
-    // First check if hospital exists and get current state
+    // First check if hospital exists by user_id
     let existing_hospital = hospitals
-        .find(hospital_id)
+        .filter(user_id.eq(target_user_id))
         .select(Hospital::as_select())
         .first::<Hospital>(conn)
-        .map_err(|_| AppError::NotFound("Hospital not found".into()))?;
+        .map_err(|_| AppError::NotFound("Hospital not found for this user".into()))?;
+
+    let hospital_id = existing_hospital.id;
 
     if payload.license_status.is_none() {
         return Err(AppError::BadRequest(
