@@ -217,6 +217,7 @@ pub struct AdminHospitalProfileResponse {
     pub country: String,
     pub primary_phone: String,
     pub email: Option<String>,
+    pub profile_image: Option<String>,
     pub license_status: bool,
     pub contact_person: crate::handlers::patients::ProfileResponse,
     pub has_blood_bank: bool,

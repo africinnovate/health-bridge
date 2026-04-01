@@ -433,6 +433,7 @@ pub fn get_admin_hospital_profile(
         country: hospital.country,
         primary_phone: hospital.primary_phone,
         email: hospital.email,
+        profile_image: hospital.profile_image,
         license_status: hospital.license_status,
         contact_person: crate::handlers::patients::ProfileResponse::from(user),
         has_blood_bank: hospital.has_blood_bank,

@@ -26,6 +26,7 @@ struct UpdateHospitalChangeset {
     emergency_phone: Option<String>,
     email: Option<String>,
     accreditation_doc_url: Option<String>,
+    profile_image: Option<String>,
     has_blood_bank: Option<bool>,
     accepting_donors: Option<bool>,
     donating_operating_hours: Option<String>,
@@ -68,6 +69,7 @@ pub fn create_hospital(
                 email.eq(&payload.email),
                 license_number.eq(payload.license_number),
                 accreditation_doc_url.eq(payload.accreditation_doc_url),
+                profile_image.eq(payload.profile_image),
                 has_blood_bank.eq(payload.has_blood_bank),
                 accepting_donors.eq(payload.accepting_donors),
                 donating_operating_hours.eq(payload.donating_operating_hours),
@@ -159,6 +161,7 @@ pub fn update_hospital(
         emergency_phone: payload.emergency_phone,
         email: payload.email,
         accreditation_doc_url: payload.accreditation_doc_url,
+        profile_image: payload.profile_image,
         has_blood_bank: payload.has_blood_bank,
         accepting_donors: payload.accepting_donors,
         donating_operating_hours: payload.donating_operating_hours,
@@ -269,6 +272,33 @@ pub fn update_accreditation_doc(
             .filter(user_id.eq(user.id)),
     )
     .set(accreditation_doc_url.eq(url))
+    .returning(Hospital::as_select())
+    .get_result::<Hospital>(conn)
+    .optional()?;
+
+    match updated {
+        Some(hospital) => Ok(hospital),
+        None => Err(AppError::NotFound(
+            "Hospital not found or unauthorized".into(),
+        )),
+    }
+}
+
+/// Update hospital profile image URL
+pub fn update_hospital_image(
+    conn: &mut PgConnection,
+    hospital_id_: Uuid,
+    user: &User,
+    url: &str,
+) -> Result<Hospital, AppError> {
+    use crate::schema::hospitals::dsl::*;
+
+    let updated = diesel::update(
+        hospitals
+            .filter(id.eq(hospital_id_))
+            .filter(user_id.eq(user.id)),
+    )
+    .set(profile_image.eq(url))
     .returning(Hospital::as_select())
     .get_result::<Hospital>(conn)
     .optional()?;

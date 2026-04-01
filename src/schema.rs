@@ -164,6 +164,7 @@ diesel::table! {
         email_verified -> Bool,
         license_number -> Varchar,
         accreditation_doc_url -> Text,
+        profile_image -> Nullable<Varchar>,
         license_status -> Bool,
         has_blood_bank -> Bool,
         accepting_donors -> Bool,

@@ -42,6 +42,7 @@ pub struct CreateHospitalRequest {
     pub email: Option<String>,
     pub license_number: String,
     pub accreditation_doc_url: String,
+    pub profile_image: Option<String>,
     pub has_blood_bank: bool,
     pub accepting_donors: bool,
     pub donating_operating_hours: Option<String>,
@@ -68,6 +69,7 @@ pub struct UpdateHospitalRequest {
     pub emergency_phone: Option<String>,
     pub email: Option<String>,
     pub accreditation_doc_url: Option<String>,
+    pub profile_image: Option<String>,
     pub has_blood_bank: Option<bool>,
     pub accepting_donors: Option<bool>,
     pub donating_operating_hours: Option<String>,
@@ -89,6 +91,7 @@ pub struct HospitalResponse {
     pub email: Option<String>,
     pub license_number: String,
     pub accreditation_doc_url: String,
+    pub profile_image: Option<String>,
     pub license_status: bool,
     pub has_blood_bank: bool,
     pub accepting_donors: bool,
@@ -154,6 +157,7 @@ pub async fn create_hospital(
         email: hospital.email,
         license_number: hospital.license_number,
         accreditation_doc_url: hospital.accreditation_doc_url,
+        profile_image: hospital.profile_image,
         license_status: hospital.license_status,
         has_blood_bank: hospital.has_blood_bank,
         accepting_donors: hospital.accepting_donors,
@@ -206,6 +210,7 @@ pub async fn update_hospital(
         email: hospital.email,
         license_number: hospital.license_number,
         accreditation_doc_url: hospital.accreditation_doc_url,
+        profile_image: hospital.profile_image,
         license_status: hospital.license_status,
         has_blood_bank: hospital.has_blood_bank,
         accepting_donors: hospital.accepting_donors,
@@ -628,6 +633,63 @@ pub async fn upload_accreditation_doc(
         url,
     ))
 }
+
+/// Upload hospital profile image
+///
+/// The field name must be 'image' or 'file' and the content type must be 'multipart/form-data'.
+#[utoipa::path(
+    post,
+    path = "/api/hospitals/upload-image/{hospital_id}",
+    params(
+        ("hospital_id" = Uuid, Path, description = "Hospital ID")
+    ),
+    request_body(content = String, content_type = "multipart/form-data"),
+    responses(
+        (status = 200, body = ApiResponse<String>)
+    ),
+    tag = "hospitals",
+    security(("bearer_auth" = []))
+)]
+pub async fn upload_hospital_image(
+    State(state): State<AppState>,
+    Path(hospital_id): Path<Uuid>,
+    Extension(user): Extension<User>,
+    mut multipart: axum::extract::Multipart,
+) -> Result<ApiResponse<String>, AppError> {
+    let mut image_data = Vec::new();
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::BadRequest(e.to_string()))?
+    {
+        let name = field.name().unwrap_or_default().to_string();
+        if name == "image" || name == "file" {
+            let data = field
+                .bytes()
+                .await
+                .map_err(|e| AppError::BadRequest(e.to_string()))?;
+            image_data = data.to_vec();
+            break;
+        }
+    }
+
+    if image_data.is_empty() {
+        return Err(AppError::BadRequest(
+            "No image file provided in 'image' or 'file' field".into(),
+        ));
+    }
+
+    let image_url = state.cloudinary_service.upload_image(image_data).await?;
+
+    let mut conn = state.pool.get()?;
+    hospitals::service::update_hospital_image(&mut conn, hospital_id, &user, &image_url)?;
+
+    Ok(ApiResponse::success_with_message(
+        "Hospital profile image uploaded successfully",
+        image_url,
+    ))
+}
 /// Update blood inventory for a specific blood type
 #[utoipa::path(
     patch,
@@ -695,6 +757,7 @@ pub async fn get_hospitals(
             email: hospital.email,
             license_number: hospital.license_number,
             accreditation_doc_url: hospital.accreditation_doc_url,
+            profile_image: hospital.profile_image,
             license_status: hospital.license_status,
             has_blood_bank: hospital.has_blood_bank,
             accepting_donors: hospital.accepting_donors,
@@ -747,6 +810,7 @@ pub async fn get_nearby_hospitals(
             email: hospital.email,
             license_number: hospital.license_number,
             accreditation_doc_url: hospital.accreditation_doc_url,
+            profile_image: hospital.profile_image,
             license_status: hospital.license_status,
             has_blood_bank: hospital.has_blood_bank,
             accepting_donors: hospital.accepting_donors,
@@ -797,6 +861,7 @@ pub async fn get_user_hospitals(
             email: hospital.email,
             license_number: hospital.license_number,
             accreditation_doc_url: hospital.accreditation_doc_url,
+            profile_image: hospital.profile_image,
             license_status: hospital.license_status,
             has_blood_bank: hospital.has_blood_bank,
             accepting_donors: hospital.accepting_donors,
@@ -847,6 +912,7 @@ pub async fn get_hospital_by_id(
         email: hospital.email,
         license_number: hospital.license_number,
         accreditation_doc_url: hospital.accreditation_doc_url,
+        profile_image: hospital.profile_image,
         license_status: hospital.license_status,
         has_blood_bank: hospital.has_blood_bank,
         accepting_donors: hospital.accepting_donors,

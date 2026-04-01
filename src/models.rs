@@ -175,6 +175,7 @@ pub struct Hospital {
     pub email_verified: bool,
     pub license_number: String,
     pub accreditation_doc_url: String,
+    pub profile_image: Option<String>,
     pub license_status: bool,
     pub has_blood_bank: bool,
     pub accepting_donors: bool,

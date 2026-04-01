@@ -43,6 +43,10 @@ pub fn protected_router() -> Router<AppState> {
             "/upload-accreditation/{hospital_id}",
             post(hospitals::upload_accreditation_doc),
         )
+        .route(
+            "/upload-image/{hospital_id}",
+            post(hospitals::upload_hospital_image),
+        )
         .route("/donors", get(hospitals::get_donors))
         .route("/donors/{donor_id}", patch(hospitals::update_donor))
         .route("/dashboard/stats", get(hospitals::get_dashboard_stats))

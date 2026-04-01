@@ -35,6 +35,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         hospitals::update_hospital_settings,
         hospitals::delete_hospital,
         hospitals::upload_accreditation_doc,
+        hospitals::upload_hospital_image,
         hospitals::get_donors,
         hospitals::update_donor,
         hospitals::get_donor_stats,
