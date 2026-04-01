@@ -37,6 +37,7 @@ pub struct AppointmentQuery {
     pub appointment_type: Option<AppointmentTypeEnum>,
     pub status: Option<AppointmentStatusEnum>,
     pub timeline: Option<String>,
+    pub specialist_id: Option<Uuid>,
 }
 
 pub fn create_appointment(
@@ -164,6 +165,10 @@ pub fn get_appointments(
 
     if let Some(s) = filters.status {
         query = query.filter(status.eq(s));
+    }
+
+    if let Some(sid) = filters.specialist_id {
+        query = query.filter(specialist_id.eq(sid));
     }
 
     if let Some(tl) = filters.timeline {

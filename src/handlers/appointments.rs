@@ -66,10 +66,11 @@ pub async fn create_appointment(
     params(
         ("appointment_type" = Option<AppointmentTypeEnum>, Query),
         ("status" = Option<AppointmentStatusEnum>, Query),
-        ("timeline" = Option<String>, Query, description = "Filter by timeframe (today, this_week, this_month, upcoming)")
+        ("timeline" = Option<String>, Query, description = "Filter by timeframe (today, this_week, this_month, upcoming)"),
+        ("specialist_id" = Option<Uuid>, Query)
     ),
     responses(
-        (status = 200, body = ApiResponse<Vec<Appointment>>),
+        (status = 200, body = ApiResponse<Vec<AppointmentResponse>>),
         (status = 401)
     ),
     tag = "appointments",
