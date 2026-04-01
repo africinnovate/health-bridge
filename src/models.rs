@@ -174,8 +174,8 @@ pub struct Hospital {
     pub email: Option<String>,
     pub email_verified: bool,
     pub license_number: String,
-    pub license_status: bool,
     pub accreditation_doc_url: String,
+    pub license_status: bool,
     pub has_blood_bank: bool,
     pub accepting_donors: bool,
     pub donating_operating_hours: Option<String>,
@@ -271,7 +271,7 @@ pub struct Specialty {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema, Associations)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Specialty))]
 #[diesel(table_name = specialists)]

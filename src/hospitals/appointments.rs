@@ -7,8 +7,8 @@ use uuid::Uuid;
 
 use crate::{
     error::AppError,
-    models::{Appointment, BloodRequest, Hospital, User},
-    schema::{appointments, blood_requests},
+    models::{Appointment, BloodRequest, Hospital, Specialist, Specialty, User},
+    schema::{appointments, blood_requests, specialists, specialties, users},
     utils::enums::{AppointmentStatusEnum, AppointmentTypeEnum, CancelledByEnum, Role},
 };
 
@@ -18,6 +18,9 @@ pub struct AppointmentResponse {
     pub user: User,
     pub hospital: Hospital,
     pub blood_request: BloodRequest,
+    pub specialist: User,
+    pub specialist_info: Option<Specialist>,
+    pub specialty: Option<Specialty>,
 }
 
 #[derive(Debug, Deserialize, Insertable, ToSchema)]
@@ -123,13 +126,19 @@ pub fn get_appointments(
         users::dsl as users_dsl,
     };
 
+    // Create the alias for the specialist user
+    diesel::alias!(users as specialist_user: SpecialistUser);
+
     let mut query = appointments
-        .inner_join(users_dsl::users.on(users_dsl::id.eq(user_id)))
+        .inner_join(users_dsl::users.on(users_dsl::id.eq(user_id))) // patient
+        .inner_join(specialist_user.on(specialist_user.field(users::id).eq(specialist_id))) // specialist
         .inner_join(hospitals_dsl::hospitals.on(hospitals_dsl::id.eq(hospital_id)))
         .inner_join(br_dsl::blood_requests.on(br_dsl::id.eq(blood_request_id)))
+        .left_join(specialists::table.on(specialist_user.field(users::id).eq(specialists::user_id)))
+        .left_join(specialties::table.on(specialists::specialty_id.eq(specialties::id)))
         .into_boxed();
 
-    // 🔐 Access control
+    // Access control
     match user_ctx.role {
         Role::Hospital => {
             let hospital_id_owned = hospitals_dsl::hospitals
@@ -210,23 +219,30 @@ pub fn get_appointments(
     }
 
     let rows = query
-        .select((
-            Appointment::as_select(),
-            User::as_select(),
-            Hospital::as_select(),
-            BloodRequest::as_select(),
-        ))
         .order(created_at.desc())
-        .load::<(Appointment, User, Hospital, BloodRequest)>(conn)?;
+        .load::<(
+            Appointment,
+            User,      // patient/donor
+            User,      // specialist
+            Hospital,
+            BloodRequest,
+            Option<Specialist>,
+            Option<Specialty>,
+        )>(conn)?;
 
     Ok(rows
         .into_iter()
         .map(
-            |(appointment, user, hospital, blood_request)| AppointmentResponse {
-                appointment,
-                user,
-                hospital,
-                blood_request,
+            |(appointment, user, specialist, hospital, blood_request, specialist_info, specialty)| {
+                AppointmentResponse {
+                    appointment,
+                    user,
+                    hospital,
+                    blood_request,
+                    specialist,
+                    specialist_info,
+                    specialty,
+                }
             },
         )
         .collect())
