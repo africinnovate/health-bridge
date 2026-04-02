@@ -463,7 +463,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[diesel(table_name = appointments)]
     struct NewAppointment<'a> {
         id: Uuid,
-        blood_request_id: Uuid,
+        blood_request_id: Option<Uuid>,
         hospital_id: Uuid,
         user_id: Uuid,
         specialist_id: Uuid,
@@ -479,7 +479,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let appointment_1 = NewAppointment {
         id: Uuid::new_v4(),
-        blood_request_id: blood_request_1_id,
+        blood_request_id: Some(blood_request_1_id),
         hospital_id,
         user_id: patient_user_id,
         specialist_id: specialist_user_id,
@@ -499,7 +499,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let appointment_2 = NewAppointment {
         id: Uuid::new_v4(),
-        blood_request_id: blood_request_2_id,
+        blood_request_id: Some(blood_request_2_id),
         hospital_id,
         user_id: donor_user_id,
         specialist_id: specialist_user_id,
@@ -519,7 +519,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let appointment_3 = NewAppointment {
         id: Uuid::new_v4(),
-        blood_request_id: blood_request_1_id,
+        blood_request_id: Some(blood_request_1_id),
         hospital_id,
         user_id: donor_user_id,
         specialist_id: specialist_user_id,

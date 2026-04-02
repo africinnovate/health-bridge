@@ -245,7 +245,7 @@ pub struct BloodRequest {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Appointment {
     pub id: Uuid,
-    pub blood_request_id: Uuid,
+    pub blood_request_id: Option<Uuid>,
     pub hospital_id: Uuid,
     pub user_id: Uuid,
     pub specialist_id: Uuid,

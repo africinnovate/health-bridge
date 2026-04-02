@@ -17,7 +17,7 @@ pub struct AppointmentResponse {
     pub appointment: Appointment,
     pub user: User,
     pub hospital: Hospital,
-    pub blood_request: BloodRequest,
+    pub blood_request: Option<BloodRequest>,
     pub specialist: User,
     pub specialist_info: Option<Specialist>,
     pub specialty: Option<Specialty>,
@@ -26,7 +26,7 @@ pub struct AppointmentResponse {
 #[derive(Debug, Deserialize, Insertable, ToSchema)]
 #[diesel(table_name = appointments)]
 pub struct CreateAppointment {
-    pub blood_request_id: Uuid,
+    pub blood_request_id: Option<Uuid>,
     pub specialist_id: Uuid,
     pub appointment_type: AppointmentTypeEnum,
     pub scheduled_time: DateTime<Utc>,
@@ -52,15 +52,23 @@ pub fn create_appointment(
         ));
     }
 
-    let request = blood_requests::table
-        .filter(blood_requests::id.eq(payload.blood_request_id))
-        .first::<BloodRequest>(conn)
-        .map_err(|_| AppError::NotFound("Blood request not found".into()))?;
+    // Look up hospital_id — required from blood request when provided, else must be supplied
+    let hospital_id = if let Some(br_id) = payload.blood_request_id {
+        let request = blood_requests::table
+            .filter(blood_requests::id.eq(br_id))
+            .first::<BloodRequest>(conn)
+            .map_err(|_| AppError::NotFound("Blood request not found".into()))?;
+        request.hospital_id
+    } else {
+        return Err(AppError::BadRequest(
+            "hospital_id is required when blood_request_id is not provided".into(),
+        ));
+    };
 
     diesel::insert_into(appointments::table)
         .values((
             appointments::blood_request_id.eq(payload.blood_request_id),
-            appointments::hospital_id.eq(request.hospital_id),
+            appointments::hospital_id.eq(hospital_id),
             appointments::user_id.eq(user.id),
             appointments::specialist_id.eq(payload.specialist_id),
             appointments::appointment_type.eq(payload.appointment_type),
@@ -136,7 +144,7 @@ pub fn get_appointments(
         .inner_join(users_dsl::users.on(users_dsl::id.eq(user_id))) // patient
         .inner_join(specialist_user.on(specialist_user.field(users::id).eq(specialist_id))) // specialist
         .inner_join(hospitals_dsl::hospitals.on(hospitals_dsl::id.eq(hospital_id)))
-        .inner_join(br_dsl::blood_requests.on(br_dsl::id.eq(blood_request_id)))
+        .left_join(br_dsl::blood_requests.on(br_dsl::id.eq(blood_request_id.assume_not_null())))
         .left_join(specialists::table.on(specialist_user.field(users::id).eq(specialists::user_id)))
         .left_join(specialties::table.on(specialists::specialty_id.eq(specialties::id)))
         .into_boxed();
@@ -232,7 +240,7 @@ pub fn get_appointments(
             User,      // patient/donor
             User,      // specialist
             Hospital,
-            BloodRequest,
+            Option<BloodRequest>,
             Option<Specialist>,
             Option<Specialty>,
         )>(conn)?;
