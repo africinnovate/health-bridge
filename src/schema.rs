@@ -231,6 +231,7 @@ diesel::table! {
 
         appointment_type -> AppointmentTypeType,
         status -> AppointmentStatusType,
+        notes -> Nullable<Text>,
 
         scheduled_time -> Timestamptz,
         previous_time -> Nullable<Timestamptz>,
@@ -239,6 +240,7 @@ diesel::table! {
         cancelled_by_id -> Nullable<Uuid>,
         cancelled_reason -> Nullable<Text>,
         cancelled_at -> Nullable<Timestamptz>,
+
 
         created_at -> Timestamptz,
     }

@@ -700,7 +700,8 @@ pub fn get_recent_activity(
     let recent_appts = appt::appointments
         .filter(appt::hospital_id.eq(h_id))
         .filter(appt::created_at.gt(thirty_days_ago))
-        .load::<crate::models::Appointment>(conn)?;
+        .select(crate::models::Appointment::as_select())
+        .load(conn)?;
 
     for appt in recent_appts {
         activities.push(RecentActivityItem {

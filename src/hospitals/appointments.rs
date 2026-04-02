@@ -30,6 +30,7 @@ pub struct CreateAppointment {
     pub specialist_id: Uuid,
     pub appointment_type: AppointmentTypeEnum,
     pub scheduled_time: DateTime<Utc>,
+    pub notes: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -65,6 +66,7 @@ pub fn create_appointment(
             appointments::appointment_type.eq(payload.appointment_type),
             appointments::status.eq(AppointmentStatusEnum::Created),
             appointments::scheduled_time.eq(payload.scheduled_time),
+            appointments::notes.eq(payload.notes),
         ))
         .returning(Appointment::as_select())
         .get_result(conn)
@@ -317,7 +319,8 @@ fn assert_hospital_owns_appointment(
     appointments::table
         .filter(appointments::id.eq(appointment_id))
         // .filter(appointments::hospital_id.eq(hospital_id)) use ACL here later
-        .first::<Appointment>(conn)
+        .select(Appointment::as_select())
+        .first(conn)
         .map_err(|_| AppError::Unauthorized("Appointment not owned by hospital".into()))
 }
 
@@ -329,6 +332,7 @@ fn assert_user_owns_appointment(
     appointments::table
         .filter(appointments::id.eq(appointment_id))
         .filter(appointments::user_id.eq(user_id))
-        .first::<Appointment>(conn)
+        .select(Appointment::as_select())
+        .first(conn)
         .map_err(|_| AppError::Unauthorized("Appointment not owned by user".into()))
 }

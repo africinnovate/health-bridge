@@ -253,6 +253,7 @@ pub struct Appointment {
     pub appointment_type: AppointmentTypeEnum,
     pub status: AppointmentStatusEnum,
 
+    pub notes: Option<String>,
     pub scheduled_time: DateTime<Utc>,
     pub previous_time: Option<DateTime<Utc>>,
 
