@@ -225,7 +225,7 @@ diesel::table! {
         id -> Uuid,
 
         blood_request_id -> Nullable<Uuid>,
-        hospital_id -> Uuid,
+        hospital_id -> Nullable<Uuid>,
         user_id -> Uuid,
         specialist_id -> Uuid,
 

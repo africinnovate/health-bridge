@@ -16,11 +16,11 @@ use crate::{
 pub struct AppointmentResponse {
     pub appointment: Appointment,
     pub user: User,
-    pub hospital: Hospital,
     pub blood_request: Option<BloodRequest>,
     pub specialist: User,
     pub specialist_info: Option<Specialist>,
     pub specialty: Option<Specialty>,
+    pub hospital: Option<Hospital>,
 }
 
 #[derive(Debug, Deserialize, Insertable, ToSchema)]
@@ -52,17 +52,14 @@ pub fn create_appointment(
         ));
     }
 
-    // Look up hospital_id — required from blood request when provided, else must be supplied
     let hospital_id = if let Some(br_id) = payload.blood_request_id {
         let request = blood_requests::table
             .filter(blood_requests::id.eq(br_id))
             .first::<BloodRequest>(conn)
             .map_err(|_| AppError::NotFound("Blood request not found".into()))?;
-        request.hospital_id
+        Some(request.hospital_id)
     } else {
-        return Err(AppError::BadRequest(
-            "hospital_id is required when blood_request_id is not provided".into(),
-        ));
+        None
     };
 
     diesel::insert_into(appointments::table)
@@ -143,7 +140,7 @@ pub fn get_appointments(
     let mut query = appointments
         .inner_join(users_dsl::users.on(users_dsl::id.eq(user_id))) // patient
         .inner_join(specialist_user.on(specialist_user.field(users::id).eq(specialist_id))) // specialist
-        .inner_join(hospitals_dsl::hospitals.on(hospitals_dsl::id.eq(hospital_id)))
+        .left_join(hospitals_dsl::hospitals.on(hospitals_dsl::id.eq(hospital_id.assume_not_null())))
         .left_join(br_dsl::blood_requests.on(br_dsl::id.eq(blood_request_id.assume_not_null())))
         .left_join(specialists::table.on(specialist_user.field(users::id).eq(specialists::user_id)))
         .left_join(specialties::table.on(specialists::specialty_id.eq(specialties::id)))
@@ -239,7 +236,7 @@ pub fn get_appointments(
             Appointment,
             User,      // patient/donor
             User,      // specialist
-            Hospital,
+            Option<Hospital>,
             Option<BloodRequest>,
             Option<Specialist>,
             Option<Specialty>,

@@ -464,7 +464,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     struct NewAppointment<'a> {
         id: Uuid,
         blood_request_id: Option<Uuid>,
-        hospital_id: Uuid,
+        hospital_id: Option<Uuid>,
         user_id: Uuid,
         specialist_id: Uuid,
         appointment_type: health_bridge::utils::enums::AppointmentTypeEnum,
@@ -480,7 +480,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let appointment_1 = NewAppointment {
         id: Uuid::new_v4(),
         blood_request_id: Some(blood_request_1_id),
-        hospital_id,
+        hospital_id: Some(hospital_id),
         user_id: patient_user_id,
         specialist_id: specialist_user_id,
         appointment_type: health_bridge::utils::enums::AppointmentTypeEnum::Patient,
@@ -500,7 +500,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let appointment_2 = NewAppointment {
         id: Uuid::new_v4(),
         blood_request_id: Some(blood_request_2_id),
-        hospital_id,
+        hospital_id: Some(hospital_id),
         user_id: donor_user_id,
         specialist_id: specialist_user_id,
         appointment_type: health_bridge::utils::enums::AppointmentTypeEnum::Donor,
@@ -520,7 +520,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let appointment_3 = NewAppointment {
         id: Uuid::new_v4(),
         blood_request_id: Some(blood_request_1_id),
-        hospital_id,
+        hospital_id: Some(hospital_id),
         user_id: donor_user_id,
         specialist_id: specialist_user_id,
         appointment_type: health_bridge::utils::enums::AppointmentTypeEnum::Patient,

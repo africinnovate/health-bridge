@@ -246,7 +246,7 @@ pub struct BloodRequest {
 pub struct Appointment {
     pub id: Uuid,
     pub blood_request_id: Option<Uuid>,
-    pub hospital_id: Uuid,
+    pub hospital_id: Option<Uuid>,
     pub user_id: Uuid,
     pub specialist_id: Uuid,
 
