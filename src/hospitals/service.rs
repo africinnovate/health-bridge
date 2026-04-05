@@ -602,7 +602,7 @@ pub fn get_dashboard_stats(
         .first::<Uuid>(conn)
         .optional()?;
 
-    let (active_requests, appts_count) = if let Some(h_id) = hospital_id {
+    let (active_requests, appts_count, urgent_requests) = if let Some(h_id) = hospital_id {
         let req_count = br::blood_requests
             .filter(br::hospital_id.eq(h_id))
             .filter(br::request_status.ne(RequestStatusTypeEnum::Completed))
@@ -619,17 +619,18 @@ pub fn get_dashboard_stats(
             .count()
             .get_result::<i64>(conn)?;
 
-        (req_count, appts)
-    } else {
-        (0, 0)
-    };
+        let urgent_reqs = br::blood_requests
+            .filter(br::hospital_id.eq(h_id))
+            .filter(br::urgency.eq(UrgencyTypeEnum::Urgent))
+            .filter(br::request_status.ne(RequestStatusTypeEnum::Completed))
+            .filter(br::request_status.ne(RequestStatusTypeEnum::Cancelled))
+            .count()
+            .get_result::<i64>(conn)?;
 
-    let urgent_requests = br::blood_requests
-        .filter(br::urgency.eq(UrgencyTypeEnum::Urgent))
-        .filter(br::request_status.ne(RequestStatusTypeEnum::Completed))
-        .filter(br::request_status.ne(RequestStatusTypeEnum::Cancelled))
-        .count()
-        .get_result::<i64>(conn)?;
+        (req_count, appts, urgent_reqs)
+    } else {
+        (0, 0, 0)
+    };
 
     Ok(HospitalDashboardStats {
         active_blood_requests: active_requests,
