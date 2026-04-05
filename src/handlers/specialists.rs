@@ -140,6 +140,8 @@ pub async fn get_specialists(
             email: user.email,
             phone: user.phone,
             gender: user.gender,
+            city: user.city,
+            state: user.state,
             image_url: user.image_url,
             email_verified: user.email_verified,
             consultation_preference: user.consultation_preference,
