@@ -32,6 +32,7 @@ pub enum Gender {
 pub enum Role {
     Patient,
     Donor,
+    PatientDonor,
     Specialist,
     Hospital,
     Admin,
@@ -404,6 +405,7 @@ impl ToSql<RoleType, Pg> for Role {
         match *self {
             Role::Patient => out.write_all(b"patient")?,
             Role::Donor => out.write_all(b"donor")?,
+            Role::PatientDonor => out.write_all(b"patientdonor")?,
             Role::Specialist => out.write_all(b"specialist")?,
             Role::Hospital => out.write_all(b"hospital")?,
             Role::Admin => out.write_all(b"admin")?,
@@ -417,6 +419,7 @@ impl FromSql<RoleType, Pg> for Role {
         match bytes.as_bytes() {
             b"patient" => Ok(Role::Patient),
             b"donor" => Ok(Role::Donor),
+            b"patientdonor" => Ok(Role::PatientDonor),
             b"specialist" => Ok(Role::Specialist),
             b"hospital" => Ok(Role::Hospital),
             b"admin" => Ok(Role::Admin),
@@ -432,6 +435,7 @@ impl FromStr for Role {
         match value.to_lowercase().as_str() {
             "patient" => Ok(Role::Patient),
             "donor" => Ok(Role::Donor),
+            "patientdonor" => Ok(Role::PatientDonor),
             "specialist" => Ok(Role::Specialist),
             "hospital" => Ok(Role::Hospital),
             "admin" => Ok(Role::Admin),
@@ -621,6 +625,7 @@ impl std::fmt::Display for Role {
         match self {
             Role::Patient => write!(f, "patient"),
             Role::Donor => write!(f, "donor"),
+            Role::PatientDonor => write!(f, "patientdonor"),
             Role::Specialist => write!(f, "specialist"),
             Role::Hospital => write!(f, "hospital"),
             Role::Admin => write!(f, "admin"),

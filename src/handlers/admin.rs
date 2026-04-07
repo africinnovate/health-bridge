@@ -259,7 +259,7 @@ pub async fn get_user_profile(
         .map_err(|_| AppError::NotFound("User not found".into()))?;
 
     let response = match target_user.role {
-        Role::Patient | Role::Donor => {
+        Role::Patient | Role::Donor | Role::PatientDonor => {
             let profile = dashboard::get_admin_patient_profile(&mut conn, user_id)?;
             AdminUserProfileResponse::Patient(profile)
         }

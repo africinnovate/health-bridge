@@ -27,6 +27,8 @@ pub struct UpdateProfileRequest {
     pub gender: Option<Gender>,
     pub dob: Option<NaiveDate>,
     pub address: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
     pub image_url: Option<String>,
 }
 
@@ -40,6 +42,8 @@ pub struct ProfileResponse {
     pub gender: Option<Gender>,
     pub dob: Option<NaiveDate>,
     pub address: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
     pub image_url: Option<String>,
     pub role: String,
     pub email_verified: bool,
@@ -68,6 +72,8 @@ pub struct PatientProfileResponse {
     pub role: String,
     pub email_verified: bool,
     pub address: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
     pub image_url: Option<String>,
     pub consultation_preference: Option<ConsultationTypeEnum>,
 
@@ -108,6 +114,8 @@ impl From<User> for ProfileResponse {
             phone: user.phone,
             gender: user.gender,
             address: user.address,
+            city: user.city,
+            state: user.state,
             image_url: user.image_url,
             dob: user.dob,
             role: user.role.to_string(),
@@ -159,6 +167,8 @@ pub async fn update_profile(
             dob.eq(&payload.dob),
             image_url.eq(&payload.image_url),
             address.eq(&payload.address),
+            city.eq(&payload.city),
+            state.eq(&payload.state),
         ))
         .get_result::<User>(&mut conn)?;
 
@@ -197,6 +207,8 @@ pub async fn update_profile(
         phone: updated_user.phone,
         gender: updated_user.gender,
         address: updated_user.address,
+        city: updated_user.city,
+        state: updated_user.state,
         dob: updated_user.dob,
         image_url: updated_user.image_url,
         role: updated_user.role.to_string(),
@@ -287,6 +299,8 @@ pub fn fetch_patient_profile(
         phone: user.phone,
         gender: user.gender,
         address: user.address,
+        city: user.city,
+        state: user.state,
         dob: user.dob,
         image_url: user.image_url,
         role: user.role.to_string(),

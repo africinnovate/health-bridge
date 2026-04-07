@@ -108,7 +108,7 @@ pub fn reschedule_appointment(
         Role::Hospital => {
             assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
         }
-        Role::Donor | Role::Patient => {
+        Role::Donor | Role::Patient | Role::PatientDonor => {
             assert_user_owns_appointment(conn, appointment_id, user.id)?;
         }
         _ => return Err(AppError::Unauthorized("Invalid role".into())),
@@ -159,7 +159,7 @@ pub fn get_appointments(
         Role::Specialist => {
             query = query.filter(specialist_id.eq(user_ctx.id));
         }
-        Role::Donor | Role::Patient => {
+        Role::Donor | Role::Patient | Role::PatientDonor => {
             query = query.filter(user_id.eq(user_ctx.id));
         }
         Role::Admin => {}
@@ -266,20 +266,22 @@ pub fn cancel_appointment(
     user: &User,
     reason: Option<String>,
 ) -> Result<Appointment, AppError> {
-    match user.role {
-        Role::Hospital => {
-            assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
-        }
-        Role::Donor | Role::Patient => {
-            assert_user_owns_appointment(conn, appointment_id, user.id)?;
+    let appointment = match user.role {
+        Role::Hospital => assert_hospital_owns_appointment(conn, appointment_id, user.id)?,
+        Role::Donor | Role::Patient | Role::PatientDonor => {
+            assert_user_owns_appointment(conn, appointment_id, user.id)?
         }
         _ => return Err(AppError::Unauthorized("Invalid role".into())),
-    }
+    };
 
     let cancelled_by = match user.role {
         Role::Hospital => CancelledByEnum::Hospital,
         Role::Donor => CancelledByEnum::Donor,
         Role::Patient => CancelledByEnum::Patient,
+        Role::PatientDonor => match appointment.appointment_type {
+            AppointmentTypeEnum::Donor => CancelledByEnum::Donor,
+            AppointmentTypeEnum::Patient => CancelledByEnum::Patient,
+        },
         _ => unreachable!(), // already guarded above
     };
 

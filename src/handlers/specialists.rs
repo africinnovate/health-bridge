@@ -261,7 +261,7 @@ pub async fn add_specialty(
 ) -> Result<ApiResponse<crate::models::Specialty>, AppError> {
     use crate::utils::enums::Role;
 
-    if matches!(user.role, Role::Donor | Role::Patient) {
+    if matches!(user.role, Role::Donor | Role::Patient | Role::PatientDonor) {
         return Err(AppError::Unauthorized(
             "Access restricted for patients and donors".into(),
         ));

@@ -470,10 +470,10 @@ pub fn get_donors(
     use crate::schema::{patients::dsl as p, users::dsl as u};
     use crate::utils::enums::Role;
 
-    // We only want users with Role::Donor or Role::Patient
+    // We only want users with Role::Donor, Role::Patient, or Role::PatientDonor
     let mut query = u::users
         .left_join(p::patients.on(p::user_id.eq(u::id)))
-        .filter(u::role.eq(Role::Donor).or(u::role.eq(Role::Patient)))
+        .filter(u::role.eq(Role::Donor).or(u::role.eq(Role::Patient)).or(u::role.eq(Role::PatientDonor)))
         .filter(u::deleted_at.is_null())
         .into_boxed();
 
