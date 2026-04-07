@@ -425,3 +425,45 @@ pub async fn update_medical_info(
         patient,
     ))
 }
+
+/// Opt-in to PatientDonor role
+///
+/// Allows a user who is currently a Patient or a Donor to upgrade their role to PatientDonor.
+#[utoipa::path(
+    put,
+    path = "/api/patients/opt-in-patient-donor",
+    responses(
+        (status = 200, description = "Successfully opted in", body = ApiResponse<PatientProfileResponse>),
+        (status = 400, description = "Bad Request"),
+        (status = 401, description = "Unauthorized"),
+        (status = 500)
+    ),
+    tag = "patients",
+    security(("bearer_auth" = []))
+)]
+pub async fn opt_in_patient_donor(
+    State(app_state): State<AppState>,
+    Extension(current_user): Extension<User>,
+) -> Result<ApiResponse<PatientProfileResponse>, AppError> {
+    use crate::utils::enums::Role;
+    
+    if current_user.role != Role::Patient && current_user.role != Role::Donor && current_user.role != Role::PatientDonor {
+        return Err(AppError::BadRequest("Only current Patients or Donors can opt into the dual role".into()));
+    }
+    
+    let mut conn = app_state.pool.get()?;
+    
+    if current_user.role != Role::PatientDonor {
+        use crate::schema::users::dsl::*;
+        diesel::update(users.filter(id.eq(current_user.id)))
+            .set(role.eq(Role::PatientDonor))
+            .execute(&mut conn)?;
+    }
+
+    let response = fetch_patient_profile(&mut conn, current_user.id)?;
+    
+    Ok(ApiResponse::success_with_message(
+        "Successfully opted in to PatientDonor role",
+        response,
+    ))
+}

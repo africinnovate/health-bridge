@@ -23,6 +23,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         patients::update_profile,
         patients::delete_account,
         patients::update_medical_info,
+        patients::opt_in_patient_donor,
         hospitals::get_hospitals,
         hospitals::get_user_hospitals,
         hospitals::get_hospital_by_id,
