@@ -9,7 +9,7 @@ use crate::utils::response::ApiResponse;
 
 #[derive(Debug)]
 pub enum AppError {
-    DbError,
+    DbError(String),
     UserAlreadyExists,
     NotFound(String),
     Unauthorized(String),
@@ -26,9 +26,9 @@ impl IntoResponse for AppError {
             }
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            AppError::DbError => (
+            AppError::DbError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Database error".to_string(),
+                msg,
             ),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::InternalServerError => (
@@ -48,14 +48,14 @@ impl IntoResponse for AppError {
 impl From<diesel::result::Error> for AppError {
     fn from(err: diesel::result::Error) -> Self {
         error!("Database error: {:?}", err);
-        AppError::DbError
+        AppError::DbError(err.to_string())
     }
 }
 
 impl From<r2d2::Error> for AppError {
     fn from(err: r2d2::Error) -> Self {
         error!("Connection pool error: {:?}", err);
-        AppError::DbError
+        AppError::DbError(err.to_string())
     }
 }
 
