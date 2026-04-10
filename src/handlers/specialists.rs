@@ -354,3 +354,49 @@ pub async fn upload_license(
         url,
     ))
 }
+
+/// Get patient profile for a specialist
+///
+/// Retrieves a patient's full profile including appointments and donation history.
+#[utoipa::path(
+    get,
+    path = "/api/specialists/patients/{id}",
+    responses(
+        (status = 200, body = ApiResponse<crate::admin::dtos::AdminPatientProfileResponse>),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "User not found"),
+        (status = 500)
+    ),
+    tag = "specialists",
+    security(("bearer_auth" = []))
+)]
+pub async fn get_patient_profile(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(patient_id): Path<Uuid>,
+) -> Result<ApiResponse<crate::admin::dtos::AdminPatientProfileResponse>, AppError> {
+    use crate::schema::users;
+    use crate::utils::enums::Role;
+
+    if user.role != Role::Specialist {
+        return Err(AppError::Unauthorized("Only specialists can access this".into()));
+    }
+
+    let mut conn = state.pool.get()?;
+
+    // Fetch user to check that they are actually a patient
+    let target_user = users::table
+        .find(patient_id)
+        .select(User::as_select())
+        .first::<User>(&mut conn)
+        .map_err(|_| AppError::NotFound("Patient not found".into()))?;
+
+    match target_user.role {
+        Role::Patient | Role::Donor | Role::PatientDonor => {
+            let profile = crate::admin::dashboard::get_admin_patient_profile(&mut conn, patient_id)?;
+            Ok(ApiResponse::success(profile))
+        }
+        _ => Err(AppError::BadRequest("User is not a patient".into()))
+    }
+}

@@ -111,7 +111,17 @@ pub fn reschedule_appointment(
         Role::Donor | Role::Patient | Role::PatientDonor => {
             assert_user_owns_appointment(conn, appointment_id, user.id)?;
         }
-        _ => return Err(AppError::Unauthorized("Invalid role".into())),
+        Role::Specialist => {
+            assert_specialist_owns_appointment(conn, appointment_id, user.id)?;
+        }
+        Role::Admin => {
+            // user role is admin. if role is admin, allow it.
+            appointments::table
+                .filter(appointments::id.eq(appointment_id))
+                .select(Appointment::as_select())
+                .first(conn)
+                .map_err(|_| AppError::NotFound("Appointment not found".into()))?;
+        }
     }
 
     diesel::update(appointments::table.find(appointment_id))
@@ -271,6 +281,14 @@ pub fn cancel_appointment(
         Role::Donor | Role::Patient | Role::PatientDonor => {
             assert_user_owns_appointment(conn, appointment_id, user.id)?
         }
+        Role::Specialist => assert_specialist_owns_appointment(conn, appointment_id, user.id)?,
+        Role::Admin => {
+            appointments::table
+                .filter(appointments::id.eq(appointment_id))
+                .select(Appointment::as_select())
+                .first(conn)
+                .map_err(|_| AppError::NotFound("Appointment not found".into()))?
+        }
         _ => return Err(AppError::Unauthorized("Invalid role".into())),
     };
 
@@ -342,4 +360,17 @@ fn assert_user_owns_appointment(
         .select(Appointment::as_select())
         .first(conn)
         .map_err(|_| AppError::Unauthorized("Appointment not owned by user".into()))
+}
+
+fn assert_specialist_owns_appointment(
+    conn: &mut PgConnection,
+    appointment_id: Uuid,
+    specialist_id: Uuid,
+) -> Result<Appointment, AppError> {
+    appointments::table
+        .filter(appointments::id.eq(appointment_id))
+        .filter(appointments::specialist_id.eq(specialist_id))
+        .select(Appointment::as_select())
+        .first(conn)
+        .map_err(|_| AppError::Unauthorized("Appointment not owned by specialist".into()))
 }

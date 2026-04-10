@@ -52,6 +52,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         specialists::add_specialty,
         specialists::list_specialties,
         specialists::upload_license,
+        specialists::get_patient_profile,
         appointments::get_appointments,
         appointments::create_appointment,
         appointments::confirm_appointment,

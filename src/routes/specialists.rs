@@ -17,4 +17,5 @@ pub fn protected_router() -> Router<AppState> {
         .route("/{id}", put(specialists::update_specialist))
         .route("/specialties", post(specialists::add_specialty))
         .route("/license", post(specialists::upload_license))
+        .route("/patients/{id}", get(specialists::get_patient_profile))
 }
