@@ -296,7 +296,7 @@ impl FromSql<CancelledByType, Pg> for CancelledByEnum {
         match bytes.as_bytes() {
             b"hospital" => Ok(CancelledByEnum::Hospital),
             b"donor" => Ok(CancelledByEnum::Donor),
-            b"cancelled" => Ok(CancelledByEnum::Patient),
+            b"patient" => Ok(CancelledByEnum::Patient),
             _ => Err("Unrecognized enum variant for CancelledByEnum".into()),
         }
     }
