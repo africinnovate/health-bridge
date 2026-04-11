@@ -6,6 +6,7 @@ use crate::{
         social_accounts, specialist_availabilities, specialists, specialties, user_settings, users,
         wallets, bank_accounts, wallet_transactions,
         consultation_types, consultation_benefits, consultation_type_benefits,
+        consultation_packages, consultation_package_benefits,
     },
     utils::enums::{
         ActionTypeEnum, AppointmentStatusEnum, AppointmentTypeEnum, BloodTypeEnum, CancelledByEnum,
@@ -696,6 +697,105 @@ pub struct UpdateConsultationBenefit {
     pub title: Option<String>,
     pub description: Option<String>,
     pub is_active: Option<bool>,
+}
+
+// ---- Consultation Packages ----
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations, ToSchema)]
+#[diesel(belongs_to(Specialist))]
+#[diesel(belongs_to(ConsultationType))]
+#[diesel(table_name = consultation_packages)]
+pub struct ConsultationPackage {
+    pub id: Uuid,
+    pub specialist_id: Uuid,
+    pub consultation_type_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub custom_price: Option<BigDecimal>,
+    pub custom_duration_minutes: Option<i32>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Insertable, Deserialize, ToSchema)]
+#[diesel(table_name = consultation_packages)]
+pub struct NewConsultationPackage {
+    pub specialist_id: Uuid,
+    pub consultation_type_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub custom_price: Option<BigDecimal>,
+    pub custom_duration_minutes: Option<i32>,
+}
+
+#[derive(AsChangeset, Deserialize, ToSchema)]
+#[diesel(table_name = consultation_packages)]
+pub struct UpdateConsultationPackage {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub custom_price: Option<BigDecimal>,
+    pub custom_duration_minutes: Option<i32>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, Associations, ToSchema)]
+#[diesel(belongs_to(ConsultationPackage, foreign_key = package_id))]
+#[diesel(belongs_to(ConsultationBenefit))]
+#[diesel(table_name = consultation_package_benefits)]
+pub struct ConsultationPackageBenefit {
+    pub id: Uuid,
+    pub package_id: Uuid,
+    pub consultation_benefit_id: Option<Uuid>,
+    pub custom_title: Option<String>,
+    pub custom_description: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Insertable, Deserialize, ToSchema)]
+#[diesel(table_name = consultation_package_benefits)]
+pub struct NewConsultationPackageBenefit {
+    pub package_id: Uuid,
+    pub consultation_benefit_id: Option<Uuid>,
+    pub custom_title: Option<String>,
+    pub custom_description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct CreatePackageRequest {
+    pub consultation_type_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub custom_price: Option<BigDecimal>,
+    pub custom_duration_minutes: Option<i32>,
+    pub benefits: Vec<PackageBenefitInput>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct PackageBenefitInput {
+    pub consultation_benefit_id: Option<Uuid>,
+    pub custom_title: Option<String>,
+    pub custom_description: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ConsultationPackageResponse {
+    #[serde(flatten)]
+    pub package: ConsultationPackage,
+    pub benefits: Vec<ResolvedBenefit>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ResolvedBenefit {
+    pub id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub is_custom: bool,
+    pub global_benefit_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Insertable, ToSchema)]

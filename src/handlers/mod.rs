@@ -10,3 +10,4 @@ pub mod admin;
 pub mod referrals;
 pub mod wallets;
 pub mod admin_consultations;
+pub mod specialist_packages;

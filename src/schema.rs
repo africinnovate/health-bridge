@@ -565,6 +565,38 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    consultation_packages (id) {
+        id -> DieselUuid,
+        specialist_id -> DieselUuid,
+        consultation_type_id -> DieselUuid,
+        name -> Varchar,
+        description -> Nullable<Text>,
+        custom_price -> Nullable<Numeric>,
+        custom_duration_minutes -> Nullable<Int4>,
+        is_active -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    consultation_package_benefits (id) {
+        id -> DieselUuid,
+        package_id -> DieselUuid,
+        consultation_benefit_id -> Nullable<DieselUuid>,
+        custom_title -> Nullable<Varchar>,
+        custom_description -> Nullable<Text>,
+        created_at -> Timestamptz,
+    }
+}
+
 diesel::joinable!(patients -> users (user_id));
 diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(password_reset_tokens -> users (user_id));
@@ -590,6 +622,10 @@ diesel::joinable!(bank_accounts -> users (user_id));
 diesel::joinable!(wallet_transactions -> wallets (wallet_id));
 diesel::joinable!(consultation_type_benefits -> consultation_types (consultation_type_id));
 diesel::joinable!(consultation_type_benefits -> consultation_benefits (consultation_benefit_id));
+diesel::joinable!(consultation_packages -> specialists (specialist_id));
+diesel::joinable!(consultation_packages -> consultation_types (consultation_type_id));
+diesel::joinable!(consultation_package_benefits -> consultation_packages (package_id));
+diesel::joinable!(consultation_package_benefits -> consultation_benefits (consultation_benefit_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,
@@ -618,4 +654,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     consultation_types,
     consultation_benefits,
     consultation_type_benefits,
+    consultation_packages,
+    consultation_package_benefits,
 );

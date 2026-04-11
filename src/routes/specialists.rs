@@ -1,7 +1,7 @@
-use crate::{AppState, handlers::{specialists, admin_consultations}};
+use crate::{AppState, handlers::{specialists, admin_consultations, specialist_packages}};
 use axum::{
     Router,
-    routing::{get, post, put},
+    routing::{get, post, put, delete},
 };
 
 pub fn public_router() -> Router<AppState> {
@@ -22,4 +22,10 @@ pub fn protected_router() -> Router<AppState> {
         .route("/consultation-types", get(admin_consultations::list_consultation_types))
         .route("/consultation-benefits", get(admin_consultations::list_consultation_benefits))
         .route("/consultation-types/{id}/benefits", get(admin_consultations::list_type_benefits))
+        // Consultation Package CRUD
+        .route("/packages", post(specialist_packages::create_package))
+        .route("/packages", get(specialist_packages::list_packages))
+        .route("/packages/{id}", get(specialist_packages::get_package))
+        .route("/packages/{id}", put(specialist_packages::update_package))
+        .route("/packages/{id}", delete(specialist_packages::delete_package))
 }

@@ -13,6 +13,7 @@ pub enum AppError {
     UserAlreadyExists,
     NotFound(String),
     Unauthorized(String),
+    Forbidden(String),
     BadRequest(String),
     InternalServerError,
     ExternalService(String),
@@ -25,6 +26,7 @@ impl IntoResponse for AppError {
                 (StatusCode::CONFLICT, "User already exists".to_string())
             }
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             AppError::DbError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,

@@ -1,5 +1,17 @@
 use crate::handlers::{
-    admin, admin_consultations, appointments, auth, common, hospitals, notifications, patients, referrals, socials, specialists, wallets,
+    admin, 
+    admin_consultations, 
+    appointments, 
+    auth, 
+    common, 
+    hospitals, 
+    notifications, 
+    patients, 
+    referrals, 
+    socials, 
+    specialists, 
+    wallets, 
+    specialist_packages,
 };
 use utoipa::OpenApi;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -93,6 +105,11 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         wallets::add_bank_account,
         wallets::withdraw_funds,
         wallets::list_transactions,
+        specialist_packages::create_package,
+        specialist_packages::list_packages,
+        specialist_packages::get_package,
+        specialist_packages::update_package,
+        specialist_packages::delete_package,
     ),
 
     components(
@@ -133,6 +150,15 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
             crate::models::NewConsultationBenefit,
             crate::models::UpdateConsultationBenefit,
             crate::models::ConsultationTypeBenefit,
+            crate::models::ConsultationPackage,
+            crate::models::NewConsultationPackage,
+            crate::models::UpdateConsultationPackage,
+            crate::models::ConsultationPackageBenefit,
+            crate::models::NewConsultationPackageBenefit,
+            crate::models::CreatePackageRequest,
+            crate::models::PackageBenefitInput,
+            crate::models::ConsultationPackageResponse,
+            crate::models::ResolvedBenefit,
             crate::utils::response::EmptyData,
         )
     ),
