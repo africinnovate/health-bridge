@@ -1,8 +1,9 @@
-use axum::{Extension, Json, extract::{Path, State}};
+use axum::{Extension, Json, extract::{Path, Query, State}};
 use bigdecimal::{BigDecimal, ToPrimitive};
+use chrono::{DateTime, NaiveDate, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::{
@@ -55,6 +56,50 @@ pub struct WithdrawalRequest {
     pub amount: BigDecimal,
     pub bank_account_id: Uuid,
     pub reason: Option<String>,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema)]
+pub struct TransactionFilters {
+    /// Optional text search against reference, description, or provider
+    pub search: Option<String>,
+
+    /// Filter by transaction status (pending, successful, failed, reversed)
+    pub status: Option<WalletTransactionStatusEnum>,
+
+    /// Filter by transaction type (deposit, withdrawal, transfer, refund, reward)
+    pub transaction_type: Option<WalletTransactionTypeEnum>,
+
+    /// Filter by start date (inclusive, YYYY-MM-DD)
+    pub date_from: Option<NaiveDate>,
+
+    /// Filter by end date (inclusive, YYYY-MM-DD)
+    pub date_to: Option<NaiveDate>,
+
+    /// Minimum amount filter, e.g. "500.00"
+    pub amount_min: Option<String>,
+
+    /// Maximum amount filter, e.g. "10000.00"
+    pub amount_max: Option<String>,
+
+    /// Page number (starts from 1)
+    #[serde(default = "default_page")]
+    pub page: i64,
+
+    /// Items per page (default: 20, max: 100)
+    #[serde(default = "default_page_size")]
+    pub page_size: i64,
+}
+
+fn default_page() -> i64 { 1 }
+fn default_page_size() -> i64 { 20 }
+
+#[derive(Serialize, ToSchema)]
+pub struct TransactionListResponse {
+    pub data: Vec<WalletTransaction>,
+    pub page: i64,
+    pub page_size: i64,
+    pub total: i64,
+    pub total_pages: i64,
 }
 
 /// Get wallet balance and transaction history
@@ -366,6 +411,155 @@ pub async fn withdraw_funds(
     })?;
 
     Ok(ApiResponse::success_with_message("Withdrawal initiated successfully", transaction))
+}
+
+/// List wallet transaction history
+///
+/// Returns a paginated list of the authenticated user's wallet transactions.
+/// Supports filtering by status, type, date range, amount range, and text search.
+#[utoipa::path(
+    get,
+    path = "/api/wallets/transactions",
+    params(TransactionFilters),
+    responses(
+        (status = 200, body = ApiResponse<TransactionListResponse>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "wallets",
+    security(("bearer_auth" = []))
+)]
+pub async fn list_transactions(
+    State(state): State<AppState>,
+    Extension(current_user): Extension<User>,
+    Query(filters): Query<TransactionFilters>,
+) -> Result<ApiResponse<TransactionListResponse>, AppError> {
+    let mut conn = state.pool.get()?;
+
+    let wallet = get_or_create_wallet(&mut conn, current_user.id)?;
+
+    let page = filters.page.max(1);
+    let page_size = filters.page_size.min(100).max(1);
+    let offset = (page - 1) * page_size;
+
+    // ---- Build base query ----
+    let mut query = wallet_transactions::table
+        .filter(wallet_transactions::wallet_id.eq(wallet.id))
+        .into_boxed();
+
+    // Status filter
+    if let Some(status) = filters.status {
+        query = query.filter(wallet_transactions::status.eq(status));
+    }
+
+    // Type filter
+    if let Some(tx_type) = filters.transaction_type {
+        query = query.filter(wallet_transactions::transaction_type.eq(tx_type));
+    }
+
+    // Date range filters — convert NaiveDate to start/end of day DateTime<Utc>
+    if let Some(date_from) = filters.date_from {
+        let start = date_from
+            .and_hms_opt(0, 0, 0)
+            .map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
+            .unwrap();
+        query = query.filter(wallet_transactions::created_at.ge(start));
+    }
+
+    if let Some(date_to) = filters.date_to {
+        let end = date_to
+            .and_hms_opt(23, 59, 59)
+            .map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
+            .unwrap();
+        query = query.filter(wallet_transactions::created_at.le(end));
+    }
+
+    // Amount range filters — parse from string
+    let amount_min = filters.amount_min
+        .as_deref()
+        .map(|s| s.parse::<BigDecimal>().ok())
+        .flatten();
+
+    let amount_max = filters.amount_max
+        .as_deref()
+        .map(|s| s.parse::<BigDecimal>().ok())
+        .flatten();
+
+    if let Some(ref min) = amount_min {
+        query = query.filter(wallet_transactions::amount.ge(min.clone()));
+    }
+
+    if let Some(ref max) = amount_max {
+        query = query.filter(wallet_transactions::amount.le(max.clone()));
+    }
+
+    // Text search — reference, description, or provider
+    if let Some(ref search) = filters.search {
+        let pattern = format!("%{}%", search.to_lowercase());
+        query = query.filter(
+            wallet_transactions::reference.ilike(pattern.clone())
+                .or(wallet_transactions::description.ilike(pattern.clone()))
+                .or(wallet_transactions::provider.ilike(pattern))
+        );
+    }
+
+    // ---- Count total (clone the predicate) ----
+    let mut count_query = wallet_transactions::table
+        .filter(wallet_transactions::wallet_id.eq(wallet.id))
+        .into_boxed();
+
+    if let Some(status) = filters.status {
+        count_query = count_query.filter(wallet_transactions::status.eq(status));
+    }
+    if let Some(tx_type) = filters.transaction_type {
+        count_query = count_query.filter(wallet_transactions::transaction_type.eq(tx_type));
+    }
+    if let Some(date_from) = filters.date_from {
+        let start = date_from.and_hms_opt(0, 0, 0)
+            .map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
+            .unwrap();
+        count_query = count_query.filter(wallet_transactions::created_at.ge(start));
+    }
+    if let Some(date_to) = filters.date_to {
+        let end = date_to.and_hms_opt(23, 59, 59)
+            .map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
+            .unwrap();
+        count_query = count_query.filter(wallet_transactions::created_at.le(end));
+    }
+    if let Some(ref min) = amount_min {
+        count_query = count_query.filter(wallet_transactions::amount.ge(min.clone()));
+    }
+    if let Some(ref max) = amount_max {
+        count_query = count_query.filter(wallet_transactions::amount.le(max.clone()));
+    }
+    if let Some(ref search) = filters.search {
+        let pattern = format!("%{}%", search.to_lowercase());
+        count_query = count_query.filter(
+            wallet_transactions::reference.ilike(pattern.clone())
+                .or(wallet_transactions::description.ilike(pattern.clone()))
+                .or(wallet_transactions::provider.ilike(pattern))
+        );
+    }
+
+    let total: i64 = count_query
+        .count()
+        .get_result(&mut conn)?;
+
+    let transactions = query
+        .order(wallet_transactions::created_at.desc())
+        .limit(page_size)
+        .offset(offset)
+        .load::<WalletTransaction>(&mut conn)?;
+
+    let total_pages = (total + page_size - 1) / page_size;
+
+    Ok(ApiResponse::success(TransactionListResponse {
+        data: transactions,
+        page,
+        page_size,
+        total,
+        total_pages,
+    }))
 }
 
 // Utility function to get or create a wallet for a user

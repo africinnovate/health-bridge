@@ -81,6 +81,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         wallets::get_banks,
         wallets::add_bank_account,
         wallets::withdraw_funds,
+        wallets::list_transactions,
     ),
 
     components(
@@ -104,6 +105,8 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
             wallets::DepositRequest,
             wallets::AddBankAccountRequest,
             wallets::WithdrawalRequest,
+            wallets::TransactionListResponse,
+            wallets::TransactionFilters,
             crate::models::Wallet,
             crate::models::BankAccount,
             crate::models::WalletTransaction,

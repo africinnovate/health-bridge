@@ -13,4 +13,5 @@ pub fn router() -> Router<AppState> {
         .route("/banks", get(wallet_handlers::get_banks))
         .route("/bank-accounts", post(wallet_handlers::add_bank_account))
         .route("/withdraw", post(wallet_handlers::withdraw_funds))
+        .route("/transactions", get(wallet_handlers::list_transactions))
 }
