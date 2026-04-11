@@ -9,3 +9,4 @@ pub mod common;
 pub mod admin;
 pub mod referrals;
 pub mod wallets;
+pub mod admin_consultations;

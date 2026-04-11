@@ -5,6 +5,7 @@ use crate::{
         password_reset_tokens, patients, referral_rewards, referrals, refresh_tokens,
         social_accounts, specialist_availabilities, specialists, specialties, user_settings, users,
         wallets, bank_accounts, wallet_transactions,
+        consultation_types, consultation_benefits, consultation_type_benefits,
     },
     utils::enums::{
         ActionTypeEnum, AppointmentStatusEnum, AppointmentTypeEnum, BloodTypeEnum, CancelledByEnum,
@@ -630,4 +631,76 @@ pub struct NewReferralReward {
     pub points: i32,
     pub reward_type: RewardTypeEnum,
     pub description: Option<String>,
+}
+
+// ---- Consultation System ----
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = consultation_types)]
+pub struct ConsultationType {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub duration_minutes: i32,
+    #[schema(value_type = String)]
+    pub base_price: BigDecimal,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Insertable, Deserialize, ToSchema)]
+#[diesel(table_name = consultation_types)]
+pub struct NewConsultationType {
+    pub name: String,
+    pub description: Option<String>,
+    pub duration_minutes: i32,
+    #[schema(value_type = String)]
+    pub base_price: BigDecimal,
+    pub is_active: bool,
+}
+
+#[derive(AsChangeset, Deserialize, ToSchema)]
+#[diesel(table_name = consultation_types)]
+pub struct UpdateConsultationType {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub duration_minutes: Option<i32>,
+    #[schema(value_type = Option<String>)]
+    pub base_price: Option<BigDecimal>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = consultation_benefits)]
+pub struct ConsultationBenefit {
+    pub id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Insertable, Deserialize, ToSchema)]
+#[diesel(table_name = consultation_benefits)]
+pub struct NewConsultationBenefit {
+    pub title: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+}
+
+#[derive(AsChangeset, Deserialize, ToSchema)]
+#[diesel(table_name = consultation_benefits)]
+pub struct UpdateConsultationBenefit {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Insertable, ToSchema)]
+#[diesel(table_name = consultation_type_benefits)]
+pub struct ConsultationTypeBenefit {
+    pub consultation_type_id: Uuid,
+    pub consultation_benefit_id: Uuid,
 }

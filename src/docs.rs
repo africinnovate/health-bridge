@@ -1,5 +1,5 @@
 use crate::handlers::{
-    admin, appointments, auth, common, hospitals, notifications, patients, referrals, socials, specialists, wallets,
+    admin, admin_consultations, appointments, auth, common, hospitals, notifications, patients, referrals, socials, specialists, wallets,
 };
 use utoipa::OpenApi;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -73,6 +73,17 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         admin::update_specialist_status,
         admin::update_hospital_status,
         admin::update_app_config,
+        admin_consultations::list_consultation_types,
+        admin_consultations::create_consultation_type,
+        admin_consultations::update_consultation_type,
+        admin_consultations::delete_consultation_type,
+        admin_consultations::list_consultation_benefits,
+        admin_consultations::create_consultation_benefit,
+        admin_consultations::update_consultation_benefit,
+        admin_consultations::delete_consultation_benefit,
+        admin_consultations::list_type_benefits,
+        admin_consultations::link_benefit_to_type,
+        admin_consultations::unlink_benefit_from_type,
         referrals::get_referral_summary,
         referrals::update_referral_link,
         wallets::get_wallet_summary,
@@ -115,6 +126,14 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
             crate::services::paystack::Bank,
             crate::admin::dtos::SpecialistActionRequest,
             crate::admin::dtos::HospitalActionRequest,
+            crate::models::ConsultationType,
+            crate::models::NewConsultationType,
+            crate::models::UpdateConsultationType,
+            crate::models::ConsultationBenefit,
+            crate::models::NewConsultationBenefit,
+            crate::models::UpdateConsultationBenefit,
+            crate::models::ConsultationTypeBenefit,
+            crate::utils::response::EmptyData,
         )
     ),
 
@@ -130,6 +149,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         (name = "admin", description = "Admin management endpoints"),
         (name = "referrals", description = "Referral system endpoints"),
         (name = "wallets", description = "Wallet and payment endpoints"),
+        (name = "admin-consultations", description = "Consultation management endpoints for admin"),
     ),
     info(
         title = "RubiMedik API",

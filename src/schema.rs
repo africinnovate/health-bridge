@@ -525,6 +525,46 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    consultation_types (id) {
+        id -> DieselUuid,
+        name -> Varchar,
+        description -> Nullable<Text>,
+        duration_minutes -> Int4,
+        base_price -> Numeric,
+        is_active -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    consultation_benefits (id) {
+        id -> DieselUuid,
+        title -> Varchar,
+        description -> Nullable<Text>,
+        is_active -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    consultation_type_benefits (consultation_type_id, consultation_benefit_id) {
+        consultation_type_id -> DieselUuid,
+        consultation_benefit_id -> DieselUuid,
+    }
+}
+
 diesel::joinable!(patients -> users (user_id));
 diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(password_reset_tokens -> users (user_id));
@@ -548,6 +588,8 @@ diesel::joinable!(referral_rewards -> referrals (referral_id));
 diesel::joinable!(wallets -> users (user_id));
 diesel::joinable!(bank_accounts -> users (user_id));
 diesel::joinable!(wallet_transactions -> wallets (wallet_id));
+diesel::joinable!(consultation_type_benefits -> consultation_types (consultation_type_id));
+diesel::joinable!(consultation_type_benefits -> consultation_benefits (consultation_benefit_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,
@@ -573,4 +615,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     wallets,
     bank_accounts,
     wallet_transactions,
+    consultation_types,
+    consultation_benefits,
+    consultation_type_benefits,
 );
