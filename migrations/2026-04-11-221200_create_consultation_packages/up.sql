@@ -26,4 +26,6 @@ CREATE TABLE consultation_package_benefits (
 CREATE INDEX idx_consultation_packages_specialist ON consultation_packages(specialist_id);
 CREATE INDEX idx_consultation_package_benefits_package ON consultation_package_benefits(package_id);
 
-SELECT diesel_manage_updated_at('consultation_packages');
+CREATE TRIGGER update_consultation_packages_updated_at
+    BEFORE UPDATE ON consultation_packages
+    FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();

@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -354,7 +353,7 @@ pub fn complete_appointment(
 fn assert_hospital_owns_appointment(
     conn: &mut PgConnection,
     appointment_id: Uuid,
-    hospital_id: Uuid,
+    _hospital_id: Uuid,
 ) -> Result<Appointment, AppError> {
     appointments::table
         .filter(appointments::id.eq(appointment_id))

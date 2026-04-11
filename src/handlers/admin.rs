@@ -11,7 +11,7 @@ use crate::{
         dashboard,
         dtos::{
             AdminDashboardResponse, ConfigActionRequest, ConfigResponse, HospitalActionRequest,
-            SpecialistActionRequest, UserFilters, UserListResponse, AdminPatientProfileResponse,
+            SpecialistActionRequest, UserFilters, UserListResponse,
             AdminUserProfileResponse,
         },
     },

@@ -7,7 +7,7 @@ use crate::error::AppError;
 use crate::models::{
     ConsultationBenefit, ConsultationPackage, ConsultationPackageBenefit,
     ConsultationPackageResponse, CreatePackageRequest, NewConsultationPackage,
-    NewConsultationPackageBenefit, ResolvedBenefit, UpdateConsultationPackage, User, Specialist,
+    NewConsultationPackageBenefit, ResolvedBenefit, User, Specialist,
     ConsultationType
 };
 use crate::schema::{

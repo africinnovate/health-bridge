@@ -4,7 +4,7 @@ use crate::{
 };
 use axum::{
     Router,
-    routing::{get, post},
+    routing::post,
 };
 
 pub fn public_router() -> Router<AppState> {

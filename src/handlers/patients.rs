@@ -2,7 +2,6 @@ use axum::Extension;
 use axum::{Json, extract::State};
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
-use tracing::info;
 use utoipa::ToSchema;
 use uuid::Uuid;
 

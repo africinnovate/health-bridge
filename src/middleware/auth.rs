@@ -1,11 +1,10 @@
 use axum::{
-    Extension, extract::{Request, State}, http::{StatusCode, header}, middleware::Next, response::Response
+    Extension, extract::Request, http::header, middleware::Next, response::Response
 };
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use diesel::prelude::*;
-use tracing::{info};
 
 use crate::{
     AppState,

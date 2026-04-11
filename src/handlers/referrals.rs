@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::{
     AppState,
     error::AppError,
-    models::{User, Referral, ReferralReward, AppConfig},
+    models::{User, ReferralReward},
     schema::{users, referrals, referral_rewards, app_configs, appointments},
     utils::{
         enums::{ReferralStatusEnum, RewardTypeEnum, Role, AppointmentStatusEnum},

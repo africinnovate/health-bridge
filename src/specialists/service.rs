@@ -2,13 +2,11 @@ use chrono::{DateTime, Utc};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::info;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::models::SpecialistAvailability;
 use crate::schema::{specialties, users};
-use crate::services::mail::MailService;
 use crate::utils::enums::{ConsultationTypeEnum, DaysOfWeekEnum, Gender};
 use crate::{
     error::AppError,
@@ -371,8 +369,8 @@ pub fn list_specialties(
 
 pub fn upload_license(
     conn: &mut PgConnection,
-    user_id: Uuid,
-    user: &User,
+    _user_id: Uuid,
+    _user: &User,
     url: &str,
 ) -> Result<(), AppError> {
     use crate::schema::specialists::dsl::*;

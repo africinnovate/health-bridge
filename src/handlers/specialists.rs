@@ -3,12 +3,10 @@ use axum::extract::{Path, Query};
 use axum::{Json, extract::State};
 use diesel::prelude::*;
 use serde::Deserialize;
-use tracing::info;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::models::{Specialty, User};
-use crate::schema::specialists;
 use crate::specialists::service::{
     self, CreateSpecialtyRequest, SpecialistAvailabilityResponse, SpecialistFilters,
     SpecialistResponse,

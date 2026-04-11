@@ -10,7 +10,7 @@ use crate::{
     AppState,
     error::AppError,
     models::{
-        User, Wallet, WalletTransaction, NewWalletTransaction, UpdateWalletTransaction,
+        User, Wallet, WalletTransaction, NewWalletTransaction,
         BankAccount, NewBankAccount,
     },
     schema::{wallets, wallet_transactions, bank_accounts},

@@ -3,7 +3,6 @@ use diesel::AsChangeset;
 use diesel::associations::HasTable;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
 use utoipa::ToSchema;
 use uuid::Uuid;
 

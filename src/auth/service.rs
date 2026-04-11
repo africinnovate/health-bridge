@@ -226,7 +226,7 @@ pub fn verify_email_code(
 
 pub fn verify_reset_token(
     conn: &mut PgConnection,
-    token: &str,
+    _token: &str,
 ) -> Result<Uuid, diesel::result::Error> {
     use crate::schema::password_reset_tokens::dsl::*;
     use diesel::prelude::*;
@@ -242,7 +242,7 @@ pub fn verify_reset_token(
 
 pub fn mark_token_as_used(
     conn: &mut PgConnection,
-    token: &str,
+    _token: &str,
 ) -> Result<(), diesel::result::Error> {
     use crate::schema::password_reset_tokens::dsl::*;
     use diesel::prelude::*;

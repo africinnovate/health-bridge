@@ -1,4 +1,4 @@
-use axum::{Router, routing::{get, post, delete, put}};
+use axum::{Router, routing::{get, post, put}};
 use crate::{AppState, handlers::appointments};
 
 pub fn router() -> Router<AppState> {

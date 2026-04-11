@@ -655,7 +655,7 @@ pub fn get_recent_activity(
         appointments::dsl as appt, blood_requests::dsl as br,
         hospital_blood_inventories::dsl as inv, hospitals::dsl as h,
     };
-    use crate::utils::enums::{AppointmentStatusEnum, RequestStatusTypeEnum};
+    use crate::utils::enums::RequestStatusTypeEnum;
 
     // First find the hospital ID associated with this user
     let hospital_id = h::hospitals
