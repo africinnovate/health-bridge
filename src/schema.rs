@@ -73,6 +73,14 @@ pub mod sql_types {
     #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "reward_type"))]
     pub struct RewardTypeType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "wallet_transaction_type"))]
+    pub struct WalletTransactionType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "wallet_transaction_status"))]
+    pub struct WalletTransactionStatus;
 }
 
 diesel::table! {
@@ -466,6 +474,57 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    wallets (id) {
+        id -> DieselUuid,
+        user_id -> DieselUuid,
+        balance -> Numeric,
+        currency -> Varchar,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    bank_accounts (id) {
+        id -> DieselUuid,
+        user_id -> DieselUuid,
+        account_number -> Varchar,
+        bank_code -> Varchar,
+        bank_name -> Varchar,
+        account_name -> Varchar,
+        recipient_code -> Varchar,
+        is_default -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::{WalletTransactionType, WalletTransactionStatus};
+
+    wallet_transactions (id) {
+        id -> DieselUuid,
+        wallet_id -> DieselUuid,
+        amount -> Numeric,
+        transaction_type -> WalletTransactionType,
+        status -> WalletTransactionStatus,
+        reference -> Varchar,
+        provider -> Varchar,
+        description -> Nullable<Text>,
+        metadata -> Nullable<Jsonb>,
+        created_at -> Timestamptz,
+    }
+}
+
 diesel::joinable!(patients -> users (user_id));
 diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(password_reset_tokens -> users (user_id));
@@ -486,6 +545,9 @@ diesel::joinable!(refresh_tokens -> users (user_id));
 diesel::joinable!(referrals -> users (referrer_id));
 diesel::joinable!(referral_rewards -> users (user_id));
 diesel::joinable!(referral_rewards -> referrals (referral_id));
+diesel::joinable!(wallets -> users (user_id));
+diesel::joinable!(bank_accounts -> users (user_id));
+diesel::joinable!(wallet_transactions -> wallets (wallet_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,
@@ -508,4 +570,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     app_configs,
     referrals,
     referral_rewards,
+    wallets,
+    bank_accounts,
+    wallet_transactions,
 );

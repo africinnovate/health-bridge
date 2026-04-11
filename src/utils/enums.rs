@@ -2,7 +2,8 @@ use crate::error::AppError;
 use crate::schema::sql_types::{
     ActionType, AppointmentStatusType, AppointmentTypeType, BloodRequestStatusType, BloodType,
     CancelledByType, ConsultationType, DaysOfWeekType, GenderType, HospitalType,
-    NotificationCategoryType, RoleType, TimelineType, UrgencyType,
+    NotificationCategoryType, RoleType, TimelineType, UrgencyType, WalletTransactionType,
+    WalletTransactionStatus,
 };
 use diesel::FromSqlRow;
 use diesel::deserialize::{self, FromSql};
@@ -119,6 +120,31 @@ pub enum ReferralStatusEnum {
 pub enum RewardTypeEnum {
     Earned,
     Applied,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
+#[diesel(sql_type = crate::schema::sql_types::WalletTransactionType)]
+#[serde(rename_all = "lowercase")]
+pub enum WalletTransactionTypeEnum {
+    Deposit,
+    Withdrawal,
+    Payment,
+    Transfer,
+    Refund,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
+#[diesel(sql_type = crate::schema::sql_types::WalletTransactionStatus)]
+#[serde(rename_all = "lowercase")]
+pub enum WalletTransactionStatusEnum {
+    Pending,
+    Successful,
+    Failed,
+    Reversed,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -676,6 +702,83 @@ impl FromSql<BloodRequestStatusType, Pg> for RequestStatusTypeEnum {
             b"completed" => Ok(RequestStatusTypeEnum::Completed),
             b"cancelled" => Ok(RequestStatusTypeEnum::Cancelled),
             _ => Err("Unrecognized enum variant for BloodRequestStatusType".into()),
+        }
+    }
+}
+
+impl ToSql<WalletTransactionType, Pg> for WalletTransactionTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            WalletTransactionTypeEnum::Deposit => out.write_all(b"deposit")?,
+            WalletTransactionTypeEnum::Withdrawal => out.write_all(b"withdrawal")?,
+            WalletTransactionTypeEnum::Payment => out.write_all(b"payment")?,
+            WalletTransactionTypeEnum::Transfer => out.write_all(b"transfer")?,
+            WalletTransactionTypeEnum::Refund => out.write_all(b"refund")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<WalletTransactionType, Pg> for WalletTransactionTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"deposit" => Ok(WalletTransactionTypeEnum::Deposit),
+            b"withdrawal" => Ok(WalletTransactionTypeEnum::Withdrawal),
+            b"payment" => Ok(WalletTransactionTypeEnum::Payment),
+            b"transfer" => Ok(WalletTransactionTypeEnum::Transfer),
+            b"refund" => Ok(WalletTransactionTypeEnum::Refund),
+            _ => Err("Unrecognized enum variant for WalletTransactionType".into()),
+        }
+    }
+}
+
+impl ToSql<WalletTransactionStatus, Pg> for WalletTransactionStatusEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            WalletTransactionStatusEnum::Pending => out.write_all(b"pending")?,
+            WalletTransactionStatusEnum::Successful => out.write_all(b"successful")?,
+            WalletTransactionStatusEnum::Failed => out.write_all(b"failed")?,
+            WalletTransactionStatusEnum::Reversed => out.write_all(b"reversed")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<WalletTransactionStatus, Pg> for WalletTransactionStatusEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"pending" => Ok(WalletTransactionStatusEnum::Pending),
+            b"successful" => Ok(WalletTransactionStatusEnum::Successful),
+            b"failed" => Ok(WalletTransactionStatusEnum::Failed),
+            b"reversed" => Ok(WalletTransactionStatusEnum::Reversed),
+            _ => Err("Unrecognized enum variant for WalletTransactionStatus".into()),
+        }
+    }
+}
+
+impl FromStr for WalletTransactionTypeEnum {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "deposit" => Ok(WalletTransactionTypeEnum::Deposit),
+            "withdrawal" => Ok(WalletTransactionTypeEnum::Withdrawal),
+            "payment" => Ok(WalletTransactionTypeEnum::Payment),
+            "transfer" => Ok(WalletTransactionTypeEnum::Transfer),
+            "refund" => Ok(WalletTransactionTypeEnum::Refund),
+            _ => Err("Invalid wallet transaction type".into()),
+        }
+    }
+}
+
+impl FromStr for WalletTransactionStatusEnum {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "pending" => Ok(WalletTransactionStatusEnum::Pending),
+            "successful" => Ok(WalletTransactionStatusEnum::Successful),
+            "failed" => Ok(WalletTransactionStatusEnum::Failed),
+            "reversed" => Ok(WalletTransactionStatusEnum::Reversed),
+            _ => Err("Invalid wallet transaction status".into()),
         }
     }
 }

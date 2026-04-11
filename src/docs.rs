@@ -1,5 +1,5 @@
 use crate::handlers::{
-    admin, appointments, auth, common, hospitals, notifications, patients, referrals, socials, specialists,
+    admin, appointments, auth, common, hospitals, notifications, patients, referrals, socials, specialists, wallets,
 };
 use utoipa::OpenApi;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -73,8 +73,13 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         admin::update_specialist_status,
         admin::update_hospital_status,
         admin::update_app_config,
-        referrals::get_referral_summary,
         referrals::update_referral_link,
+        wallets::get_wallet_summary,
+        wallets::deposit_initialize,
+        wallets::deposit_verify,
+        wallets::get_banks,
+        wallets::add_bank_account,
+        wallets::withdraw_funds,
     ),
 
     components(
@@ -93,6 +98,19 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
             crate::utils::enums::RewardTypeEnum,
             crate::utils::enums::Role,
             crate::utils::enums::ConsultationTypeEnum,
+            wallets::WalletSummary,
+            wallets::DepositInitializeResponse,
+            wallets::DepositRequest,
+            wallets::AddBankAccountRequest,
+            wallets::WithdrawalRequest,
+            crate::models::Wallet,
+            crate::models::BankAccount,
+            crate::models::WalletTransaction,
+            crate::utils::enums::WalletTransactionStatusEnum,
+            crate::utils::enums::WalletTransactionTypeEnum,
+            crate::services::paystack::Bank,
+            crate::admin::dtos::SpecialistActionRequest,
+            crate::admin::dtos::HospitalActionRequest,
         )
     ),
 
@@ -107,6 +125,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         (name = "settings", description = "User settings endpoints"),
         (name = "admin", description = "Admin management endpoints"),
         (name = "referrals", description = "Referral system endpoints"),
+        (name = "wallets", description = "Wallet and payment endpoints"),
     ),
     info(
         title = "RubiMedik API",

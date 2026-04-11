@@ -19,6 +19,7 @@ pub struct Config {
     pub cloudinary_cloud_name: String,
     pub cloudinary_api_key: String,
     pub cloudinary_api_secret: String,
+    pub paystack_secret_key: String,
 }
 
 impl Config {
@@ -46,6 +47,7 @@ impl Config {
                 .expect("CLOUDINARY_API_KEY must be set"),
             cloudinary_api_secret: env::var("CLOUDINARY_API_SECRET")
                 .expect("CLOUDINARY_API_SECRET must be set"),
+            paystack_secret_key: env::var("PAYSTACK_SECRET_KEY").expect("PAYSTACK_SECRET_KEY must be set"),
         }
     }
 }

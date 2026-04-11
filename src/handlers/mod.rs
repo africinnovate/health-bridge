@@ -8,3 +8,4 @@ pub mod socials;
 pub mod common;
 pub mod admin;
 pub mod referrals;
+pub mod wallets;

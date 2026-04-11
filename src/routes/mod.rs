@@ -11,6 +11,7 @@ pub mod notifications;
 pub mod admin;
 pub mod user_settings;
 pub mod referrals;
+pub mod wallets;
 
 pub fn create_router() -> Router<AppState> {
     let protected_auth = Router::new()
@@ -84,6 +85,12 @@ pub fn create_router() -> Router<AppState> {
         middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
     );
 
+    let protected_wallets = Router::new()
+    .nest("/wallets", wallets::router())
+    .route_layer(
+        middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
+    );
+
     Router::new()
         .merge(public_auth)
         .merge(protected_auth)
@@ -97,4 +104,5 @@ pub fn create_router() -> Router<AppState> {
         .merge(protected_user_settings)
         .merge(protected_admin)
         .merge(protected_referrals)
+        .merge(protected_wallets)
 }

@@ -4,12 +4,13 @@ use crate::{
         hospital_blood_inventories, hospital_settings, hospitals, notifications,
         password_reset_tokens, patients, referral_rewards, referrals, refresh_tokens,
         social_accounts, specialist_availabilities, specialists, specialties, user_settings, users,
+        wallets, bank_accounts, wallet_transactions,
     },
     utils::enums::{
         ActionTypeEnum, AppointmentStatusEnum, AppointmentTypeEnum, BloodTypeEnum, CancelledByEnum,
         ConsultationTypeEnum, DaysOfWeekEnum, Gender, HospitalTypeEnum, NotificationCategoryEnum,
         ReferralStatusEnum, RequestStatusTypeEnum, RewardTypeEnum, Role, TimelineTypeEnum,
-        UrgencyTypeEnum,
+        UrgencyTypeEnum, WalletTransactionStatusEnum, WalletTransactionTypeEnum,
     },
 };
 use chrono::{DateTime, NaiveDate, Utc};
@@ -17,6 +18,7 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use bigdecimal::BigDecimal;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
 #[diesel(table_name = users)]
@@ -86,6 +88,92 @@ pub struct UpdateUser<'a> {
     pub eligible_to_donate: Option<bool>,
     pub consultation_preference: Option<ConsultationTypeEnum>,
     pub deleted_at: Option<DateTime<Utc>>,
+}
+
+// ---- Wallet Systems ----
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = wallets)]
+pub struct Wallet {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    #[schema(value_type = String)]
+    pub balance: BigDecimal,
+    pub currency: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = wallets)]
+pub struct NewWallet {
+    pub user_id: Uuid,
+    pub balance: BigDecimal,
+    pub currency: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = bank_accounts)]
+pub struct BankAccount {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub account_number: String,
+    pub bank_code: String,
+    pub bank_name: String,
+    pub account_name: String,
+    pub recipient_code: String,
+    pub is_default: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = bank_accounts)]
+pub struct NewBankAccount<'a> {
+    pub user_id: Uuid,
+    pub account_number: &'a str,
+    pub bank_code: &'a str,
+    pub bank_name: &'a str,
+    pub account_name: &'a str,
+    pub recipient_code: &'a str,
+    pub is_default: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = wallet_transactions)]
+pub struct WalletTransaction {
+    pub id: Uuid,
+    pub wallet_id: Uuid,
+    #[schema(value_type = String)]
+    pub amount: BigDecimal,
+    pub transaction_type: WalletTransactionTypeEnum,
+    pub status: WalletTransactionStatusEnum,
+    pub reference: String,
+    pub provider: String,
+    pub description: Option<String>,
+    #[schema(value_type = Option<Object>)]
+    pub metadata: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = wallet_transactions)]
+pub struct NewWalletTransaction {
+    pub wallet_id: Uuid,
+    pub amount: BigDecimal,
+    pub transaction_type: WalletTransactionTypeEnum,
+    pub status: WalletTransactionStatusEnum,
+    pub reference: String,
+    pub provider: String,
+    pub description: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(AsChangeset)]
+#[diesel(table_name = wallet_transactions)]
+pub struct UpdateWalletTransaction {
+    pub status: Option<WalletTransactionStatusEnum>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Queryable, Selectable, Identifiable)]

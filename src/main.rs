@@ -33,6 +33,7 @@ struct AppState {
     cfg: config::Config,
     mail_service: MailService,
     cloudinary_service: std::sync::Arc<common::services::CloudinaryService>,
+    paystack_service: std::sync::Arc<services::paystack::PaystackService>,
 }
 
 #[tokio::main]
@@ -43,12 +44,14 @@ async fn main() -> anyhow::Result<()> {
     let pool = db::init_db(&cfg.database_url)?;
     let mail_service = MailService::new(cfg.resend_api_key.clone(), cfg.from_email.clone());
     let cloudinary_service = std::sync::Arc::new(common::services::CloudinaryService::new(&cfg));
+    let paystack_service = std::sync::Arc::new(services::paystack::PaystackService::new(cfg.paystack_secret_key.clone()));
 
     let state = AppState {
         pool: pool.clone(),
         cfg: cfg.clone(),
         mail_service: mail_service.clone(),
         cloudinary_service,
+        paystack_service,
     };
 
     let cors = CorsLayer::new()
