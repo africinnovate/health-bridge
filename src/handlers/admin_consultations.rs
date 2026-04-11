@@ -28,14 +28,15 @@ use axum::http::StatusCode;
         (status = 500)
     ),
     tag = "admin-consultations",
+    tag = "specialists",
     security(("bearer_auth" = []))
 )]
 pub async fn list_consultation_types(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> Result<ApiResponse<Vec<ConsultationType>>, AppError> {
-    if user.role != Role::Admin {
-        return Err(AppError::Unauthorized("Admin access required".into()));
+    if !matches!(user.role, Role::Admin | Role::Specialist) {
+        return Err(AppError::Unauthorized("Insufficient permissions".into()));
     }
 
     let mut conn = state.pool.get()?;
@@ -54,7 +55,7 @@ pub async fn list_consultation_types(
         (status = 401),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
     security(("bearer_auth" = []))
 )]
 pub async fn create_consultation_type(
@@ -85,7 +86,7 @@ pub async fn create_consultation_type(
         (status = 404),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
     security(("bearer_auth" = []))
 )]
 pub async fn update_consultation_type(
@@ -116,7 +117,7 @@ pub async fn update_consultation_type(
         (status = 404),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
     security(("bearer_auth" = []))
 )]
 pub async fn delete_consultation_type(
@@ -145,15 +146,16 @@ pub async fn delete_consultation_type(
         (status = 401),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
+    tag = "specialists",
     security(("bearer_auth" = []))
 )]
 pub async fn list_consultation_benefits(
     State(state): State<AppState>,
     Extension(user): Extension<User>,
 ) -> Result<ApiResponse<Vec<ConsultationBenefit>>, AppError> {
-    if user.role != Role::Admin {
-        return Err(AppError::Unauthorized("Admin access required".into()));
+    if !matches!(user.role, Role::Admin | Role::Specialist) {
+        return Err(AppError::Unauthorized("Insufficient permissions".into()));
     }
 
     let mut conn = state.pool.get()?;
@@ -171,7 +173,8 @@ pub async fn list_consultation_benefits(
         (status = 401),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
+    tag = "specialists",
     security(("bearer_auth" = []))
 )]
 pub async fn list_type_benefits(
@@ -179,8 +182,8 @@ pub async fn list_type_benefits(
     Extension(user): Extension<User>,
     Path(id): Path<Uuid>,
 ) -> Result<ApiResponse<Vec<ConsultationBenefit>>, AppError> {
-    if user.role != Role::Admin {
-        return Err(AppError::Unauthorized("Admin access required".into()));
+    if !matches!(user.role, Role::Admin | Role::Specialist) {
+        return Err(AppError::Unauthorized("Insufficient permissions".into()));
     }
 
     let mut conn = state.pool.get()?;
@@ -203,7 +206,7 @@ pub async fn list_type_benefits(
         (status = 401),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
     security(("bearer_auth" = []))
 )]
 pub async fn create_consultation_benefit(
@@ -234,7 +237,7 @@ pub async fn create_consultation_benefit(
         (status = 404),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
     security(("bearer_auth" = []))
 )]
 pub async fn update_consultation_benefit(
@@ -265,7 +268,7 @@ pub async fn update_consultation_benefit(
         (status = 404),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
     security(("bearer_auth" = []))
 )]
 pub async fn delete_consultation_benefit(
@@ -294,7 +297,7 @@ pub async fn delete_consultation_benefit(
         (status = 401),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
     security(("bearer_auth" = []))
 )]
 pub async fn link_benefit_to_type(
@@ -326,7 +329,7 @@ pub async fn link_benefit_to_type(
         (status = 401),
         (status = 500)
     ),
-    tag = "admin-consultations",
+    tag = "admin",
     security(("bearer_auth" = []))
 )]
 pub async fn unlink_benefit_from_type(

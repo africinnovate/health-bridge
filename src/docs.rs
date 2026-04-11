@@ -149,7 +149,6 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         (name = "admin", description = "Admin management endpoints"),
         (name = "referrals", description = "Referral system endpoints"),
         (name = "wallets", description = "Wallet and payment endpoints"),
-        (name = "admin-consultations", description = "Consultation management endpoints for admin"),
     ),
     info(
         title = "RubiMedik API",
