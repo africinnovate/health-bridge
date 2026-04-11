@@ -21,7 +21,7 @@ pub struct RegisterRequest {
     pub email: String,
     pub password: String,
     pub role: String,
-    // pub phone: Option<String>,
+    pub referred_by_code: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -78,6 +78,8 @@ pub struct UserResponse {
     pub email: String,
     pub role: String,
     pub consultation_preference: Option<ConsultationTypeEnum>,
+    pub referral_code: String,
+    pub referral_link: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -95,6 +97,8 @@ impl From<User> for UserResponse {
             email: user.email,
             role: user.role.to_string(),
             consultation_preference: user.consultation_preference,
+            referral_code: user.referral_code,
+            referral_link: user.referral_link,
         }
     }
 }
@@ -155,7 +159,35 @@ pub async fn register(
         }
     }
 
-    let user = auth::create_user(&mut conn, &payload.email, &payload.password, other_role)?;
+    let user = conn.transaction::<User, AppError, _>(|conn| {
+        let new_user = auth::create_user(conn, &payload.email, &payload.password, other_role)?;
+
+        // Handle referral
+        if let Some(ref_code) = &payload.referred_by_code {
+            if let Some(referrer) = users
+                .filter(crate::schema::users::referral_code.eq(ref_code))
+                .first::<User>(conn)
+                .optional()?
+            {
+                use crate::schema::referrals;
+                use crate::models::NewReferral;
+                use crate::utils::enums::ReferralStatusEnum;
+
+                let new_referral = NewReferral {
+                    referrer_id: referrer.id,
+                    referred_user_id: new_user.id,
+                    referral_code: ref_code.clone(),
+                    status: ReferralStatusEnum::Pending,
+                };
+
+                diesel::insert_into(referrals::table)
+                    .values(&new_referral)
+                    .execute(conn)?;
+            }
+        }
+
+        Ok(new_user)
+    })?;
 
     let code = auth::create_email_verification_code(&mut conn, user.id, 4)?;
 

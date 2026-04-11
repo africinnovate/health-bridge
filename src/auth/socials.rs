@@ -41,6 +41,7 @@ pub fn login_or_register_social_user(
         Some(u) => u,
         None => {
             // 3. Create new user
+            let referral_code = format!("{:08X}", rand::random::<u32>());
             let new_user = NewUser {
                 first_name: profile.first_name.as_deref().unwrap_or(""),
                 last_name: profile.last_name.as_deref().unwrap_or(""),
@@ -53,6 +54,8 @@ pub fn login_or_register_social_user(
                 password_hash: "", // IMPORTANT: no password
                 role: role.unwrap_or(Role::Patient),
                 consultation_preference: None,
+                referral_code: &referral_code,
+                referral_link: None,
             };
 
             diesel::insert_into(users::table)

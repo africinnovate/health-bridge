@@ -10,8 +10,9 @@ use crate::{
         },
         dashboard,
         dtos::{
-            AdminDashboardResponse, HospitalActionRequest, SpecialistActionRequest, UserFilters,
-            UserListResponse, AdminPatientProfileResponse, AdminUserProfileResponse,
+            AdminDashboardResponse, ConfigActionRequest, ConfigResponse, HospitalActionRequest,
+            SpecialistActionRequest, UserFilters, UserListResponse, AdminPatientProfileResponse,
+            AdminUserProfileResponse,
         },
     },
     error::AppError,
@@ -277,4 +278,56 @@ pub async fn get_user_profile(
     };
 
     Ok(ApiResponse::success(response))
+}
+
+/// Update application configuration (Admin only)
+///
+/// Allows admins to update system-wide settings like reward points and conversion rates
+#[utoipa::path(
+    put,
+    path = "/api/admin/configs/{key}",
+    request_body = ConfigActionRequest,
+    responses(
+        (status = 200, body = ApiResponse<ConfigResponse>),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden - Admin only"),
+        (status = 404, description = "Config key not found"),
+        (status = 500)
+    ),
+    tag = "admin",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_app_config(
+    State(state): State<AppState>,
+    Extension(current_admin): Extension<User>,
+    Path(key): Path<String>,
+    Json(payload): Json<crate::admin::dtos::ConfigActionRequest>,
+) -> Result<ApiResponse<crate::admin::dtos::ConfigResponse>, AppError> {
+    use crate::schema::app_configs;
+    use diesel::prelude::*;
+
+    // Ensure user is admin
+    if !matches!(current_admin.role, crate::utils::enums::Role::Admin) {
+        return Err(AppError::Unauthorized(
+            "Only administrators can perform this action".into(),
+        ));
+    }
+
+    let mut conn = state.pool.get()?;
+
+    let updated_config = diesel::update(app_configs::table.filter(app_configs::key.eq(&key)))
+        .set((
+            app_configs::value.eq(payload.value),
+            app_configs::description.eq(payload.description),
+            app_configs::updated_at.eq(chrono::Utc::now()),
+        ))
+        .get_result::<crate::models::AppConfig>(&mut conn)
+        .map_err(|_| AppError::NotFound(format!("Config key '{}' not found", key)))?;
+
+    Ok(ApiResponse::success(crate::admin::dtos::ConfigResponse {
+        key: updated_config.key,
+        value: updated_config.value,
+        description: updated_config.description,
+        updated_at: updated_config.updated_at,
+    }))
 }

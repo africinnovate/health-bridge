@@ -48,6 +48,8 @@ pub struct ProfileResponse {
     pub role: String,
     pub email_verified: bool,
     pub consultation_preference: Option<ConsultationTypeEnum>,
+    pub referral_code: String,
+    pub referral_link: Option<String>,
 }
 
 #[derive(Serialize, ToSchema, Debug)]
@@ -76,6 +78,8 @@ pub struct PatientProfileResponse {
     pub state: Option<String>,
     pub image_url: Option<String>,
     pub consultation_preference: Option<ConsultationTypeEnum>,
+    pub referral_code: String,
+    pub referral_link: Option<String>,
 
     // Patient / medical fields
     pub blood_type: Option<String>,
@@ -121,6 +125,8 @@ impl From<User> for ProfileResponse {
             role: user.role.to_string(),
             email_verified: user.email_verified,
             consultation_preference: user.consultation_preference,
+            referral_code: user.referral_code,
+            referral_link: user.referral_link,
         }
     }
 }
@@ -214,6 +220,8 @@ pub async fn update_profile(
         role: updated_user.role.to_string(),
         email_verified: updated_user.email_verified,
         consultation_preference: updated_user.consultation_preference,
+        referral_code: updated_user.referral_code,
+        referral_link: updated_user.referral_link,
 
         blood_type: patient.as_ref().and_then(|p| p.blood_type.clone()),
         chronic_illnesses: patient.as_ref().and_then(|p| p.chronic_illnesses.clone()),
@@ -306,6 +314,8 @@ pub fn fetch_patient_profile(
         role: user.role.to_string(),
         email_verified: user.email_verified,
         consultation_preference: user.consultation_preference,
+        referral_code: user.referral_code,
+        referral_link: user.referral_link,
 
         blood_type: patient.as_ref().and_then(|p| p.blood_type.clone()),
         chronic_illnesses: patient.as_ref().and_then(|p| p.chronic_illnesses.clone()),

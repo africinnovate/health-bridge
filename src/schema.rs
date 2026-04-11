@@ -65,6 +65,14 @@ pub mod sql_types {
     #[derive(SqlType, QueryId)]
     #[diesel(postgres_type(name = "notification_category"))]
     pub struct NotificationCategoryType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "referral_status"))]
+    pub struct ReferralStatusType;
+
+    #[derive(SqlType, QueryId)]
+    #[diesel(postgres_type(name = "reward_type"))]
+    pub struct RewardTypeType;
 }
 
 diesel::table! {
@@ -91,8 +99,55 @@ diesel::table! {
         note -> Nullable<Text>,
         eligible_to_donate -> Bool,
         consultation_preference -> Nullable<ConsultationType>,
+        referral_code -> Varchar,
+        referral_link -> Nullable<Text>,
         created_at -> Timestamptz,
         deleted_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+
+    app_configs (id) {
+        id -> DieselUuid,
+        key -> Varchar,
+        value -> Text,
+        description -> Nullable<Text>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::ReferralStatusType;
+
+    referrals (id) {
+        id -> DieselUuid,
+        referrer_id -> DieselUuid,
+        referred_user_id -> DieselUuid,
+        referral_code -> Varchar,
+        status -> ReferralStatusType,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use diesel::sql_types::Uuid as DieselUuid;
+    use crate::schema::sql_types::RewardTypeType;
+
+    referral_rewards (id) {
+        id -> DieselUuid,
+        user_id -> DieselUuid,
+        referral_id -> Nullable<DieselUuid>,
+        points -> Int4,
+        reward_type -> RewardTypeType,
+        description -> Nullable<Text>,
+        created_at -> Timestamptz,
     }
 }
 
@@ -428,6 +483,9 @@ diesel::joinable!(social_accounts -> users (user_id));
 diesel::joinable!(user_settings -> users (user_id));
 diesel::joinable!(hospital_settings -> hospitals (hospital_id));
 diesel::joinable!(refresh_tokens -> users (user_id));
+diesel::joinable!(referrals -> users (referrer_id));
+diesel::joinable!(referral_rewards -> users (user_id));
+diesel::joinable!(referral_rewards -> referrals (referral_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     users,
@@ -447,4 +505,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     hospital_settings,
     hospital_blood_inventories,
     refresh_tokens,
+    app_configs,
+    referrals,
+    referral_rewards,
 );

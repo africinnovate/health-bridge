@@ -61,6 +61,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         password_hash: &password_hash,
         role: Role::Patient,
         consultation_preference: None,
+        referral_code: "PATIENT1",
+        referral_link: None,
     };
 
     diesel::insert_into(users::table)
@@ -109,6 +111,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         password_hash: &password_hash,
         role: Role::Donor,
         consultation_preference: None,
+        referral_code: "DONOR123",
+        referral_link: None,
     };
 
     diesel::insert_into(users::table)
@@ -157,6 +161,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         password_hash: &password_hash,
         role: Role::Hospital,
         consultation_preference: None,
+        referral_code: "HOSPITAL",
+        referral_link: None,
     };
 
     diesel::insert_into(users::table)
@@ -187,6 +193,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         password_hash: &password_hash,
         role: Role::Admin,
         consultation_preference: None,
+        referral_code: "ADMIN123",
+        referral_link: None,
     };
 
     diesel::insert_into(users::table)
@@ -217,6 +225,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         password_hash: &password_hash,
         role: Role::Specialist,
         consultation_preference: None,
+        referral_code: "DRSARAH1",
+        referral_link: None,
     };
 
     diesel::insert_into(users::table)

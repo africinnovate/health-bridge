@@ -25,7 +25,7 @@ pub enum Gender {
 }
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
 )]
 #[diesel(sql_type = RoleType)]
 #[serde(rename_all = "lowercase")]
@@ -98,6 +98,27 @@ pub enum CancelledByEnum {
     Patient,
     Specialist,
     Admin,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
+#[diesel(sql_type = crate::schema::sql_types::ReferralStatusType)]
+#[serde(rename_all = "lowercase")]
+pub enum ReferralStatusEnum {
+    Pending,
+    Active,
+    Verified,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema,
+)]
+#[diesel(sql_type = crate::schema::sql_types::RewardTypeType)]
+#[serde(rename_all = "lowercase")]
+pub enum RewardTypeEnum {
+    Earned,
+    Applied,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -304,6 +325,48 @@ impl FromSql<CancelledByType, Pg> for CancelledByEnum {
             b"specialist" => Ok(CancelledByEnum::Specialist),
             b"admin" => Ok(CancelledByEnum::Admin),
             _ => Err("Unrecognized enum variant for CancelledByEnum".into()),
+        }
+    }
+}
+
+impl ToSql<crate::schema::sql_types::ReferralStatusType, Pg> for ReferralStatusEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            ReferralStatusEnum::Pending => out.write_all(b"pending")?,
+            ReferralStatusEnum::Active => out.write_all(b"active")?,
+            ReferralStatusEnum::Verified => out.write_all(b"verified")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<crate::schema::sql_types::ReferralStatusType, Pg> for ReferralStatusEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"pending" => Ok(ReferralStatusEnum::Pending),
+            b"active" => Ok(ReferralStatusEnum::Active),
+            b"verified" => Ok(ReferralStatusEnum::Verified),
+            _ => Err("Unrecognized enum variant for ReferralStatusEnum".into()),
+        }
+    }
+}
+
+impl ToSql<crate::schema::sql_types::RewardTypeType, Pg> for RewardTypeEnum {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            RewardTypeEnum::Earned => out.write_all(b"earned")?,
+            RewardTypeEnum::Applied => out.write_all(b"applied")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<crate::schema::sql_types::RewardTypeType, Pg> for RewardTypeEnum {
+    fn from_sql(bytes: PgValue) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"earned" => Ok(RewardTypeEnum::Earned),
+            b"applied" => Ok(RewardTypeEnum::Applied),
+            _ => Err("Unrecognized enum variant for RewardTypeEnum".into()),
         }
     }
 }

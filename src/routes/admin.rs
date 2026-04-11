@@ -1,7 +1,7 @@
 use crate::{AppState, handlers::admin};
 use axum::{
     Router,
-    routing::{delete, get, patch},
+    routing::{delete, get, patch, put},
 };
 
 pub fn router() -> Router<AppState> {
@@ -17,4 +17,5 @@ pub fn router() -> Router<AppState> {
             "/hospitals/{id}/status",
             patch(admin::update_hospital_status),
         )
+        .route("/configs/{key}", put(admin::update_app_config))
 }

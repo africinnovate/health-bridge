@@ -235,3 +235,17 @@ pub enum AdminUserProfileResponse {
     #[serde(rename = "hospital")]
     Hospital(AdminHospitalProfileResponse),
 }
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ConfigActionRequest {
+    pub value: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ConfigResponse {
+    pub key: String,
+    pub value: String,
+    pub description: Option<String>,
+    pub updated_at: DateTime<Utc>,
+}

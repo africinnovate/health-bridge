@@ -68,6 +68,9 @@ pub fn create_user(
     }
 
     // ---- Insert new user ----
+    // I'll use random bytes for an 8-character hex code.
+    let random_code = format!("{:08X}", OsRng.next_u32());
+
     let new_user = NewUser {
         first_name: "",
         last_name: "",
@@ -80,6 +83,8 @@ pub fn create_user(
         password_hash: &hashed_password,
         role: user_role,
         consultation_preference: None,
+        referral_code: &random_code,
+        referral_link: None,
     };
 
     let user = diesel::insert_into(users)

@@ -1,14 +1,15 @@
 use crate::{
     schema::{
-        admin_audit_logs, appointments, blood_requests, email_verification_tokens,
+        admin_audit_logs, app_configs, appointments, blood_requests, email_verification_tokens,
         hospital_blood_inventories, hospital_settings, hospitals, notifications,
-        password_reset_tokens, patients, refresh_tokens, social_accounts,
-        specialist_availabilities, specialists, specialties, user_settings, users,
+        password_reset_tokens, patients, referral_rewards, referrals, refresh_tokens,
+        social_accounts, specialist_availabilities, specialists, specialties, user_settings, users,
     },
     utils::enums::{
         ActionTypeEnum, AppointmentStatusEnum, AppointmentTypeEnum, BloodTypeEnum, CancelledByEnum,
         ConsultationTypeEnum, DaysOfWeekEnum, Gender, HospitalTypeEnum, NotificationCategoryEnum,
-        RequestStatusTypeEnum, Role, TimelineTypeEnum, UrgencyTypeEnum,
+        ReferralStatusEnum, RequestStatusTypeEnum, RewardTypeEnum, Role, TimelineTypeEnum,
+        UrgencyTypeEnum,
     },
 };
 use chrono::{DateTime, NaiveDate, Utc};
@@ -40,6 +41,8 @@ pub struct User {
     pub note: Option<String>,
     pub eligible_to_donate: bool,
     pub consultation_preference: Option<ConsultationTypeEnum>,
+    pub referral_code: String,
+    pub referral_link: Option<String>,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
 }
@@ -58,6 +61,8 @@ pub struct NewUser<'a> {
     pub password_hash: &'a str,
     pub role: Role,
     pub consultation_preference: Option<ConsultationTypeEnum>,
+    pub referral_code: &'a str,
+    pub referral_link: Option<&'a str>,
 }
 
 #[derive(AsChangeset)]
@@ -76,6 +81,8 @@ pub struct UpdateUser<'a> {
     pub password_hash: &'a str,
     pub role: Role,
     pub note: Option<Option<&'a str>>,
+    pub referral_code: Option<&'a str>,
+    pub referral_link: Option<Option<&'a str>>,
     pub eligible_to_donate: Option<bool>,
     pub consultation_preference: Option<ConsultationTypeEnum>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -467,4 +474,72 @@ pub struct NewRefreshToken<'a> {
     pub user_id: Uuid,
     pub token: &'a str,
     pub expires_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = app_configs)]
+pub struct AppConfig {
+    pub id: Uuid,
+    pub key: String,
+    pub value: String,
+    pub description: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Insertable, Deserialize, ToSchema)]
+#[diesel(table_name = app_configs)]
+pub struct NewAppConfig {
+    pub key: String,
+    pub value: String,
+    pub description: Option<String>,
+}
+
+#[derive(AsChangeset, Deserialize, ToSchema)]
+#[diesel(table_name = app_configs)]
+pub struct UpdateAppConfig {
+    pub value: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = referrals)]
+pub struct Referral {
+    pub id: Uuid,
+    pub referrer_id: Uuid,
+    pub referred_user_id: Uuid,
+    pub referral_code: String,
+    pub status: ReferralStatusEnum,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = referrals)]
+pub struct NewReferral {
+    pub referrer_id: Uuid,
+    pub referred_user_id: Uuid,
+    pub referral_code: String,
+    pub status: ReferralStatusEnum,
+}
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Identifiable, ToSchema)]
+#[diesel(table_name = referral_rewards)]
+pub struct ReferralReward {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub referral_id: Option<Uuid>,
+    pub points: i32,
+    pub reward_type: RewardTypeEnum,
+    pub description: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = referral_rewards)]
+pub struct NewReferralReward {
+    pub user_id: Uuid,
+    pub referral_id: Option<Uuid>,
+    pub points: i32,
+    pub reward_type: RewardTypeEnum,
+    pub description: Option<String>,
 }

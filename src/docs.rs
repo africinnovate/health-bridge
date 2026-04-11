@@ -1,5 +1,5 @@
 use crate::handlers::{
-    admin, appointments, auth, common, hospitals, notifications, patients, socials, specialists,
+    admin, appointments, auth, common, hospitals, notifications, patients, referrals, socials, specialists,
 };
 use utoipa::OpenApi;
 use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
@@ -72,9 +72,29 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         admin::get_users,
         admin::update_specialist_status,
         admin::update_hospital_status,
+        admin::update_app_config,
+        referrals::get_referral_summary,
+        referrals::update_referral_link,
     ),
 
-    components(),
+    components(
+        schemas(
+            referrals::ReferralSummaryResponse,
+            referrals::RewardHistoryResponse,
+            referrals::ReferralStat,
+            referrals::UpdateReferralLinkPayload,
+            auth::RegisterRequest,
+            auth::LoginRequest,
+            auth::AuthResponse,
+            auth::UserResponse,
+            crate::admin::dtos::ConfigActionRequest,
+            crate::admin::dtos::ConfigResponse,
+            crate::utils::enums::ReferralStatusEnum,
+            crate::utils::enums::RewardTypeEnum,
+            crate::utils::enums::Role,
+            crate::utils::enums::ConsultationTypeEnum,
+        )
+    ),
 
     modifiers(&SecurityAddon),
     tags(
@@ -86,6 +106,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         (name = "notifications", description = "Notification management endpoints"),
         (name = "settings", description = "User settings endpoints"),
         (name = "admin", description = "Admin management endpoints"),
+        (name = "referrals", description = "Referral system endpoints"),
     ),
     info(
         title = "RubiMedik API",

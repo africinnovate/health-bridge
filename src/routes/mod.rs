@@ -10,6 +10,7 @@ pub mod appointments;
 pub mod notifications;
 pub mod admin;
 pub mod user_settings;
+pub mod referrals;
 
 pub fn create_router() -> Router<AppState> {
     let protected_auth = Router::new()
@@ -71,6 +72,12 @@ pub fn create_router() -> Router<AppState> {
     let public_specialists = Router::new()
     .nest("/specialists", specialists::public_router());
 
+    let protected_referrals = Router::new()
+    .nest("/referrals", referrals::routes())
+    .route_layer(
+        middleware::from_fn_with_state(|state: &AppState| state.clone(), require_auth),
+    );
+
     let protected_admin = Router::new()
     .nest("/admin", admin::router())
     .route_layer(
@@ -89,4 +96,5 @@ pub fn create_router() -> Router<AppState> {
         .merge(protected_notifications)
         .merge(protected_user_settings)
         .merge(protected_admin)
+        .merge(protected_referrals)
 }
