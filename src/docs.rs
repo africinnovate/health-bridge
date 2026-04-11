@@ -73,6 +73,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         admin::update_specialist_status,
         admin::update_hospital_status,
         admin::update_app_config,
+        // referrals::get_referral_summary,
         referrals::update_referral_link,
         wallets::get_wallet_summary,
         wallets::deposit_initialize,
