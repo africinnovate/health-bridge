@@ -96,6 +96,8 @@ pub enum CancelledByEnum {
     Hospital,
     Donor,
     Patient,
+    Specialist,
+    Admin,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsExpression, FromSqlRow, ToSchema)]
@@ -286,6 +288,8 @@ impl ToSql<CancelledByType, Pg> for CancelledByEnum {
             CancelledByEnum::Hospital => out.write_all(b"hospital")?,
             CancelledByEnum::Donor => out.write_all(b"donor")?,
             CancelledByEnum::Patient => out.write_all(b"patient")?,
+            CancelledByEnum::Specialist => out.write_all(b"specialist")?,
+            CancelledByEnum::Admin => out.write_all(b"admin")?,
         }
         Ok(IsNull::No)
     }
@@ -297,6 +301,8 @@ impl FromSql<CancelledByType, Pg> for CancelledByEnum {
             b"hospital" => Ok(CancelledByEnum::Hospital),
             b"donor" => Ok(CancelledByEnum::Donor),
             b"patient" => Ok(CancelledByEnum::Patient),
+            b"specialist" => Ok(CancelledByEnum::Specialist),
+            b"admin" => Ok(CancelledByEnum::Admin),
             _ => Err("Unrecognized enum variant for CancelledByEnum".into()),
         }
     }

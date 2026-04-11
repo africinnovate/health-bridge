@@ -88,7 +88,7 @@ pub async fn get_appointments(
 
 /// Confirm appointment
 ///
-/// Used by Hospital staff to confirm appointment
+/// Used by Hospital staff, Specialists, or Admins to confirm an appointment
 #[utoipa::path(
     put,
     path = "/api/appointments/confirm/{appointment_id}",

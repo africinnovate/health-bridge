@@ -83,13 +83,27 @@ pub fn confirm_appointment(
     appointment_id: Uuid,
     user: &User,
 ) -> Result<Appointment, AppError> {
-    if user.role != Role::Hospital {
-        return Err(AppError::Unauthorized(
-            "Only hospitals can confirm appointments".into(),
-        ));
+    match user.role {
+        Role::Hospital => {
+            assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
+        }
+        Role::Specialist => {
+            assert_specialist_owns_appointment(conn, appointment_id, user.id)?;
+        }
+        Role::Admin => {
+            // Admins can confirm any appointment
+            appointments::table
+                .filter(appointments::id.eq(appointment_id))
+                .select(Appointment::as_select())
+                .first(conn)
+                .map_err(|_| AppError::NotFound("Appointment not found".into()))?;
+        }
+        _ => {
+            return Err(AppError::Unauthorized(
+                "Only hospitals, specialists, or admins can confirm appointments".into(),
+            ));
+        }
     }
-
-    assert_hospital_owns_appointment(conn, appointment_id, user.id)?;
 
     diesel::update(appointments::table.find(appointment_id))
         .set(appointments::status.eq(AppointmentStatusEnum::Confirmed))
@@ -300,7 +314,8 @@ pub fn cancel_appointment(
             AppointmentTypeEnum::Donor => CancelledByEnum::Donor,
             AppointmentTypeEnum::Patient => CancelledByEnum::Patient,
         },
-        _ => unreachable!(), // already guarded above
+        Role::Specialist => CancelledByEnum::Specialist,
+        Role::Admin => CancelledByEnum::Admin,
     };
 
     diesel::update(appointments::table.find(appointment_id))

@@ -1,0 +1,2 @@
+-- This is empty because PostgreSQL doesn't support removing values from an ENUM easily.
+-- To reverse this, you'd need to drop the type and recreate it, which requires dropping/altering columns using it.
