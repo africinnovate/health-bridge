@@ -1,4 +1,10 @@
-use axum::{
+import re
+
+with open("src/handlers/appointments.rs", "r") as f:
+    text = f.read()
+
+# 1. Imports
+imports_replacement = """use axum::{
     Extension, Json,
     extract::{Path, Query, State},
 };
@@ -12,10 +18,7 @@ use uuid::Uuid;
 use crate::{
     AppState,
     error::AppError,
-    hospitals::{
-        self,
-        appointments::{AppointmentQuery, AppointmentResponse},
-    },
+    hospitals,
     models::{
         Appointment, AppConfig, ConsultationPackage, ReferralReward, NewReferralReward, User,
         WalletTransaction, NewWalletTransaction, ConsultationType,
@@ -105,19 +108,14 @@ pub struct CreateAppointmentResponse {
 pub struct VerifyAppointmentPaymentPayload {
     pub reference: String,
 }
+"""
 
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct RescheduleAppointmentPayload {
-    pub scheduled_time: DateTime<Utc>,
-}
+text = re.sub(r'use axum.*?::ApiResponse,\n    \},\n\};\n', imports_replacement, text, flags=re.DOTALL)
 
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct CancelAppointmentPayload {
-    pub reason: Option<String>,
-}
+# Remove the old CreateAppointment struct path macro definition since we changed the body signature
+old_path_macro = r'#\[utoipa::path\([^\]]+create_appointment.+?pub async fn create_appointment.*?\n\}'
 
-/// Create appointment (donor or patient initiates)
-#[utoipa::path(
+new_create_appointment = """#[utoipa::path(
     post,
     path = "/api/appointments/create",
     request_body = CreateAppointmentPayload,
@@ -216,7 +214,7 @@ pub async fn create_appointment(
                     user_id: user.id,
                     referral_id: None,
                     points: -apply_points,
-                    reward_type: RewardTypeEnum::Applied, 
+                    reward_type: RewardTypeEnum::Bonus, 
                     description: Some("Points applied for consultation discount".into()),
                 })
                 .execute(c)?;
@@ -234,13 +232,13 @@ pub async fn create_appointment(
         let specialist_wallet = crate::handlers::wallets::get_or_create_wallet(c, payload.specialist_id)?;
         
         let platform_cut = (fee.clone() * platform_percent.clone()) / BigDecimal::from(100);
-        let specialist_cut = fee.clone() - platform_cut.clone();
+        let specialist_cut = fee.clone() - platform_cut;
 
         diesel::insert_into(wallet_transactions::table)
             .values(&NewWalletTransaction {
                 wallet_id: specialist_wallet.id,
                 amount: specialist_cut.clone(),
-                transaction_type: WalletTransactionTypeEnum::Deposit,
+                transaction_type: WalletTransactionTypeEnum::Earning,
                 status: WalletTransactionStatusEnum::Pending, 
                 reference: format!("ESCROW-{}", appt.id),
                 provider: "system".into(),
@@ -249,7 +247,6 @@ pub async fn create_appointment(
                     "appointment_id": appt.id,
                     "platform_cut": platform_cut.to_f64().unwrap_or(0.0),
                     "total_payable": total_payable.to_f64().unwrap_or(0.0),
-                    "points_applied": apply_points,
                     "paystack_reference": pay_reference,
                     "paid_via_wallet": use_wallet
                 })),
@@ -271,224 +268,6 @@ pub async fn create_appointment(
             reference: (!use_wallet).then_some(pay_reference),
         },
     ))
-}
-
-#[utoipa::path(
-    get,
-    path = "/api/appointments",
-    params(
-        ("appointment_type" = Option<AppointmentTypeEnum>, Query),
-        ("status" = Option<AppointmentStatusEnum>, Query),
-        ("timeline" = Option<String>, Query, description = "Filter by timeframe (today, this_week, this_month, upcoming)"),
-        ("specialist_id" = Option<Uuid>, Query)
-    ),
-    responses(
-        (status = 200, body = ApiResponse<Vec<AppointmentResponse>>),
-        (status = 401)
-    ),
-    tag = "appointments",
-    security(("bearer_auth" = []))
-)]
-pub async fn get_appointments(
-    State(state): State<AppState>,
-    Extension(user): Extension<User>,
-    Query(filters): Query<AppointmentQuery>,
-) -> Result<ApiResponse<Vec<AppointmentResponse>>, AppError> {
-    let mut conn = state.pool.get()?;
-    let results = hospitals::appointments::get_appointments(&mut conn, &user, filters)?;
-    Ok(ApiResponse::success(results))
-}
-
-/// Confirm appointment
-///
-/// Used by Hospital staff, Specialists, or Admins to confirm an appointment
-#[utoipa::path(
-    put,
-    path = "/api/appointments/confirm/{appointment_id}",
-    responses(
-        (status = 200, body = ApiResponse<Appointment>),
-        (status = 401),
-        (status = 404),
-        (status = 500)
-    ),
-    tag = "appointments",
-    security(("bearer_auth" = []))
-)]
-pub async fn confirm_appointment(
-    Path(id): Path<Uuid>,
-    Extension(user): Extension<User>,
-    State(state): State<AppState>,
-) -> Result<ApiResponse<Appointment>, AppError> {
-    let mut conn = state.pool.get()?;
-    let appt = hospitals::appointments::confirm_appointment(&mut conn, id, &user)?;
-    Ok(ApiResponse::success(appt))
-}
-
-/// Reschedule an appointment
-#[utoipa::path(
-    put,
-    path = "/api/appointments/reschedule/{appointment_id}",
-    request_body = RescheduleAppointmentPayload,
-    responses(
-        (status = 200, body = ApiResponse<Appointment>),
-        (status = 401),
-        (status = 404)
-    ),
-    tag = "appointments",
-    security(("bearer_auth" = []))
-)]
-pub async fn reschedule_appointment(
-    Path(appointment_id): Path<Uuid>,
-    Extension(user): Extension<User>,
-    State(state): State<AppState>,
-    Json(payload): Json<RescheduleAppointmentPayload>,
-) -> Result<ApiResponse<Appointment>, AppError> {
-    let mut conn = state.pool.get()?;
-    let appointment = hospitals::appointments::reschedule_appointment(
-        &mut conn,
-        appointment_id,
-        &user,
-        payload.scheduled_time,
-    )?;
-    Ok(ApiResponse::success(appointment))
-}
-
-/// Cancel Appointment
-#[utoipa::path(
-    put,
-    path = "/api/appointments/cancel/{appointment_id}",
-    request_body = CancelAppointmentPayload,
-    responses(
-        (status = 200, body = ApiResponse<Appointment>),
-        (status = 401),
-        (status = 404)
-    ),
-    tag = "appointments",
-    security(("bearer_auth" = []))
-)]
-pub async fn cancel_appointment(
-    Path(appointment_id): Path<Uuid>,
-    Extension(user): Extension<User>,
-    State(state): State<AppState>,
-    Json(payload): Json<CancelAppointmentPayload>,
-) -> Result<ApiResponse<Appointment>, AppError> {
-    let mut conn = state.pool.get()?;
-    
-    let appointment = conn.transaction::<_, AppError, _>(|c| {
-        let existing_appt = appointments_schema::table
-            .find(appointment_id)
-            .first::<Appointment>(c)?;
-            
-        let window_hours: i64 = get_config_value(c, "appointment_cancel_window")
-            .and_then(|v| v.parse().map_err(|_| AppError::InternalServerError))
-            .unwrap_or(24);
-
-        if chrono::Utc::now() > existing_appt.scheduled_time - chrono::Duration::hours(window_hours) {
-            return Err(AppError::BadRequest("Appointment cancellation window has passed".into()));
-        }
-
-        let appt = hospitals::appointments::cancel_appointment(c, appointment_id, &user, payload.reason)?;
-
-        let escrow_tx = wallet_transactions::table
-            .filter(wallet_transactions::reference.eq(format!("ESCROW-{}", appt.id)))
-            .filter(wallet_transactions::status.eq(WalletTransactionStatusEnum::Pending))
-            .first::<WalletTransaction>(c)
-            .optional()?;
-
-        if let Some(target_tx) = escrow_tx {
-            diesel::update(wallet_transactions::table.find(target_tx.id))
-                .set(wallet_transactions::status.eq(WalletTransactionStatusEnum::Failed))
-                .execute(c)?;
-
-            if let Some(metadata) = target_tx.metadata {
-                let total_payable = metadata.as_object().and_then(|m| m.get("total_payable")).and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let points_applied = metadata.as_object().and_then(|m| m.get("points_applied")).and_then(|v| v.as_i64()).unwrap_or(0);
-
-                let patient_wallet = crate::handlers::wallets::get_or_create_wallet(c, appt.user_id)?;
-
-                if total_payable > 0.0 {
-                    let refund_amount = BigDecimal::from_f64(total_payable).unwrap_or(BigDecimal::from(0));
-                    
-                    diesel::update(wallets::table.find(patient_wallet.id))
-                        .set(wallets::balance.eq(wallets::balance + &refund_amount))
-                        .execute(c)?;
-
-                    diesel::insert_into(wallet_transactions::table)
-                        .values(&NewWalletTransaction {
-                            wallet_id: patient_wallet.id,
-                            amount: refund_amount,
-                            transaction_type: WalletTransactionTypeEnum::Refund,
-                            status: WalletTransactionStatusEnum::Successful,
-                            reference: format!("REFUND-{}", appt.id),
-                            provider: "system".into(),
-                            description: Some("Consultation fee refund".into()),
-                            metadata: None,
-                        })
-                        .execute(c)?;
-                }
-
-                if points_applied > 0 {
-                    diesel::insert_into(referral_rewards::table)
-                        .values(&NewReferralReward {
-                            user_id: appt.user_id,
-                            referral_id: None,
-                            points: points_applied as i32,
-                            reward_type: RewardTypeEnum::Earned, 
-                            description: Some("Points refunded from cancelled appointment".into()),
-                        })
-                        .execute(c)?;
-                }
-            }
-        }
-
-        Ok(appt)
-    })?;
-
-    Ok(ApiResponse::success(appointment))
-}
-
-/// Complete appointment. Used only by Hospital
-#[utoipa::path(
-    put,
-    path = "/api/appointments/complete/{appointment_id}",
-    responses(
-        (status = 200, body = ApiResponse<Appointment>),
-        (status = 401),
-        (status = 404)
-    ),
-    tag = "appointments",
-    security(("bearer_auth" = []))
-)]
-pub async fn complete_appointment(
-    Path(appointment_id): Path<Uuid>,
-    Extension(user): Extension<User>,
-    State(state): State<AppState>,
-) -> Result<ApiResponse<Appointment>, AppError> {
-    let mut conn = state.pool.get()?;
-    
-    let appointment = conn.transaction::<_, AppError, _>(|c| {
-        let appt = hospitals::appointments::complete_appointment(c, appointment_id, &user)?;
-
-        let escrow_tx = wallet_transactions::table
-            .filter(wallet_transactions::reference.eq(format!("ESCROW-{}", appt.id)))
-            .filter(wallet_transactions::status.eq(WalletTransactionStatusEnum::Pending))
-            .first::<WalletTransaction>(c)
-            .optional()?;
-
-        if let Some(target_tx) = escrow_tx {
-            diesel::update(wallet_transactions::table.find(target_tx.id))
-                .set(wallet_transactions::status.eq(WalletTransactionStatusEnum::Successful))
-                .execute(c)?;
-                
-            diesel::update(wallets::table.find(target_tx.wallet_id))
-                .set(wallets::balance.eq(wallets::balance + &target_tx.amount))
-                .execute(c)?;
-        }
-
-        Ok(appt)
-    })?;
-
-    Ok(ApiResponse::success(appointment))
 }
 
 #[utoipa::path(
@@ -518,13 +297,13 @@ pub async fn verify_appointment_payment(
 
     let pending_transactions = wallet_transactions::table
         .filter(wallet_transactions::status.eq(WalletTransactionStatusEnum::Pending))
-        .filter(wallet_transactions::transaction_type.eq(WalletTransactionTypeEnum::Deposit))
+        .filter(wallet_transactions::transaction_type.eq(WalletTransactionTypeEnum::Earning))
         .load::<crate::models::WalletTransaction>(&mut conn)?;
         
     let mut matching_tx = None;
     for tx in pending_transactions {
         if let Some(meta) = &tx.metadata {
-            if meta.as_object().and_then(|m| m.get("paystack_reference")).and_then(|v| v.as_str()) == Some(&payload.reference) {
+            if meta.get("paystack_reference") == Some(&serde_json::json!(payload.reference)) {
                 matching_tx = Some(tx);
                 break;
             }
@@ -534,12 +313,11 @@ pub async fn verify_appointment_payment(
     let target_tx = matching_tx.ok_or_else(|| AppError::NotFound("Pending appointment payment not found".into()))?;
     
     let metadata = target_tx.metadata.unwrap();
-    let total_payable = metadata.as_object().and_then(|m| m.get("total_payable")).and_then(|v| v.as_f64()).unwrap_or(0.0);
-    let appt_id = metadata.as_object().and_then(|m| m.get("appointment_id")).and_then(|v| v.as_str()).and_then(|s| s.parse::<Uuid>().ok())
+    let total_payable = metadata.get("total_payable").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let appt_id = metadata.get("appointment_id").and_then(|v| v.as_str()).and_then(|s| s.parse::<Uuid>().ok())
         .ok_or_else(|| AppError::InternalServerError)?;
 
     if total_payable > 0.0 {
-        use bigdecimal::FromPrimitive;
         let _ = perform_platform_transfer(&state, BigDecimal::from_f64(total_payable).unwrap_or(BigDecimal::from(0)), &mut conn).await;
     }
 
@@ -547,5 +325,16 @@ pub async fn verify_appointment_payment(
         .find(appt_id)
         .first::<Appointment>(&mut conn)?;
 
+    // We keep the escort transaction Pending until completion. It's just now confirmed to be funded.
+    // If you want to change its status to mark it as funded, you can add another field. For now it remains Pending.
+
     Ok(ApiResponse::success(appointment))
 }
+"""
+
+text = re.sub(old_path_macro, new_create_appointment, text, flags=re.DOTALL)
+
+with open("src/handlers/appointments.rs", "w") as f:
+    f.write(text)
+
+print("Patched appointments.rs")

@@ -563,7 +563,7 @@ pub async fn list_transactions(
 }
 
 // Utility function to get or create a wallet for a user
-fn get_or_create_wallet(conn: &mut PgConnection, user_id_val: Uuid) -> Result<Wallet, AppError> {
+pub fn get_or_create_wallet(conn: &mut PgConnection, user_id_val: Uuid) -> Result<Wallet, AppError> {
     let wallet = wallets::table
         .filter(wallets::user_id.eq(user_id_val))
         .first::<Wallet>(conn)

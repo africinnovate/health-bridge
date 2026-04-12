@@ -67,6 +67,7 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         specialists::get_patient_profile,
         appointments::get_appointments,
         appointments::create_appointment,
+        appointments::verify_appointment_payment,
         appointments::confirm_appointment,
         appointments::reschedule_appointment,
         appointments::cancel_appointment,
