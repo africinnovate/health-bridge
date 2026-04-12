@@ -742,3 +742,55 @@ pub fn get_recent_activity(
 
     Ok(activities)
 }
+
+pub fn get_hospital_detailed_profile(
+    conn: &mut PgConnection,
+    user_idd: Uuid,
+) -> Result<crate::admin::dtos::AdminHospitalProfileResponse, AppError> {
+    use crate::admin::dtos::HospitalBloodInventorySummary;
+    use crate::models::{Hospital, User};
+    use crate::schema::{hospitals, users, hospital_blood_inventories, blood_requests};
+
+    let (user, hospital) = users::table
+        .inner_join(hospitals::table.on(hospitals::user_id.eq(users::id)))
+        .filter(users::id.eq(user_idd))
+        .select((User::as_select(), Hospital::as_select()))
+        .first::<(User, Hospital)>(conn)?;
+
+    let blood_inventory = hospital_blood_inventories::table
+        .filter(hospital_blood_inventories::hospital_id.eq(hospital.id))
+        .select((
+            hospital_blood_inventories::blood_type,
+            hospital_blood_inventories::units_available,
+        ))
+        .load::<(crate::utils::enums::BloodTypeEnum, i32)>(conn)?
+        .into_iter()
+        .map(|(bt, units)| HospitalBloodInventorySummary {
+            blood_type: bt,
+            units,
+        })
+        .collect();
+
+    let total_requests = blood_requests::table
+        .filter(blood_requests::hospital_id.eq(hospital.id))
+        .count()
+        .get_result::<i64>(conn)?;
+
+    Ok(crate::admin::dtos::AdminHospitalProfileResponse {
+        id: hospital.id,
+        name: hospital.name,
+        hospital_type: hospital.hospital_type,
+        address: hospital.address,
+        city: hospital.city,
+        state: hospital.state,
+        country: hospital.country,
+        primary_phone: hospital.primary_phone,
+        email: hospital.email,
+        profile_image: hospital.profile_image,
+        license_status: hospital.license_status,
+        contact_person: crate::handlers::patients::ProfileResponse::from(user),
+        has_blood_bank: hospital.has_blood_bank,
+        blood_inventory,
+        total_requests,
+    })
+}

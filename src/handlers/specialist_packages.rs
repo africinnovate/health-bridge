@@ -16,6 +16,8 @@ use crate::schema::{
 };
 use crate::utils::response::ApiResponse;
 use crate::AppState;
+use crate::consultations::service as consultation_service;
+use crate::utils::enums::Role;
 
 /// Create a new consultation package
 #[utoipa::path(
@@ -310,4 +312,85 @@ fn get_resolved_package(
         package,
         benefits: resolved_benefits,
     })
+}
+
+// ---- Specialist Consultation Listing Handlers ----
+
+/// List all consultation types for specialists
+#[utoipa::path(
+    get,
+    path = "/api/specialists/consultation-types",
+    responses(
+        (status = 200, body = ApiResponse<Vec<ConsultationType>>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "specialists",
+    security(("bearer_auth" = []))
+)]
+pub async fn list_consultation_types(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<Vec<ConsultationType>>, AppError> {
+    if user.role != Role::Specialist {
+        return Err(AppError::Unauthorized("Specialist access required".into()));
+    }
+
+    let mut conn = state.pool.get()?;
+    let types = consultation_service::list_consultation_types(&mut conn)?;
+
+    Ok(ApiResponse::success(types))
+}
+
+/// List all consultation benefits for specialists
+#[utoipa::path(
+    get,
+    path = "/api/specialists/consultation-benefits",
+    responses(
+        (status = 200, body = ApiResponse<Vec<ConsultationBenefit>>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "specialists",
+    security(("bearer_auth" = []))
+)]
+pub async fn list_consultation_benefits(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> Result<ApiResponse<Vec<ConsultationBenefit>>, AppError> {
+    if user.role != Role::Specialist {
+        return Err(AppError::Unauthorized("Specialist access required".into()));
+    }
+
+    let mut conn = state.pool.get()?;
+    let benefits = consultation_service::list_consultation_benefits(&mut conn)?;
+
+    Ok(ApiResponse::success(benefits))
+}
+
+/// List benefits for a specific consultation type for specialists
+#[utoipa::path(
+    get,
+    path = "/api/specialists/consultation-types/{id}/benefits",
+    responses(
+        (status = 200, body = ApiResponse<Vec<ConsultationBenefit>>),
+        (status = 401),
+        (status = 500)
+    ),
+    tag = "specialists",
+    security(("bearer_auth" = []))
+)]
+pub async fn list_type_benefits(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Path(id): Path<Uuid>,
+) -> Result<ApiResponse<Vec<ConsultationBenefit>>, AppError> {
+    if user.role != Role::Specialist {
+        return Err(AppError::Unauthorized("Specialist access required".into()));
+    }
+
+    let mut conn = state.pool.get()?;
+    let benefits = consultation_service::list_type_benefits(&mut conn, id)?;
+
+    Ok(ApiResponse::success(benefits))
 }

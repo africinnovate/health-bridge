@@ -14,6 +14,7 @@ use crate::specialists::service::{
 use crate::utils::enums::DaysOfWeekEnum;
 use crate::utils::response::ApiResponse;
 use crate::{AppState, error::AppError, utils::enums::ConsultationTypeEnum};
+use crate::patients::service as patient_service;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateSpecialistRequest {
@@ -392,7 +393,7 @@ pub async fn get_patient_profile(
 
     match target_user.role {
         Role::Patient | Role::Donor | Role::PatientDonor => {
-            let profile = crate::admin::dashboard::get_admin_patient_profile(&mut conn, patient_id)?;
+            let profile = patient_service::get_patient_detailed_profile(&mut conn, patient_id)?;
             Ok(ApiResponse::success(profile))
         }
         _ => Err(AppError::BadRequest("User is not a patient".into()))

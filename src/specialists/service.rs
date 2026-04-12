@@ -367,6 +367,29 @@ pub fn list_specialties(
     Ok(results)
 }
 
+pub fn get_specialist_detailed_profile(
+    conn: &mut PgConnection,
+    user_id_val: Uuid,
+) -> Result<crate::admin::dtos::AdminSpecialistProfileResponse, AppError> {
+    let (user, specialist, specialty_name) = users::table
+        .inner_join(specialists::table.on(specialists::user_id.eq(users::id)))
+        .inner_join(specialties::table.on(specialists::specialty_id.eq(specialties::id)))
+        .filter(users::id.eq(user_id_val))
+        .select((User::as_select(), Specialist::as_select(), specialties::name))
+        .first::<(User, Specialist, String)>(conn)?;
+
+    Ok(crate::admin::dtos::AdminSpecialistProfileResponse {
+        profile: crate::handlers::patients::ProfileResponse::from(user),
+        specialty: specialty_name,
+        bio: specialist.bio,
+        experience: specialist.years_of_experience,
+        country: specialist.country,
+        consultation_types: specialist.consultation_type,
+        verified: specialist.verified,
+        license_url: specialist.license_url,
+    })
+}
+
 pub fn upload_license(
     conn: &mut PgConnection,
     _user_id: Uuid,

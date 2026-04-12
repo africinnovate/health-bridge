@@ -110,6 +110,9 @@ use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
         specialist_packages::get_package,
         specialist_packages::update_package,
         specialist_packages::delete_package,
+        specialist_packages::list_consultation_types,
+        specialist_packages::list_consultation_benefits,
+        specialist_packages::list_type_benefits,
     ),
 
     components(
