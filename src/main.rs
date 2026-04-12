@@ -17,94 +17,66 @@ mod services;
 mod specialists;
 mod utils;
 
-use ax_ex::FromRef;
-use common::services::CloudinaryService;
-use config::Config;
-use db::DbPool;
-use services::mail::MailService;
-use services::paystack::PaystackService;
+use axum::{Router, http::StatusCode, routing::get};
 use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio::net::TcpListener;
-use tracing::info;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber;
+use tower_http::cors::{Any, CorsLayer};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
-mod ax_ex {
-    pub use axum::extract::FromRef;
-}
+use crate::db::DbPool;
+use crate::docs::ApiDoc;
+use crate::services::MailService;
 
 #[derive(Clone)]
-pub struct AppState {
-    pub pool: DbPool,
-    pub cfg: Config,
-    pub mail_service: MailService,
-    pub paystack_service: Arc<PaystackService>,
-    pub cloudinary_service: Arc<CloudinaryService>,
-}
-
-impl FromRef<AppState> for DbPool {
-    fn from_ref(state: &AppState) -> Self {
-        state.pool.clone()
-    }
-}
-
-impl FromRef<AppState> for MailService {
-    fn from_ref(state: &AppState) -> Self {
-        state.mail_service.clone()
-    }
-}
-
-impl FromRef<AppState> for Config {
-    fn from_ref(state: &AppState) -> Self {
-        state.cfg.clone()
-    }
-}
-
-impl FromRef<AppState> for Arc<PaystackService> {
-    fn from_ref(state: &AppState) -> Self {
-        state.paystack_service.clone()
-    }
-}
-
-impl FromRef<AppState> for Arc<CloudinaryService> {
-    fn from_ref(state: &AppState) -> Self {
-        state.cloudinary_service.clone()
-    }
+struct AppState {
+    pool: DbPool,
+    cfg: config::Config,
+    mail_service: MailService,
+    cloudinary_service: std::sync::Arc<common::services::CloudinaryService>,
+    paystack_service: std::sync::Arc<services::paystack::PaystackService>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Initialize tracing
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "health_bridge=debug,tower_http=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    tracing_subscriber::fmt::init();
 
-    info!("Starting health-bridge server...");
-
-    let config = Config::from_env();
-    let pool = db::init_db(&config.database_url)?;
-    let mail_service = MailService::new(config.resend_api_key.clone(), config.from_email.clone());
-    let paystack_service = Arc::new(PaystackService::new(config.paystack_secret_key.clone()));
-    let cloudinary_service = Arc::new(CloudinaryService::new(&config));
+    let cfg = config::Config::from_env();
+    let pool = db::init_db(&cfg.database_url)?;
+    let mail_service = MailService::new(cfg.resend_api_key.clone(), cfg.from_email.clone());
+    let cloudinary_service = std::sync::Arc::new(common::services::CloudinaryService::new(&cfg));
+    let paystack_service = std::sync::Arc::new(services::paystack::PaystackService::new(cfg.paystack_secret_key.clone()));
 
     let state = AppState {
-        pool,
-        cfg: config.clone(),
-        mail_service,
-        paystack_service,
+        pool: pool.clone(),
+        cfg: cfg.clone(),
+        mail_service: mail_service.clone(),
         cloudinary_service,
+        paystack_service,
     };
 
-    let app = routes::create_router().with_state(state);
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
-    let addr: SocketAddr = config.bind_addr.parse()?;
-    info!("Listening on {}", addr);
+    let app = Router::new()
+        .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .nest("/api", routes::create_router())
+        .route(
+            "/health",
+            get(|| async { (StatusCode::OK, "The health is healthing! ...") }),
+        )
+        .layer(axum::Extension(state.clone()))
+        .layer(cors)
+        .with_state(state);
 
-    let listener = TcpListener::bind(addr).await?;
+    let addr: SocketAddr = cfg.bind_addr.parse()?;
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    tracing::info!("listening on {}", addr);
+    println!("Server starting on http://{}", addr);
+    println!("📚 Swagger UI available at http://{}/docs", addr);
+
     axum::serve(listener, app).await?;
 
     Ok(())
