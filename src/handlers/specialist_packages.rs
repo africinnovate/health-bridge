@@ -320,6 +320,7 @@ fn get_resolved_package(
 #[utoipa::path(
     get,
     path = "/api/specialists/consultation-types",
+    operation_id = "specialist_list_consultation_types",
     responses(
         (status = 200, body = ApiResponse<Vec<ConsultationType>>),
         (status = 401),
@@ -346,6 +347,7 @@ pub async fn list_consultation_types(
 #[utoipa::path(
     get,
     path = "/api/specialists/consultation-benefits",
+    operation_id = "specialist_list_consultation_benefits",
     responses(
         (status = 200, body = ApiResponse<Vec<ConsultationBenefit>>),
         (status = 401),
@@ -372,6 +374,7 @@ pub async fn list_consultation_benefits(
 #[utoipa::path(
     get,
     path = "/api/specialists/consultation-types/{id}/benefits",
+    operation_id = "specialist_list_type_benefits",
     responses(
         (status = 200, body = ApiResponse<Vec<ConsultationBenefit>>),
         (status = 401),
