@@ -1,5 +1,4 @@
 use axum::{extract::{Path, State}, Extension, Json};
-use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::{
@@ -9,7 +8,6 @@ use crate::{
         ConsultationBenefit, NewConsultationBenefit, UpdateConsultationBenefit,
         ConsultationTypeBenefit, User,
     },
-    schema::{consultation_types, consultation_benefits, consultation_type_benefits},
     utils::{enums::Role, response::{ApiResponse, EmptyData}},
     AppState,
 };

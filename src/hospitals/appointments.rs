@@ -302,7 +302,6 @@ pub fn cancel_appointment(
                 .first(conn)
                 .map_err(|_| AppError::NotFound("Appointment not found".into()))?
         }
-        _ => return Err(AppError::Unauthorized("Invalid role".into())),
     };
 
     let cancelled_by = match user.role {

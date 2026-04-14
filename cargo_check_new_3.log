@@ -1,0 +1,137 @@
+    Checking health-bridge v0.1.0 (/Users/justin/Projects/hb)
+warning: struct `PatientMeta` is never constructed
+  --> src/admin/dtos.rs:33:12
+   |
+33 | pub struct PatientMeta {
+   |            ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `SpecialistMeta` is never constructed
+  --> src/admin/dtos.rs:38:12
+   |
+38 | pub struct SpecialistMeta {
+   |            ^^^^^^^^^^^^^^
+
+warning: struct `HospitalMeta` is never constructed
+  --> src/admin/dtos.rs:45:12
+   |
+45 | pub struct HospitalMeta {
+   |            ^^^^^^^^^^^^
+
+warning: struct `PaginatedResponse` is never constructed
+  --> src/admin/dtos.rs:52:12
+   |
+52 | pub struct PaginatedResponse<T> {
+   |            ^^^^^^^^^^^^^^^^^
+
+warning: struct `AdminUserFilters` is never constructed
+  --> src/admin/dtos.rs:60:12
+   |
+60 | pub struct AdminUserFilters {
+   |            ^^^^^^^^^^^^^^^^
+
+warning: function `create_notification` is never used
+  --> src/common/notifications.rs:51:8
+   |
+51 | pub fn create_notification(
+   |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `notify_user` is never used
+   --> src/common/notifications.rs:246:8
+    |
+246 | pub fn notify_user(
+    |        ^^^^^^^^^^^
+
+warning: field `frontend_url` is never read
+  --> src/config.rs:17:9
+   |
+10 | pub struct Config {
+   |            ------ field in this struct
+...
+17 |     pub frontend_url: String,
+   |         ^^^^^^^^^^^^
+   |
+   = note: `Config` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: fields `access_code` and `reference` are never read
+  --> src/services/paystack.rs:30:9
+   |
+28 | pub struct InitializeTransactionResponse {
+   |            ----------------------------- fields in this struct
+29 |     pub authorization_url: String,
+30 |     pub access_code: String,
+   |         ^^^^^^^^^^^
+31 |     pub reference: String,
+   |         ^^^^^^^^^
+   |
+   = note: `InitializeTransactionResponse` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: multiple fields are never read
+  --> src/services/paystack.rs:36:9
+   |
+35 | pub struct VerifyTransactionResponse {
+   |            ------------------------- fields in this struct
+36 |     pub id: u64,
+   |         ^^
+37 |     pub domain: String,
+   |         ^^^^^^
+38 |     pub status: String,
+39 |     pub reference: String,
+   |         ^^^^^^^^^
+40 |     pub amount: u64,
+   |         ^^^^^^
+41 |     pub gateway_response: String,
+   |         ^^^^^^^^^^^^^^^^
+42 |     pub channel: String,
+   |         ^^^^^^^
+43 |     pub currency: String,
+   |         ^^^^^^^^
+44 |     pub metadata: Option<serde_json::Value>,
+   |         ^^^^^^^^
+   |
+   = note: `VerifyTransactionResponse` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `account_number` and `bank_id` are never read
+  --> src/services/paystack.rs:57:9
+   |
+56 | pub struct ResolveAccountResponse {
+   |            ---------------------- fields in this struct
+57 |     pub account_number: String,
+   |         ^^^^^^^^^^^^^^
+58 |     pub account_name: String,
+59 |     pub bank_id: u32,
+   |         ^^^^^^^
+   |
+   = note: `ResolveAccountResponse` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `active`, `name`, and `details` are never read
+  --> src/services/paystack.rs:73:9
+   |
+72 | pub struct TransferRecipientResponse {
+   |            ------------------------- fields in this struct
+73 |     pub active: bool,
+   |         ^^^^^^
+74 |     pub recipient_code: String,
+75 |     pub name: String,
+   |         ^^^^
+76 |     pub details: serde_json::Value,
+   |         ^^^^^^^
+   |
+   = note: `TransferRecipientResponse` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `reference` and `amount` are never read
+  --> src/services/paystack.rs:90:9
+   |
+89 | pub struct InitiateTransferResponse {
+   |            ------------------------ fields in this struct
+90 |     pub reference: String,
+   |         ^^^^^^^^^
+91 |     pub status: String,
+92 |     pub amount: u64,
+   |         ^^^^^^
+   |
+   = note: `InitiateTransferResponse` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: `health-bridge` (bin "health-bridge") generated 13 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.48s

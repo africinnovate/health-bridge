@@ -5,6 +5,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(appointments::get_appointments))
         .route("/create", post(appointments::create_appointment))
+        .route("/apply-points", post(appointments::apply_points_preview))
         .route(
             "/verify-payment",
             post(appointments::verify_appointment_payment),

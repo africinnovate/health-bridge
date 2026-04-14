@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use diesel::AsChangeset;
-use diesel::associations::HasTable;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

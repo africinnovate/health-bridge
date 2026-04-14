@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Extension},
+    extract::{State, Extension, Query},
     Json,
 };
 use diesel::prelude::*;
@@ -50,6 +50,17 @@ pub struct UpdateReferralLinkPayload {
     pub referral_link: String,
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct PointCalculatorQuery {
+    pub points: i32,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PointCalculatorResponse {
+    pub points: i32,
+    pub naira_equivalent: f64,
+}
+
 /// Get referral summary for the current user
 #[utoipa::path(
     get,
@@ -82,7 +93,7 @@ pub async fn get_referral_summary(
         .first::<Option<i64>>(&mut conn)?
         .unwrap_or(0);
 
-    let total_points = (earned_points - applied_points) as i32;
+    let total_points = (earned_points + applied_points) as i32;
 
     // 2. Get Naira equivalent from config
     let point_value_str = app_configs::table
@@ -169,6 +180,41 @@ pub async fn get_referral_summary(
         referral_stats,
         referral_code: user.referral_code,
         referral_link: user.referral_link,
+    }))
+}
+
+/// Calculate Naira value for points
+#[utoipa::path(
+    get,
+    path = "/api/referrals/calculate-points",
+    params(
+        ("points" = i32, Query)
+    ),
+    responses(
+        (status = 200, body = ApiResponse<PointCalculatorResponse>),
+        (status = 401)
+    ),
+    tag = "referrals",
+    security(("bearer_auth" = []))
+)]
+pub async fn calculate_points(
+    State(state): State<AppState>,
+    Query(query): Query<PointCalculatorQuery>,
+) -> Result<ApiResponse<PointCalculatorResponse>, AppError> {
+    let mut conn = state.pool.get()?;
+    
+    let point_value_str = app_configs::table
+        .filter(app_configs::key.eq("reward_point"))
+        .select(app_configs::value)
+        .first::<String>(&mut conn)
+        .unwrap_or_else(|_| "0".to_string());
+    
+    let point_value: f64 = point_value_str.parse().unwrap_or(0.0);
+    let naira_equivalent = query.points as f64 * point_value;
+
+    Ok(ApiResponse::success(PointCalculatorResponse {
+        points: query.points,
+        naira_equivalent,
     }))
 }
 

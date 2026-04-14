@@ -17,7 +17,7 @@ use crate::{
         appointments::{AppointmentQuery, AppointmentResponse},
     },
     models::{
-        Appointment, AppConfig, ConsultationPackage, ReferralReward, NewReferralReward, User,
+        Appointment, ConsultationPackage, NewReferralReward, User,
         WalletTransaction, NewWalletTransaction, ConsultationType,
     },
     schema::{
@@ -90,6 +90,23 @@ pub struct CreateAppointmentPayload {
     pub appointment_type: AppointmentTypeEnum,
     pub scheduled_time: DateTime<Utc>,
     pub notes: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ApplyPointsPayload {
+    pub package_id: Uuid,
+    pub apply_points: i32,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ApplyPointsResponse {
+    #[schema(value_type = String)]
+    pub original_fee: BigDecimal,
+    #[schema(value_type = String)]
+    pub discount: BigDecimal,
+    #[schema(value_type = String)]
+    pub total_payable: BigDecimal,
+    pub available_points: i32,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -549,3 +566,71 @@ pub async fn verify_appointment_payment(
 
     Ok(ApiResponse::success(appointment))
 }
+
+/// Preview fee after applying points
+#[utoipa::path(
+    post,
+    path = "/api/appointments/apply-points",
+    request_body = ApplyPointsPayload,
+    responses(
+        (status = 200, body = ApiResponse<ApplyPointsResponse>),
+        (status = 401),
+        (status = 404),
+        (status = 500)
+    ),
+    tag = "appointments",
+    security(("bearer_auth" = []))
+)]
+pub async fn apply_points_preview(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<ApplyPointsPayload>,
+) -> Result<ApiResponse<ApplyPointsResponse>, AppError> {
+    let mut conn = state.pool.get()?;
+    
+    // 1. Get package fee
+    let (pkg, ctype) = consultation_packages::table
+        .find(payload.package_id)
+        .inner_join(consultation_types::table)
+        .first::<(ConsultationPackage, ConsultationType)>(&mut conn)
+        .map_err(|_| AppError::NotFound("Package not found".into()))?;
+    
+    let fee = pkg.custom_price.unwrap_or(ctype.base_price);
+
+    // 2. Get point value
+    let reward_point_val: i32 = get_config_value(&mut conn, "reward_point")
+        .and_then(|v| v.parse().map_err(|_| AppError::InternalServerError))
+        .unwrap_or(0);
+
+    // 3. Get user's available points
+    let earned_points: i64 = referral_rewards::table
+        .filter(referral_rewards::user_id.eq(user.id))
+        .filter(referral_rewards::reward_type.eq(RewardTypeEnum::Earned))
+        .select(diesel::dsl::sum(referral_rewards::points))
+        .first::<Option<i64>>(&mut conn)?
+        .unwrap_or(0);
+
+    let applied_points: i64 = referral_rewards::table
+        .filter(referral_rewards::user_id.eq(user.id))
+        .filter(referral_rewards::reward_type.eq(RewardTypeEnum::Applied))
+        .select(diesel::dsl::sum(referral_rewards::points))
+        .first::<Option<i64>>(&mut conn)?
+        .unwrap_or(0);
+
+    let total_available_points = (earned_points + applied_points) as i32;
+
+    if payload.apply_points > total_available_points {
+        return Err(AppError::BadRequest(format!("Insufficient points. Available: {}", total_available_points)));
+    }
+
+    let discount = BigDecimal::from(payload.apply_points * reward_point_val);
+    let total_payable = if fee > discount { fee.clone() - discount.clone() } else { BigDecimal::from(0) };
+
+    Ok(ApiResponse::success(ApplyPointsResponse {
+        original_fee: fee,
+        discount,
+        total_payable,
+        available_points: total_available_points,
+    }))
+}
+

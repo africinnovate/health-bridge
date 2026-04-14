@@ -2,10 +2,7 @@ use chrono::Datelike;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 
-use crate::schema::{
-    appointments, blood_requests, hospital_blood_inventories, hospitals, specialists, specialties,
-    users,
-};
+use crate::schema::{blood_requests, hospitals, specialists, users};
 use crate::admin::dtos::{
     AdminActivity, AdminDashboardResponse, AdminHospitalProfileResponse,
     AdminPatientProfileResponse, AdminSpecialistProfileResponse, AdminUserResponse,
